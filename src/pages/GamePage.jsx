@@ -18,7 +18,7 @@ const GamePage = () => {
         {leader === null ? (
           <SelectLeader setLeader={setLeader} />
         ) : (
-          <GameSection />
+          <GameSection leader={leader} />
         )}
       </div>
     </>
