@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import board from "../assets/Leaders_Board.png";
+import boardImg from "../assets/Leaders_Board.png";
 import leader1 from "../assets/Leaders_BGA_black_leader_1.png";
 import leader2 from "../assets/Leaders_BGA_black_leader_2.png";
 
 const GameSection = () => {
+  const [tiles, setTiles] = useState();
+  let turns = 1;
   const initalBoard = [
-    ["P", "P", "P", "L2", "P", "P", "P"],
+    ["P2", "P2", "P2", "L2", "P2", "P2", "P2"],
     ["T", "T", "T", "T", "T", "T", "T"],
     ["T", "T", "T", "T", "T", "T", "T"],
-    ["P", "P", "P", "L1", "P", "P", "P"],
+    ["P1", "P1", "P1", "L1", "P1", "P1", "P1"],
   ];
   const [board, setBoard] = useState(initalBoard);
 
@@ -24,7 +26,7 @@ const GameSection = () => {
             <button
               key={`${rowIndex}-${colIndex}`}
               onClick={() => handleButtonClick(rowIndex, colIndex, cell)}
-              className="flex items-center justify-center w-20 aspect-square border rounded-full bg-gray-200 hover:bg-gray-300"
+              className="flex items-center justify-center w-20 aspect-square rounded-full bg-gray-200 hover:bg-gray-300"
             >
               {cell === "L1" ? (
                 <img
