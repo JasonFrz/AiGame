@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import board from "../assets/Leaders_Board.png";
 import leader1 from "../assets/Leaders_BGA_black_leader_1.png";
 import leader2 from "../assets/Leaders_BGA_black_leader_2.png";
 
 const GameSection = () => {
-  // const [selectedTiles, setSelectedTiles] = useState(null);
+  const initalBoard = [
+    ["P", "P", "P", "L", "P", "P", "P"],
+    ["T", "T", "T", "T", "T", "T", "T"],
+    ["T", "T", "T", "T", "T", "T", "T"],
+    ["P", "P", "P", "L", "P", "P", "P"],
+  ];
+  const [board, setBoard] = useState([]);
+  const [tiles, setTiles] = useState([]);
   const totalButtons = 28;
-  const buttonData = Array(totalButtons)
-    .fill(null)
-    .map((_, index) => ({
-      id: index + 1,
-      label: `Btn ${index + 1}`,
-    }));
+
+  useEffect(() => {
+    setBoard(initalBoard);
+  }, []);
 
   const handleButtonClick = (id, label) => {
     console.log(`Button ${id} (${label}) clicked!`);
@@ -20,19 +25,22 @@ const GameSection = () => {
 
   return (
     <div className="flex-col gap-2">
-      {/* <div className="relative">
-        <img src={board} className="w-130 h-auto" alt="board" />
-      </div> */}
       <div className="grid grid-cols-7 grid-row-4 gap-2">
-        {buttonData.map((button) => (
-          <button
-            key={button.id}
-            onClick={() => handleButtonClick(button.id, button.label)}
-            className="bg-amber-500 text-black rounded-2xl"
-          >
-            {button.label}
-          </button>
-        ))}
+        {board.map((row, rowIndex) =>
+          row.map((cell, colIndex) => (
+            <button
+              // React requires a unique 'key' for each item in a loop
+              key={`${rowIndex}-${colIndex}`}
+              // We pass an arrow function to onClick to send our specific data
+              onClick={() => handleButtonClick(`${rowIndex}-${colIndex}`, cell)}
+              // Added some basic styling to make the buttons visible
+              className="flex items-center justify-center p-4 border rounded-md bg-gray-200 hover:bg-gray-300"
+            >
+              {/* The value from the array ("p", "t", "l") is rendered as the button's text */}
+              {cell}
+            </button>
+          ))
+        )}
       </div>
     </div>
   );
