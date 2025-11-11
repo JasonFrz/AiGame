@@ -4,8 +4,7 @@ import leader1 from "../assets/Leaders_BGA_black_leader_1.png";
 import leader2 from "../assets/Leaders_BGA_black_leader_2.png";
 
 const GameSection = () => {
-  const [tiles, setTiles] = useState();
-  let turns = 1;
+  const [turn, setTurn] = useState(1); //1 dan 3 = human 2 dan 4 = ai
   const initalBoard = [
     ["P2", "P2", "P2", "L2", "P2", "P2", "P2"],
     ["T", "T", "T", "T", "T", "T", "T"],
@@ -13,9 +12,8 @@ const GameSection = () => {
     ["P1", "P1", "P1", "L1", "P1", "P1", "P1"],
   ];
   const [board, setBoard] = useState(initalBoard);
-
   const handleButtonClick = (row, col, key) => {
-    alert(`${key}, Place: ${row},${col}`);
+    alert(`key: ${key} row: ${row} col: ${col}`);
   };
 
   return (
