@@ -5,22 +5,15 @@ import leader2 from "../assets/Leaders_BGA_black_leader_2.png";
 
 const GameSection = () => {
   const initalBoard = [
-    ["P", "P", "P", "L", "P", "P", "P"],
+    ["P", "P", "P", "L2", "P", "P", "P"],
     ["T", "T", "T", "T", "T", "T", "T"],
     ["T", "T", "T", "T", "T", "T", "T"],
-    ["P", "P", "P", "L", "P", "P", "P"],
+    ["P", "P", "P", "L1", "P", "P", "P"],
   ];
-  const [board, setBoard] = useState([]);
-  const [tiles, setTiles] = useState([]);
-  const totalButtons = 28;
+  const [board, setBoard] = useState(initalBoard);
 
-  useEffect(() => {
-    setBoard(initalBoard);
-  }, []);
-
-  const handleButtonClick = (id, label) => {
-    console.log(`Button ${id} (${label}) clicked!`);
-    alert(`You clicked ${label}!`);
+  const handleButtonClick = (row, col, key) => {
+    alert(`${key}, Place: ${row},${col}`);
   };
 
   return (
@@ -29,15 +22,25 @@ const GameSection = () => {
         {board.map((row, rowIndex) =>
           row.map((cell, colIndex) => (
             <button
-              // React requires a unique 'key' for each item in a loop
               key={`${rowIndex}-${colIndex}`}
-              // We pass an arrow function to onClick to send our specific data
-              onClick={() => handleButtonClick(`${rowIndex}-${colIndex}`, cell)}
-              // Added some basic styling to make the buttons visible
-              className="flex items-center justify-center p-4 border rounded-md bg-gray-200 hover:bg-gray-300"
+              onClick={() => handleButtonClick(rowIndex, colIndex, cell)}
+              className="flex items-center justify-center w-20 aspect-square border rounded-full bg-gray-200 hover:bg-gray-300"
             >
-              {/* The value from the array ("p", "t", "l") is rendered as the button's text */}
-              {cell}
+              {cell === "L1" ? (
+                <img
+                  src={leader1}
+                  alt={cell}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : cell === "L2" ? (
+                <img
+                  src={leader2}
+                  alt={cell}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                cell
+              )}
             </button>
           ))
         )}
