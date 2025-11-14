@@ -18,6 +18,7 @@ import vizier from "../assets/Leaders_BGA_black_Vizir.png";
 import hermit from "../assets/Leaders_BGA_black_VieilOurs.png";
 import cub from "../assets/Leaders_BGA_black_Ourson.png";
 import nemesis from "../assets/Leaders_BGA_black_Nemesis.png";
+import board_img from "../assets/Leaders_Board.png";
 
 const GameSection = () => {
   const totalCards = [
@@ -40,18 +41,32 @@ const GameSection = () => {
     { name: "Nemesis", img: nemesis, board_logo: "N" },
   ];
   const initalBoard = [
-    ["P2", "P2", "P2", "L2", "P2", "P2", "P2"],
+    [null, null, null, "L2", null, null, null],
+    [null, null, "P2", "T", "P2", null, null],
+    [null, "P2", "T", "T", "T", "P2", null],
+    ["P2", "T", "T", "T", "T", "T", "P2"],
     ["T", "T", "T", "T", "T", "T", "T"],
     ["T", "T", "T", "T", "T", "T", "T"],
-    ["P1", "P1", "P1", "L1", "P1", "P1", "P1"],
+    ["P1", "T", "T", "T", "T", "T", "P1"],
+    [null, "P1", "T", "T", "T", "P1", null],
+    [null, null, "P1", "T", "P1", null, null],
+    [null, null, null, "L1", null, null, null],
   ];
+
   const baseBoard = [
-    ["P2", "P2", "P2", "P2", "P2", "P2", "P2"],
+    [null, null, null, "P2", null, null, null],
+    [null, null, "P2", "T", "P2", null, null],
+    [null, "P2", "T", "T", "T", "P2", null],
+    ["P2", "T", "T", "T", "T", "T", "P2"],
     ["T", "T", "T", "T", "T", "T", "T"],
     ["T", "T", "T", "T", "T", "T", "T"],
-    ["P1", "P1", "P1", "P1", "P1", "P1", "P1"],
+    ["P1", "T", "T", "T", "T", "T", "P1"],
+    [null, "P1", "T", "T", "T", "P1", null],
+    [null, null, "P1", "T", "P1", null, null],
+    [null, null, null, "P1", null, null, null],
   ];
-  const [turn, setTurn] = useState(1); //1 (action phase) dan 3(recruitment phase) = human 2 (action phase) dan 4(recruitment phase) = ai
+
+  const [turn, setTurn] = useState(1); //1 (action phase) dan 2(recruitment phase) = human 3 (action phase) dan 4(recruitment phase) = ai
   const [playerCard, setPlayerCard] = useState(Array(4).fill(null));
   const [AiCard, setAiCard] = useState(Array(4).fill(null));
   const [deck, setDeck] = useState([]);
@@ -137,7 +152,7 @@ const GameSection = () => {
         newCol >= 0 &&
         newCol < board[0].length
       ) {
-        if (board[newRow][newCol] !== "P2" && board[newRow][newCol] !== "L2") {
+        if (board[newRow][newCol] !== "L2") {
           moves.push([newRow, newCol]);
         }
       }
@@ -154,10 +169,10 @@ const GameSection = () => {
   }, []);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col items-center gap-5">
       {/* Section AI */}
       <div className="flex flex-col items-center justify-center">
-        <h1>Cards:</h1>
+        <h1 className="font-bold">Cards:</h1>
         <div className="grid grid-cols-4 gap-3">
           {AiCard.map(() => (
             <button
@@ -167,38 +182,21 @@ const GameSection = () => {
           ))}
         </div>
       </div>
-      <div className="flex gap-4 items-center">
-        <div className="flex flex-col gap-2">
-          {deck.slice(0, 3).map((card, index) => (
-            <button
-              key={index}
-              className="flex items-center justify-center w-20 aspect-square rounded-full"
-            >
-              {card ? (
-                <img
-                  src={card.img}
-                  alt={card.name}
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <span>{index + 1}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-7 grid-row-4 gap-2">
+      <div className="flex items-center justify-center">
+        <div className="grid grid-cols-7 grid-row-7 gap-2">
           {board.map((row, rowIndex) =>
             row.map((cell, colIndex) => (
               <button
                 key={`${rowIndex}-${colIndex}`}
-                disabled={cell === "L2" || cell === "P2" ? true : false}
+                disabled={cell === null || cell === "L2" ? true : false}
                 onClick={() => handleButtonClick(rowIndex, colIndex, cell)}
                 className={`flex items-center justify-center w-20 aspect-square rounded-full ${
+                  cell === null ? "opacity-0 pointer-events-none" : ""
+                } ${
                   cell === "P1" || cell === "P2"
                     ? "border-4 border-yellow-400"
                     : ""
-                } bg-white   ${
+                } bg-white ${
                   validMovesHighlight.some(
                     ([r, c]) => r === rowIndex && c === colIndex
                   )
@@ -220,8 +218,41 @@ const GameSection = () => {
           )}
         </div>
       </div>
-      <div className="flex flex-col items-center justify-center">
-        <h1>Cards:</h1>
+      <div className="flex flex-col gap-2">
+        
+      </div>
+      <h1 className="font-bold">Decks:</h1>
+      <div className="flex gap-2">
+        {deck.slice(0, 3).map((card, index) => (
+          <button
+            key={index}
+            className="flex items-center justify-center w-20 aspect-square rounded-full"
+          >
+            {card ? (
+              <img
+                src={card.img}
+                alt={card.name}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <span>{index + 1}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      {turn === 1 && (
+        <button className="bg-red-500 p-2 rounded-sm font-bold">
+          End Action Phase
+        </button>
+      )}
+      {turn === 2 && (
+        <button className="bg-red-500 p-2 rounded-sm">
+          End Recruitment Phase
+        </button>
+      )}
+
+      <div className="flex flex-col items-center justify-center gap-2">
+        <h1 className="font-bold">Cards:</h1>
         {/* Human Card */}
         <div className="grid grid-cols-4 gap-3">
           {playerCard.map(() => (
