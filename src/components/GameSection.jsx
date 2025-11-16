@@ -16,13 +16,14 @@ import protector from "../assets/Leaders_BGA_black_Protecteur.png";
 import assassin from "../assets/Leaders_BGA_black_Assassin.png";
 import vizier from "../assets/Leaders_BGA_black_Vizir.png";
 import hermit from "../assets/Leaders_BGA_black_VieilOurs.png";
-import cub from "../assets/Leaders_BGA_black_Ourson.png";
+import cub_img from "../assets/Leaders_BGA_black_Ourson.png";
 import nemesis from "../assets/Leaders_BGA_black_Nemesis.png";
-import board_img from "../assets/Leaders_Board.png";
+// import board_img from "../assets/Leaders_Board.png";
 
 const GameSection = () => {
+  const cub = { name: "Cub", img: cub_img, board_logo: "C" };
   const totalCards = [
-    { name: "Acrobat", img: acrotbat, board_logo: "A" },
+    { name: "Acrobat", img: acrotbat, board_logo: "Ac" },
     { name: "Claw Launcher", img: claw_launcher, board_logo: "CL" },
     { name: "Rider", img: rider, board_logo: "R" },
     { name: "Manipulator", img: manipulator, board_logo: "M" },
@@ -34,7 +35,6 @@ const GameSection = () => {
     { name: "Archer", img: archer, board_logo: "Ar" },
     { name: "Vizier", img: vizier, board_logo: "V" },
     { name: "Hermit", img: hermit, board_logo: "H" },
-    { name: "Cub", img: cub, board_logo: "C" },
     { name: "Jailer", img: jailer, board_logo: "J" },
     { name: "Protector", img: protector, board_logo: "P" },
     { name: "Assassin", img: assassin, board_logo: "As" },
@@ -73,6 +73,8 @@ const GameSection = () => {
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [validMovesHighlight, setValidMovesHighlight] = useState([]);
   const [board, setBoard] = useState(initalBoard);
+  const [moved, setMoved] = useState([false, false, false, false, false]); //array index 0 = leader, 1-4 = pieces
+  const [firstMove, setFirstMove] = useState([false, false]); //index 0 = human, 1 = ai
 
   const shuffledDeck = () => {
     const shuffled = [...totalCards].sort(() => Math.random() - 0.5);
@@ -92,11 +94,18 @@ const GameSection = () => {
     }
 
     if (key === "L1" && turn === 1) {
+      if (moved[0]) {
+        return;
+      }
       handleLeaderMove(row, col);
     }
   };
 
   const moveLeader = (newRol, newCol) => {
+    if (moved[0] === true) {
+      return;
+    }
+
     const newBoard = board.map((row) => [...row]);
 
     let oldCol = null;
@@ -120,6 +129,9 @@ const GameSection = () => {
     setBoard(newBoard);
     setSelectedPiece(null);
     setValidMovesHighlight([]);
+    const movedCopy = [...moved];
+    movedCopy[0] = true;
+    setMoved(movedCopy);
   };
 
   const handleLeaderMove = (row, col) => {
@@ -159,14 +171,50 @@ const GameSection = () => {
     });
     setSelectedPiece("L1");
     setValidMovesHighlight(moves);
-    console.log("Leader at:", row, col);
-    console.log("Valid moves:", moves);
   };
 
   useEffect(() => {
+    const copyFirstMove = [...firstMove];
+    copyFirstMove[0] = true;
+    setFirstMove(copyFirstMove);
     shuffledDeck();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleActionPhase = () => {
+    const movedCopy = [...moved];
+    movedCopy.fill(false);
+    setMoved(movedCopy);
+    if (playerCard.includes(null)) {
+      setTurn(2);
+    } else {
+      setTurn(3);
+    }
+  };
+
+  const handleRecruitCard = (index) => {
+    if (turn !== 2) {
+      return;
+    }
+
+    const newDeck = [...deck];
+    const newPlayerCard = [...playerCard];
+
+    setSelectedPiece(newDeck[index].board_logo);
+    const emptyIndex = newPlayerCard.indexOf(null);
+    if (emptyIndex === -1) {
+      return;
+    }
+
+    newPlayerCard[emptyIndex] = newDeck[index];
+    newDeck.splice(index, 1);
+
+    if (firstMove[0] === true) {
+      setPlayerCard(newPlayerCard);
+      setDeck(newDeck);
+      setTurn(3);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -218,15 +266,16 @@ const GameSection = () => {
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        
-      </div>
+      <div className="flex flex-col gap-2"></div>
       <h1 className="font-bold">Decks:</h1>
       <div className="flex gap-2">
         {deck.slice(0, 3).map((card, index) => (
           <button
             key={index}
             className="flex items-center justify-center w-20 aspect-square rounded-full"
+            onClick={() => {
+              handleRecruitCard(index);
+            }}
           >
             {card ? (
               <img
@@ -241,13 +290,18 @@ const GameSection = () => {
         ))}
       </div>
       {turn === 1 && (
-        <button className="bg-red-500 p-2 rounded-sm font-bold">
+        <button
+          className="bg-red-500 p-2 rounded-sm font-bold"
+          onClick={() => {
+            handleActionPhase();
+          }}
+        >
           End Action Phase
         </button>
       )}
       {turn === 2 && (
-        <button className="bg-red-500 p-2 rounded-sm">
-          End Recruitment Phase
+        <button className="bg-red-500 p-2 rounded-sm font-bold" disabled>
+          Please Recruit a Card
         </button>
       )}
 
@@ -255,8 +309,21 @@ const GameSection = () => {
         <h1 className="font-bold">Cards:</h1>
         {/* Human Card */}
         <div className="grid grid-cols-4 gap-3">
-          {playerCard.map(() => (
-            <button className="flex items-center justify-center w-20 aspect-square rounded-full bg-white hover:bg-gray-300"></button>
+          {playerCard.map((card, index) => (
+            <button
+              key={index}
+              className="flex items-center justify-center w-20 aspect-square rounded-full bg-white hover:bg-gray-300"
+            >
+              {card ? (
+                <img
+                  src={card.img}
+                  alt={card.name}
+                  className="object-cover w-full h-full rounded-full"
+                />
+              ) : (
+                ""
+              )}
+            </button>
           ))}
         </div>
       </div>
