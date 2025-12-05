@@ -23,11 +23,11 @@ const HomePage = () => {
             <span>223117084</span>
           </div>
           <div className="flex justify-between">
-            <span>Jason Juan Alberto Joe</span>
+            <span>Irvin Caesar Young</span>
             <span>223117088</span>
           </div>
           <div className="flex justify-between">
-            <span>Irvin Caesar Young</span>
+            <span>Jason Juan Alberto Joe</span>
             <span>223117089</span>
           </div>
         </div>
