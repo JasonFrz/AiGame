@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 // 1. ASSETS IMPORT
 // ==========================================
 
+// --- IMAGES ---
+import gameLogo from "../assets/logo.png";
+import gameBackground from "../assets/background.jpg"; 
+
 // --- COINS (TOKENS ON BOARD) ---
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png"; 
@@ -107,28 +111,30 @@ const GameSection = ({ onBack }) => {
       100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
     .animate-spawn { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-    .neon-border { box-shadow: 0 0 10px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
+    .neon-border { box-shadow: 0 0 15px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
   // --- CONFIG (SLOTS) ---
   const SLOT_COORDINATES = [
-    [{ top: "9%", left: "50%" }], // R0 (Size 1)
-    [ { top: "16.3%", left: "36.5%" }, { top: "16.3%", left: "63.5%" }, { top: "23%", left: "23%" }, { top: "23%", left: "76.5%" } ], // R1 (Size 4)
-    [ { top: "30%", left: "9.8%" }, { top: "30%", left: "36.5%" }, { top: "23%", left: "50%" }, { top: "30%", left: "63.5%" }, { top: "30%", left: "90.3%" } ], // R2 (Size 5)
-    [ { top: "43%", left: "9.8%" }, { top: "36.6%", left: "23%" }, { top: "43%", left: "36.8%" }, { top: "36.6%", left: "50%" }, { top: "36.6%", left: "76.5%" }, { top: "43%", left: "90.3%" } ], // R3 (Size 6)
-    [ { top: "56.8%", left: "9.8%" }, { top: "49.8%", left: "23%" }, { top: "49.8%", left: "50%" }, { top: "43%", left: "63.5%" }, { top: "49.8%", left: "76.8%" } ], // R4 (Size 5)
-    [ { top: "63.5%", left: "23%" }, { top: "56.8%", left: "36.5%" }, { top: "63.5%", left: "50%" }, { top: "56.8%", left: "63.5%" }, { top: "63.5%", left: "76.8%" }, { top: "56.8%", left: "90.3%" } ], // R5 (Size 6)
-    [ { top: "70.2%", left: "9.8%" }, { top: "70.2%", left: "36.5%" }, { top: "77%", left: "50%" }, { top: "70.2%", left: "63.5%" }, { top: "70.2%", left: "90.3%" } ], // R6 (Size 5)
-    [ { top: "77%", left: "23%" }, { top: "83.8%", left: "36.5%" }, { top: "83.8%", left: "63.5%" }, { top: "77%", left: "76.7%" } ], // R7 (Size 4)
-    [{ top: "90.5%", left: "50%" }], // R8 (Size 1)
+    [{ top: "9%", left: "50%" }], 
+    [ { top: "16.3%", left: "36.5%" }, { top: "16.3%", left: "63.5%" }, { top: "23%", left: "23%" }, { top: "23%", left: "76.5%" } ], 
+    [ { top: "30%", left: "9.8%" }, { top: "30%", left: "36.5%" }, { top: "23%", left: "50%" }, { top: "30%", left: "63.5%" }, { top: "30%", left: "90.3%" } ], 
+    [ { top: "43%", left: "9.8%" }, { top: "36.6%", left: "23%" }, { top: "43%", left: "36.8%" }, { top: "36.6%", left: "50%" }, { top: "36.6%", left: "76.5%" }, { top: "43%", left: "90.3%" } ], 
+    [ { top: "56.8%", left: "9.8%" }, { top: "49.8%", left: "23%" }, { top: "49.8%", left: "50%" }, { top: "43%", left: "63.5%" }, { top: "49.8%", left: "76.8%" } ], 
+    [ { top: "63.5%", left: "23%" }, { top: "56.8%", left: "36.5%" }, { top: "63.5%", left: "50%" }, { top: "56.8%", left: "63.5%" }, { top: "63.5%", left: "76.8%" }, { top: "56.8%", left: "90.3%" } ], 
+    [ { top: "70.2%", left: "9.8%" }, { top: "70.2%", left: "36.5%" }, { top: "77%", left: "50%" }, { top: "70.2%", left: "63.5%" }, { top: "70.2%", left: "90.3%" } ], 
+    [ { top: "77%", left: "23%" }, { top: "83.8%", left: "36.5%" }, { top: "83.8%", left: "63.5%" }, { top: "77%", left: "76.7%" } ], 
+    [{ top: "90.5%", left: "50%" }], 
   ];
 
-  // Logic Helpers
+  // Logic Helpers (Tetap sama)
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-        "0,0": [[1,1], [1,2], [2,2]], // P2 Leader (Reine) moves forward to 2,2
+        "0,0": [[1,1], [1,2], [2,2]], 
         "1,0": [[2,0], [2,1]], "1,1": [[0,0], [2,1], [2,2]], "1,2": [[0,0], [2,2], [2,3]], "1,3": [[2,3], [2,4]],
         "2,0": [[1,0], [3,0], [3,1]], "2,1": [[1,0], [1,1], [3,1], [3,2]], "2,2": [[1,1], [1,2], [3,2], [3,3], [0,0]], "2,3": [[1,2], [1,3], [3,3], [3,4]], "2,4": [[1,3], [3,4], [3,5]],
         "3,0": [[2,0], [4,0]], "3,1": [[2,0], [2,1], [4,0], [4,1]], "3,2": [[2,1], [2,2], [4,1], [4,2]], "3,3": [[2,2], [2,3], [4,2], [4,3]], "3,4": [[2,3], [2,4], [4,3], [4,4]], "3,5": [[2,4], [4,4]],
@@ -136,24 +142,17 @@ const GameSection = ({ onBack }) => {
         "5,0": [[4,0], [6,0]], "5,1": [[4,0], [4,1], [6,0], [6,1]], "5,2": [[4,1], [4,2], [6,1], [6,2]], "5,3": [[4,2], [4,3], [6,2], [6,3]], "5,4": [[4,3], [4,4], [6,3], [6,4]], "5,5": [[4,4], [6,4]],
         "6,0": [[5,0], [5,1], [7,0]], "6,1": [[5,1], [5,2], [7,0], [7,1]], "6,2": [[5,2], [5,3], [7,1], [7,2], [8,0]], "6,3": [[5,3], [5,4], [7,2], [7,3]], "6,4": [[5,4], [5,5], [7,3]],
         "7,0": [[6,0], [6,1]], "7,1": [[6,1], [6,2], [8,0]], "7,2": [[6,2], [6,3], [8,0]], "7,3": [[6,3], [6,4]], 
-        "8,0": [[7,1], [7,2], [6,2]] // P1 Leader (Roi) moves forward to 6,2
+        "8,0": [[7,1], [7,2], [6,2]] 
     };
     return manualMap[mapKey] || [];
   };
 
-  // Recruit Zone: 3 Kiri, 3 Kanan
   const isRecruitZone = (r, c, player) => {
     if (player === 1) {
-        // Player 1 (Bottom): 
-        // Left Flank: 5,0 | 6,0 | 7,0
-        // Right Flank: 5,5 | 6,4 | 7,3
         const validSpots = ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3"];
         return validSpots.includes(`${r},${c}`);
     }
     if (player === 2) {
-        // Player 2 (Top - AI):
-        // Left Flank: 1,0 | 2,0 | 3,0
-        // Right Flank: 1,3 | 2,4 | 3,5
         const validSpots = ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1"];
         return validSpots.includes(`${r},${c}`);
     }
@@ -169,15 +168,15 @@ const GameSection = ({ onBack }) => {
   const [selectedPos, setSelectedPos] = useState(null);
   const [validMoves, setValidMoves] = useState([]);
   const [gameOver, setGameOver] = useState(null);
-  const [gameLog, setGameLog] = useState("Your Turn (Action Phase)");
+  const [gameLog, setGameLog] = useState("Your Turn");
   
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
-  
+  const [mobileTab, setMobileTab] = useState(null);
+
   useEffect(() => {
     initializeGame();
   }, []);
 
-  // Sync Player Roster
   useEffect(() => {
     if (board.length === 0) return;
     const myUnits = [];
@@ -194,8 +193,6 @@ const GameSection = ({ onBack }) => {
   }, [board]);
 
   const initializeGame = () => {
-    // FIX: Inisialisasi ukuran array board agar sesuai dengan jumlah slot visual
-    // R0: 1, R1: 4, R2: 5, R3: 6, R4: 5, R5: 6, R6: 5, R7: 4, R8: 1
     const initialBoardState = [];
     initialBoardState[0] = Array(1).fill(null);
     initialBoardState[1] = Array(4).fill(null);
@@ -203,19 +200,15 @@ const GameSection = ({ onBack }) => {
     initialBoardState[3] = Array(6).fill(null);
     initialBoardState[4] = Array(5).fill(null);
     initialBoardState[5] = Array(6).fill(null);
-    initialBoardState[6] = Array(5).fill(null); // Perbaikan: Dulu 4, harusnya 5
+    initialBoardState[6] = Array(5).fill(null); 
     initialBoardState[7] = Array(4).fill(null);
     initialBoardState[8] = Array(1).fill(null);
     
-    // --- SET POSISI LEADER ---
-    // Player 1 (Roi) -> Bawah (8,0)
     initialBoardState[8][0] = { type: "Leader", owner: 1, cardId: "leader", moved: false, isNew: true };
-    // Player 2 (Reine/AI) -> Atas (0,0)
     initialBoardState[0][0] = { type: "Leader", owner: 2, cardId: "leader2", moved: false, isNew: true };
 
     setBoard(initialBoardState);
     
-    // Shuffle Deck
     const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
     const visible = shuffled.splice(0, 3);
     setDeck(shuffled);
@@ -223,10 +216,9 @@ const GameSection = ({ onBack }) => {
     
     setTurn(1);
     setGameOver(null);
-    setGameLog("Your Turn (Action Phase)");
+    setGameLog("Your Turn");
   };
 
-  // --- LOGIC: WIN & AI (Alpha Beta) ---
   const checkWinCondition = (currentBoard) => {
       let p1Pos, p2Pos;
       for(let r=0; r<currentBoard.length; r++) for(let c=0; c<currentBoard[r].length; c++) {
@@ -274,7 +266,6 @@ const GameSection = ({ onBack }) => {
         const cell = simBoard[r][c];
         if(cell && cell.owner === owner && !cell.moved) {
             getNeighbors(r,c).forEach(([nr, nc]) => {
-                // Safety check for array bounds
                 if (simBoard[nr] && typeof simBoard[nr][nc] !== 'undefined') {
                     if(!simBoard[nr][nc]) moves.push({from:[r,c], to:[nr,nc]});
                 }
@@ -312,7 +303,6 @@ const GameSection = ({ onBack }) => {
       if (gameOver) return;
       await new Promise(r => setTimeout(r, 600));
 
-      // AI ACTION
       let currentBoard = board.map(row => row.map(c => c ? {...c, moved:false, isNew:false} : null));
       const moves = getValidMoves(currentBoard, 2);
       let bestMove = null; let bestScore = -Infinity;
@@ -335,13 +325,11 @@ const GameSection = ({ onBack }) => {
       const w = checkWinCondition(currentBoard);
       if(w) { setGameOver(w); setGameLog(w === "AI" ? "AI Wins" : "You Win"); return; }
 
-      // AI RECRUIT
       await new Promise(r => setTimeout(r, 400));
       let aiCount = 0; currentBoard.forEach(row=>row.forEach(c=>{if(c&&c.owner===2)aiCount++}));
       if(aiCount < 5 && deck.length > 0) {
           const spots = [];
           for(let r=0; r<=2; r++) for(let c=0; c<currentBoard[r].length; c++) 
-             // Updated AI Logic to allow recruit only on flanks
              if(currentBoard[r] && isRecruitZone(r,c,2) && !currentBoard[r][c]) spots.push([r,c]);
           
           if(spots.length > 0) {
@@ -359,7 +347,7 @@ const GameSection = ({ onBack }) => {
       }
       setBoard(currentBoard);
       setTurn(1);
-      setGameLog("Your Turn (Action Phase)");
+      setGameLog("Your Turn");
       setBoard(prev => prev.map(row => row.map(c => c ? {...c, moved:false, isNew:false} : null)));
 
   }, [board, deck, visibleDeck, gameOver]);
@@ -369,7 +357,6 @@ const GameSection = ({ onBack }) => {
 
   // --- USER INTERACTIONS ---
 
-  // 1. SELECT FROM ROSTER
   const handleSelectUnit = (r, c) => {
       if(gameOver || turn !== 1) return;
       const cell = board[r][c];
@@ -377,6 +364,7 @@ const GameSection = ({ onBack }) => {
       if(cell && cell.owner === 1) {
           if(cell.moved) { setGameLog("Unit already moved."); return; }
           setSelectedPos([r,c]);
+          setMobileTab(null);
           setGameLog(`Selected ${getCardData(cell.cardId)?.name || "Unit"}`);
           
           const moves = [];
@@ -387,11 +375,9 @@ const GameSection = ({ onBack }) => {
       }
   };
 
-  // 2. BOARD INTERACTION
   const handleBoardClick = (r, c) => {
       if(gameOver) return;
 
-      // RECRUIT
       if(turn === 2 && recruitSelectionIndex !== null) {
           if(!board[r][c] && isRecruitZone(r,c,1)) {
               const card = visibleDeck[recruitSelectionIndex];
@@ -405,13 +391,13 @@ const GameSection = ({ onBack }) => {
               setVisibleDeck(newV);
               
               setRecruitSelectionIndex(null);
+              setMobileTab(null);
               setTurn(3);
               setGameLog("AI Turn...");
           }
           return;
       }
 
-      // ACTION
       if(turn === 1) {
           if(board[r][c] && board[r][c].owner === 1) {
               handleSelectUnit(r,c);
@@ -438,7 +424,8 @@ const GameSection = ({ onBack }) => {
       let count = 0; board.forEach(r => r.forEach(c => { if(c && c.owner === 1) count++ }));
       if(count < 5) {
           setTurn(2);
-          setGameLog("Recruit Phase: Choose a card from the Left");
+          setMobileTab('recruit');
+          setGameLog("Recruit Phase");
       } else {
           setTurn(3);
           setGameLog("Party Full. AI Turn...");
@@ -449,11 +436,10 @@ const GameSection = ({ onBack }) => {
   const CardUI = ({ data, onClick, isSelected, isEmpty }) => {
     if (isEmpty) {
         return (
-            <div className="w-24 h-40 bg-black border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                    <span className="text-gray-500 font-bold text-xs tracking-widest">THE</span>
-                    <br/>
-                    <span className="text-gray-400 font-bold text-sm tracking-widest uppercase">Leaders</span>
+            <div className="w-24 h-36 md:w-40 md:h-60 bg-[#2a1e1a]/50 border-2 border-dashed border-[#8D6E63]/50 rounded-lg flex items-center justify-center shrink-0 transition-all hover:bg-[#2a1e1a]/80">
+                <div className="text-center opacity-50">
+                    <span className="text-[#D7CCC8] font-bold text-[10px] tracking-widest block">SLOT</span>
+                    <span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">KOSONG</span>
                 </div>
             </div>
         );
@@ -464,80 +450,115 @@ const GameSection = ({ onBack }) => {
     return (
       <div 
         onClick={onClick}
-        className={`w-32 h-56 bg-black rounded-lg border-4 relative overflow-hidden cursor-pointer transition-all duration-300 card-hover
-            ${isSelected ? 'neon-border scale-105 z-10' : 'border-[#8D6E63]'}
+        className={`w-24 h-36 md:w-40 md:h-60 bg-[#1a1210] rounded-xl border-[3px] relative overflow-hidden cursor-pointer transition-all duration-300 shrink-0 group shadow-lg
+            ${isSelected ? 'neon-border scale-105 z-10' : 'border-[#5D4037] hover:border-[#FFCA28]'}
+            ${!isSelected && 'hover:-translate-y-2 hover:shadow-[0_10px_20px_rgba(0,0,0,0.5)]'}
         `}
       >
-        <div className="h-[60%] w-full bg-[#2a1e1a] relative">
-            <img src={info.cardImg} alt={info.name} className="w-full h-full object-cover" />
-            <div className="absolute top-1 right-1">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
-                    ${info.type === 'Active' ? 'bg-red-500 text-white' : 
-                      info.type === 'Passive' ? 'bg-blue-500 text-white' : 'bg-yellow-500 text-black'}
+        <div className="h-[65%] w-full bg-[#2a1e1a] relative">
+            <img src={info.cardImg} alt={info.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            <div className="absolute top-2 right-2 shadow-sm">
+                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[9px] md:text-[11px] font-extrabold border-2 border-white/20 shadow-md
+                    ${info.type === 'Active' ? 'bg-gradient-to-br from-red-600 to-red-800 text-white' : 
+                      info.type === 'Passive' ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white' : 'bg-gradient-to-br from-amber-500 to-amber-700 text-black'}
                 `}>
                     {info.type === 'Active' ? 'A' : info.type === 'Passive' ? 'P' : 'S'}
                 </div>
             </div>
         </div>
-        <div className="h-[40%] w-full bg-black p-2 flex flex-col items-center justify-center text-center border-t-2 border-[#8D6E63]">
-            <h3 className="text-[#E8DCC4] font-bold text-xs uppercase tracking-wider mb-1">{info.name}</h3>
-            <p className="text-[9px] text-gray-400 leading-tight line-clamp-3">{info.desc}</p>
+
+        <div className="h-[35%] w-full bg-gradient-to-b from-[#3E2723] to-[#2E1E1A] p-2 flex flex-col items-center justify-center text-center border-t-[3px] border-[#5D4037]">
+            <h3 className="text-[#FFECB3] font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 font-serif">{info.name}</h3>
+            <p className="text-[8px] md:text-[10px] text-[#D7CCC8] leading-tight line-clamp-3 px-1">{info.desc}</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="w-full h-[100dvh] bg-[#E8DCC4] overflow-hidden flex flex-col font-sans select-none relative">
+    <div 
+        className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center"
+        style={{ backgroundImage: `url(${gameBackground})` }}
+    >
       <style>{styles}</style>
 
-      {/* HEADER BAR */}
-      <div className="h-14 bg-white shadow-md flex items-center justify-between px-6 z-50">
-          <div className="text-[#3E2723] font-bold text-lg">THE LEADERS</div>
-          <div className={`px-4 py-1 rounded-full font-bold text-sm ${gameOver ? (gameOver==="Player"?"bg-green-600 text-white":"bg-red-600 text-white") : "bg-gray-100 text-[#3E2723]"}`}>
-              {gameOver ? (gameOver === "Player" ? "VICTORY" : "DEFEAT") : gameLog}
+      {/* HEADER BAR (NAVBAR) - DARK WOOD THEME */}
+      <div className="h-14 md:h-16 bg-[#2a1e1a] border-b-4 border-[#8D6E63] shadow-2xl flex items-center justify-between px-4 md:px-8 z-50 shrink-0 relative">
+          
+          {/* LOGO SECTION */}
+          <div className="flex items-center gap-2">
+             <img src={gameLogo} alt="The Leaders Logo" className="h-10 md:h-12 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
           </div>
-          <div className="flex gap-2">
+          
+          {/* STATUS BADGE */}
+          <div className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300
+              ${gameOver 
+                ? (gameOver==="Player" ? "bg-green-800 text-green-100 border-green-600" : "bg-red-900 text-red-100 border-red-700") 
+                : "bg-[#3E2723] text-[#FFECB3] border-[#5D4037]"
+              }`}>
+              {gameOver ? (gameOver === "Player" ? "🏆 VICTORY" : "💀 DEFEAT") : <span className="animate-pulse tracking-wide">{gameLog}</span>}
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="flex gap-3">
             {turn === 1 && (
-                <button onClick={handleEndAction} className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white px-4 py-1 rounded shadow text-sm font-bold">
-                    End Action Phase
+                <button onClick={handleEndAction} className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase tracking-wide transition-all active:scale-95">
+                    End Turn
                 </button>
             )}
-             <button onClick={() => onBack ? onBack() : window.location.reload()} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm">
+             <button onClick={() => onBack ? onBack() : window.location.reload()} className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] hover:from-[#6D4C41] hover:to-[#4E342E] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-md">
                 Exit
             </button>
           </div>
       </div>
 
-      {/* MAIN GAME AREA (3 COLUMNS) */}
-      <div className="flex-grow flex w-full h-full overflow-hidden">
+      {/* MAIN GAME LAYOUT */}
+      <div className="flex-grow flex flex-col md:flex-row w-full h-full overflow-hidden relative">
           
-          {/* LEFT: RECRUITMENT DECK */}
-          <div className="w-48 bg-[#D7CCC8] border-r-4 border-[#8D6E63] flex flex-col items-center py-4 gap-4 shadow-xl z-20">
-              <h2 className="text-[#3E2723] font-bold text-sm uppercase tracking-widest border-b-2 border-[#3E2723] pb-1">Recruit</h2>
-              <div className="flex flex-col gap-3 overflow-y-auto no-scrollbar pb-20">
-                  {visibleDeck.map((card, idx) => (
-                      <CardUI 
-                        key={idx} 
-                        data={card} 
-                        onClick={() => {
-                            if(turn === 2) setRecruitSelectionIndex(idx);
-                        }}
-                        isSelected={turn === 2 && recruitSelectionIndex === idx}
-                      />
-                  ))}
-                  {visibleDeck.length === 0 && <div className="text-gray-500 text-xs">Deck Empty</div>}
+          {/* LEFT SIDEBAR: RECRUIT (DARK TRANSLUCENT OVERLAY) */}
+          <div className={`
+              absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow-[4px_0_20px_rgba(0,0,0,0.5)] border-r-4 border-[#5D4037]
+              transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0
+              ${mobileTab === 'recruit' ? 'translate-y-0' : 'translate-y-full md:translate-y-0 hidden md:flex'}
+          `}>
+              <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md shrink-0">
+                <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em] drop-shadow-sm">Recruitment</h2>
+                <button onClick={()=>setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8] hover:text-white">&times;</button>
+              </div>
+              
+              <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] bg-opacity-10">
+                  <div className="flex flex-wrap md:flex-col justify-center items-center gap-4 md:gap-6 min-h-min">
+                    {visibleDeck.map((card, idx) => (
+                        <CardUI 
+                            key={idx} 
+                            data={card} 
+                            onClick={() => {
+                                if(turn === 2) {
+                                    setRecruitSelectionIndex(idx);
+                                    setMobileTab(null);
+                                    setGameLog("Place unit on highlighted zone");
+                                }
+                            }}
+                            isSelected={turn === 2 && recruitSelectionIndex === idx}
+                        />
+                    ))}
+                    {visibleDeck.length === 0 && (
+                        <div className="text-[#8D6E63] text-sm font-bold border-2 border-dashed border-[#5D4037] p-4 rounded text-center w-full opacity-70">
+                            Deck Empty
+                        </div>
+                    )}
+                  </div>
               </div>
           </div>
 
-          {/* CENTER: BOARD */}
-          <div className="flex-grow bg-[#E8DCC4] relative flex items-center justify-center p-4">
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{backgroundImage: "url('https://www.transparenttextures.com/patterns/wood-pattern.png')"}}></div>
+          {/* CENTER: BOARD (TRANSPARENT TO SHOW BACKGROUND) */}
+          <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 lg:p-10 overflow-hidden">
+              {/* Optional: Vignette effect untuk fokus ke tengah */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_50%,rgba(0,0,0,0.4)_100%)] pointer-events-none"></div>
 
-              {/* BOARD CONTAINER: Maximize width/height based on aspect ratio 650/750 */}
-              <div className="relative w-full h-full flex items-center justify-center">
-                  <div className="relative max-h-full max-w-full aspect-[650/750]">
-                      <img src={board_img} alt="Board" className="w-full h-full object-contain pointer-events-none drop-shadow-2xl opacity-90" />
+              <div className="relative w-full h-full flex items-center justify-center z-10">
+                  <div className="relative max-h-full max-w-full aspect-[650/750] transition-all duration-500">
+                      <img src={board_img} alt="Board" className="w-full h-full object-contain pointer-events-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" />
                       
                       {board.map((row, r) => row.map((cell, c) => {
                           if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) return null;
@@ -551,29 +572,26 @@ const GameSection = ({ onBack }) => {
                                  key={`${r}-${c}`}
                                  onClick={() => handleBoardClick(r,c)}
                                  style={{ position: "absolute", top: coords.top, left: coords.left, transform: "translate(-50%, -50%)" }}
-                                 className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full
-                                    ${isValMove ? "cursor-pointer z-30" : ""}
-                                    ${isRecruitValid ? "cursor-pointer z-30" : ""}
+                                 className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200
+                                    ${isValMove ? "cursor-pointer z-30 scale-110" : ""}
+                                    ${isRecruitValid ? "cursor-pointer z-30 scale-110" : ""}
                                  `}
                               >
-                                  {/* HIGHLIGHTS */}
-                                  {isValMove && <div className="absolute w-full h-full rounded-full bg-green-500/50 animate-pulse border-2 border-green-400 shadow-[0_0_15px_rgba(34,197,94,1)]"></div>}
-                                  {isRecruitValid && <div className="absolute w-full h-full rounded-full bg-yellow-400/40 animate-pulse border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,1)]"></div>}
-                                  {isSelectedUnit && <div className="absolute w-[120%] h-[120%] rounded-full border-4 border-blue-500 animate-spin-slow"></div>}
+                                  {isValMove && <div className="absolute w-full h-full rounded-full bg-green-500/40 animate-pulse border-2 border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.6)]"></div>}
+                                  {isRecruitValid && <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400 shadow-[0_0_20px_rgba(250,204,21,0.6)]"></div>}
+                                  {isSelectedUnit && <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-[spin_3s_linear_infinite] border-dashed shadow-[0_0_15px_rgba(34,211,238,0.5)]"></div>}
 
-                                  {/* UNIT */}
                                   {cell && (
-                                      <div className={`relative w-[95%] h-[95%] transition-all duration-300
+                                      <div className={`relative w-[95%] h-[95%] transition-all duration-300 ease-out
                                           ${cell.isNew ? "animate-spawn" : ""}
-                                          ${cell.moved ? "grayscale opacity-70" : "hover:scale-110 cursor-pointer"}
+                                          ${cell.moved ? "grayscale-[0.8] opacity-80" : "hover:scale-110 cursor-pointer hover:drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]"}
                                       `}>
                                           <img 
                                             src={getCardData(cell.cardId).unitImg}
                                             alt="Unit" 
-                                            className={`w-full h-full object-contain drop-shadow-lg ${cell.owner === 2 ? "filter hue-rotate-[160deg] brightness-90" : ""}`}
+                                            className={`w-full h-full object-contain drop-shadow-md ${cell.owner === 2 ? "filter hue-rotate-[160deg] brightness-90" : ""}`}
                                           />
-                                          {/* Owner Ring */}
-                                          <div className={`absolute inset-0 rounded-full border-2 ${cell.owner === 1 ? "border-blue-500" : "border-red-500"}`}></div>
+                                          <div className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${cell.owner === 1 ? "border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "border-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"}`}></div>
                                       </div>
                                   )}
                               </div>
@@ -583,20 +601,57 @@ const GameSection = ({ onBack }) => {
               </div>
           </div>
 
-          {/* RIGHT: PLAYER TEAM (ROSTER) */}
-          <div className="w-56 bg-[#D7CCC8] border-l-4 border-[#8D6E63] flex flex-col items-center py-4 gap-4 shadow-xl z-20">
-              <h2 className="text-[#3E2723] font-bold text-sm uppercase tracking-widest border-b-2 border-[#3E2723] pb-1">My Deck</h2>
-              <div className="flex flex-col gap-3 h-full overflow-y-auto no-scrollbar pb-10">
-                  {Array(5).fill(null).map((_, idx) => {
-                      const unit = playerRoster[idx];
-                      if(unit) {
-                          const isSelected = selectedPos && selectedPos[0] === unit.r && selectedPos[1] === unit.c;
-                          return <CardUI key={idx} data={unit} onClick={() => handleSelectUnit(unit.r, unit.c)} isSelected={isSelected} />;
-                      } else {
-                          return <CardUI key={idx} isEmpty={true} />;
-                      }
-                  })}
+          {/* RIGHT SIDEBAR: DECK (DARK TRANSLUCENT OVERLAY) */}
+          <div className={`
+              absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.5)] border-l-4 border-[#5D4037]
+              transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0
+              ${mobileTab === 'roster' ? 'translate-y-0' : 'translate-y-full md:translate-y-0 hidden md:flex'}
+          `}>
+              <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md shrink-0">
+                  <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em] drop-shadow-sm">Active Party</h2>
+                  <button onClick={()=>setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8] hover:text-white">&times;</button>
               </div>
+              
+              <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] bg-opacity-10">
+                  <div className="flex flex-wrap md:flex-col justify-center items-center gap-4 md:gap-6 min-h-min pb-20 md:pb-0">
+                      {Array(5).fill(null).map((_, idx) => {
+                          const unit = playerRoster[idx];
+                          if(unit) {
+                              const isSelected = selectedPos && selectedPos[0] === unit.r && selectedPos[1] === unit.c;
+                              return <CardUI key={idx} data={unit} onClick={() => handleSelectUnit(unit.r, unit.c)} isSelected={isSelected} />;
+                          } else {
+                              return <CardUI key={idx} isEmpty={true} />;
+                          }
+                      })}
+                  </div>
+              </div>
+          </div>
+
+          {/* MOBILE NAV BAR (DARK LEATHER) */}
+          <div className="md:hidden h-16 bg-[#2a1e1a] flex items-center justify-around shrink-0 z-50 text-[#D7CCC8] border-t-4 border-[#5D4037] shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+               <button 
+                  onClick={() => setMobileTab(mobileTab === 'recruit' ? null : 'recruit')}
+                  className={`flex flex-col items-center p-2 rounded w-20 transition-all ${mobileTab==='recruit' ? 'bg-[#5D4037] text-[#FFCA28] scale-110 shadow-inner' : 'opacity-70'}`}
+               >
+                   <span className="text-xl mb-1">🎴</span>
+                   <span className="text-[9px] font-bold uppercase tracking-wide">Recruit</span>
+               </button>
+               
+               <button 
+                  onClick={() => setMobileTab(null)}
+                  className={`flex flex-col items-center p-2 rounded w-20 transition-all ${mobileTab===null ? 'bg-[#5D4037] text-[#FFCA28] scale-110 shadow-inner' : 'opacity-70'}`}
+               >
+                   <span className="text-xl mb-1">♟️</span>
+                   <span className="text-[9px] font-bold uppercase tracking-wide">Board</span>
+               </button>
+
+               <button 
+                  onClick={() => setMobileTab(mobileTab === 'roster' ? null : 'roster')}
+                  className={`flex flex-col items-center p-2 rounded w-20 transition-all ${mobileTab==='roster' ? 'bg-[#5D4037] text-[#FFCA28] scale-110 shadow-inner' : 'opacity-70'}`}
+               >
+                   <span className="text-xl mb-1">🛡️</span>
+                   <span className="text-[9px] font-bold uppercase tracking-wide">Deck</span>
+               </button>
           </div>
 
       </div>
