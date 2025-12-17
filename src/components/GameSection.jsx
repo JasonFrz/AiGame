@@ -666,7 +666,7 @@ const GameSection = ({ onBack }) => {
 
     // Poin Defense
     score += safeGuards * 150; // Bagus punya bodyguard
-    score -= threatsToAI * 5000; // BAHAYA BESAR jika musuh nempel Leader AI
+    score -= threatsToAI * 3000; // BAHAYA BESAR jika musuh nempel Leader AI
 
     // --- C. EVALUASI AGRESI KE LEADER MANUSIA (ATTACK) ---
     const neighborsPlayer = getNeighbors(p1LeaderPos[0], p1LeaderPos[1]);
@@ -680,7 +680,7 @@ const GameSection = ({ onBack }) => {
     });
 
     // Poin Attack
-    score += threatsToPlayer * 4000; // Tekan Leader musuh!
+    score += threatsToPlayer * 8000; // Tekan Leader musuh!
 
     // --- D. MOBILITAS & JARAK (Tie Breaker) ---
     // Jika tidak ada ancaman, AI lebih suka mendekat sedikit (agresif terkontrol)
@@ -832,6 +832,37 @@ const GameSection = ({ onBack }) => {
   }, [turn, runAITurn]);
 
   // --- USER INTERACTIONS ---
+
+  const calculateUnitMoves = (currentBoard, r, c) => {
+    const unit = currentBoard[r][c];
+
+    if (!unit) {
+      return [];
+    }
+
+    const neighbors = getNeighbors(r, c);
+    let potentialMoves = [];
+
+    switch (unit.cardId) {
+      case "rider":
+        neighbors.forEach(([n1r, n1c]) => {
+          if (!currentBoard[n1r][n1c]) {
+            potentialMoves.push([n1r, n1c]);
+
+            const neighbors2 = getNeighbors(n1r, n1c);
+            neighbors2.forEach(([n2r, n2c]) => {
+              if ((n2r !== r || n2c !== c) && !currentBoard[n2r][n2c]) {
+                potentialMoves.push([n2r, n2c]);
+              }
+            });
+          }
+        });
+        break;
+
+      default:
+        break;
+    }
+  };
 
   const handleSelectUnit = (r, c) => {
     if (gameOver || turn !== 1) return;
