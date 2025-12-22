@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ==========================================
 // 1. ASSETS IMPORT
@@ -47,7 +48,6 @@ import vizierCard from "../assets/cards/Vizier.png";
 import wandererCard from "../assets/cards/Wanderer.png";
 import roiCard from "../assets/cards/Roi.png";
 import reineCard from "../assets/cards/Reine.png";
-import { useNavigate } from "react-router-dom";
 
 // ==========================================
 // 2. DATABASE & MAPPING
@@ -133,6 +133,7 @@ const ABILITY_DB = {
   },
 };
 
+// --- SINGLE SOURCE OF TRUTH (UNIQUE CHARACTERS) ---
 const TOTAL_CARDS_DATA = [
   { id: "acrobat", unitImg: acrobateCoin, cardImg: acrobatCard },
   { id: "archer", unitImg: archerCoin, cardImg: archerCard },
@@ -152,11 +153,9 @@ const TOTAL_CARDS_DATA = [
   { id: "wanderer", unitImg: wandererCoin, cardImg: wandererCard },
 ];
 
-// Nilai strategis setiap unit.
-// Unit ofensif/mematikan diberi nilai lebih tinggi.
 const UNIT_VALUES = {
-  leader: 10000, // Jangan sampai mati
-  assassin: 800, // Sangat mematikan
+  leader: 10000,
+  assassin: 800,
   manipulator: 700,
   guard: 600,
   archer: 600,
@@ -206,6 +205,7 @@ const getCardData = (id) => {
 
 const GameSection = ({ onBack }) => {
   const navigate = useNavigate();
+
   // --- STYLES ---
   const styles = `
     @keyframes popIn {
@@ -275,208 +275,46 @@ const GameSection = ({ onBack }) => {
     [{ top: "90.5%", left: "50%" }],
   ];
 
-  // Logic Helpers (Tetap sama)
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      "0,0": [
-        [1, 1],
-        [1, 2],
-        [2, 2],
-      ],
-      "1,0": [
-        [2, 0],
-        [2, 1],
-      ],
-      "1,1": [
-        [0, 0],
-        [2, 1],
-        [2, 2],
-      ],
-      "1,2": [
-        [0, 0],
-        [2, 2],
-        [2, 3],
-      ],
-      "1,3": [
-        [2, 3],
-        [2, 4],
-      ],
-      "2,0": [
-        [1, 0],
-        [3, 0],
-        [3, 1],
-      ],
-      "2,1": [
-        [1, 0],
-        [1, 1],
-        [3, 1],
-        [3, 2],
-      ],
-      "2,2": [
-        [1, 1],
-        [1, 2],
-        [3, 2],
-        [3, 3],
-        [0, 0],
-      ],
-      "2,3": [
-        [1, 2],
-        [1, 3],
-        [3, 3],
-        [3, 4],
-      ],
-      "2,4": [
-        [1, 3],
-        [3, 4],
-        [3, 5],
-      ],
-      "3,0": [
-        [2, 0],
-        [4, 0],
-      ],
-      "3,1": [
-        [2, 0],
-        [2, 1],
-        [4, 0],
-        [4, 1],
-      ],
-      "3,2": [
-        [2, 1],
-        [2, 2],
-        [4, 1],
-        [4, 2],
-      ],
-      "3,3": [
-        [2, 2],
-        [2, 3],
-        [4, 2],
-        [4, 3],
-      ],
-      "3,4": [
-        [2, 3],
-        [2, 4],
-        [4, 3],
-        [4, 4],
-      ],
-      "3,5": [
-        [2, 4],
-        [4, 4],
-      ],
-      "4,0": [
-        [3, 0],
-        [3, 1],
-        [5, 0],
-        [5, 1],
-      ],
-      "4,1": [
-        [3, 1],
-        [3, 2],
-        [5, 1],
-        [5, 2],
-      ],
-      "4,2": [
-        [3, 2],
-        [3, 3],
-        [5, 2],
-        [5, 3],
-      ],
-      "4,3": [
-        [3, 3],
-        [3, 4],
-        [5, 3],
-        [5, 4],
-      ],
-      "4,4": [
-        [3, 4],
-        [3, 5],
-        [5, 4],
-        [5, 5],
-      ],
-      "5,0": [
-        [4, 0],
-        [6, 0],
-      ],
-      "5,1": [
-        [4, 0],
-        [4, 1],
-        [6, 0],
-        [6, 1],
-      ],
-      "5,2": [
-        [4, 1],
-        [4, 2],
-        [6, 1],
-        [6, 2],
-      ],
-      "5,3": [
-        [4, 2],
-        [4, 3],
-        [6, 2],
-        [6, 3],
-      ],
-      "5,4": [
-        [4, 3],
-        [4, 4],
-        [6, 3],
-        [6, 4],
-      ],
-      "5,5": [
-        [4, 4],
-        [6, 4],
-      ],
-      "6,0": [
-        [5, 0],
-        [5, 1],
-        [7, 0],
-      ],
-      "6,1": [
-        [5, 1],
-        [5, 2],
-        [7, 0],
-        [7, 1],
-      ],
-      "6,2": [
-        [5, 2],
-        [5, 3],
-        [7, 1],
-        [7, 2],
-        [8, 0],
-      ],
-      "6,3": [
-        [5, 3],
-        [5, 4],
-        [7, 2],
-        [7, 3],
-      ],
-      "6,4": [
-        [5, 4],
-        [5, 5],
-        [7, 3],
-      ],
-      "7,0": [
-        [6, 0],
-        [6, 1],
-      ],
-      "7,1": [
-        [6, 1],
-        [6, 2],
-        [8, 0],
-      ],
-      "7,2": [
-        [6, 2],
-        [6, 3],
-        [8, 0],
-      ],
-      "7,3": [
-        [6, 3],
-        [6, 4],
-      ],
-      "8,0": [
-        [7, 1],
-        [7, 2],
-        [6, 2],
-      ],
+      "0,0": [[1, 1], [1, 2], [2, 2]],
+      "1,0": [[2, 0], [2, 1]],
+      "1,1": [[0, 0], [2, 1], [2, 2]],
+      "1,2": [[0, 0], [2, 2], [2, 3]],
+      "1,3": [[2, 3], [2, 4]],
+      "2,0": [[1, 0], [3, 0], [3, 1]],
+      "2,1": [[1, 0], [1, 1], [3, 1], [3, 2]],
+      "2,2": [[1, 1], [1, 2], [3, 2], [3, 3], [0, 0]],
+      "2,3": [[1, 2], [1, 3], [3, 3], [3, 4]],
+      "2,4": [[1, 3], [3, 4], [3, 5]],
+      "3,0": [[2, 0], [4, 0]],
+      "3,1": [[2, 0], [2, 1], [4, 0], [4, 1]],
+      "3,2": [[2, 1], [2, 2], [4, 1], [4, 2]],
+      "3,3": [[2, 2], [2, 3], [4, 2], [4, 3]],
+      "3,4": [[2, 3], [2, 4], [4, 3], [4, 4]],
+      "3,5": [[2, 4], [4, 4]],
+      "4,0": [[3, 0], [3, 1], [5, 0], [5, 1]],
+      "4,1": [[3, 1], [3, 2], [5, 1], [5, 2]],
+      "4,2": [[3, 2], [3, 3], [5, 2], [5, 3]],
+      "4,3": [[3, 3], [3, 4], [5, 3], [5, 4]],
+      "4,4": [[3, 4], [3, 5], [5, 4], [5, 5]],
+      "5,0": [[4, 0], [6, 0]],
+      "5,1": [[4, 0], [4, 1], [6, 0], [6, 1]],
+      "5,2": [[4, 1], [4, 2], [6, 1], [6, 2]],
+      "5,3": [[4, 2], [4, 3], [6, 2], [6, 3]],
+      "5,4": [[4, 3], [4, 4], [6, 3], [6, 4]],
+      "5,5": [[4, 4], [6, 4]],
+      "6,0": [[5, 0], [5, 1], [7, 0]],
+      "6,1": [[5, 1], [5, 2], [7, 0], [7, 1]],
+      "6,2": [[5, 2], [5, 3], [7, 1], [7, 2], [8, 0]],
+      "6,3": [[5, 3], [5, 4], [7, 2], [7, 3]],
+      "6,4": [[5, 4], [5, 5], [7, 3]],
+      "7,0": [[6, 0], [6, 1]],
+      "7,1": [[6, 1], [6, 2], [8, 0]],
+      "7,2": [[6, 2], [6, 3], [8, 0]],
+      "7,3": [[6, 3], [6, 4]],
+      "8,0": [[7, 1], [7, 2], [6, 2]],
     };
     return manualMap[mapKey] || [];
   };
@@ -506,6 +344,9 @@ const GameSection = ({ onBack }) => {
 
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [mobileTab, setMobileTab] = useState(null);
+
+  // FIX: Use a ref to prevent AI running multiple times in one turn
+  const isAiProcessing = useRef(false);
 
   useEffect(() => {
     initializeGame();
@@ -555,6 +396,7 @@ const GameSection = ({ onBack }) => {
 
     setBoard(initialBoardState);
 
+    // UNIQUE INITIALIZATION
     const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
     const visible = shuffled.splice(0, 3);
     setDeck(shuffled);
@@ -563,6 +405,7 @@ const GameSection = ({ onBack }) => {
     setTurn(1);
     setGameOver(null);
     setGameLog("Your Turn");
+    isAiProcessing.current = false;
   };
 
   const checkWinCondition = (currentBoard) => {
@@ -584,7 +427,6 @@ const GameSection = ({ onBack }) => {
       let blockedPaths = 0;
 
       neighbors.forEach(([nr, nc]) => {
-        // FIX: Safety check to ensure row exists before checking cell
         const neighborCell =
           currentBoard[nr] && currentBoard[nr][nc] !== undefined
             ? currentBoard[nr][nc]
@@ -593,9 +435,6 @@ const GameSection = ({ onBack }) => {
         if (neighborCell !== "WALL" && neighborCell !== null) {
           blockedPaths++;
           if (neighborCell.owner === enemyOwner) adjacentEnemies++;
-        } else if (neighborCell === "WALL") {
-          // Optional: Treat walls as blocks or ignore depending on game rules
-          // For now, we assume walls don't count as units for capture, but block movement
         }
       });
 
@@ -619,27 +458,20 @@ const GameSection = ({ onBack }) => {
     let aiUnitCount = 0;
     let playerUnitCount = 0;
 
-    // 1. Loop seluruh papan
     for (let r = 0; r < simBoard.length; r++) {
       for (let c = 0; c < simBoard[r].length; c++) {
         const cell = simBoard[r][c];
         if (!cell) continue;
 
-        // --- A. EVALUASI MATERIAL (UNIT) ---
-        // Ambil nilai dasar unit dari database
         let unitValue = UNIT_VALUES[cell.cardId] || 200;
-
-        // Bonus Posisi: Unit di tengah (baris 3-5, kol 2-3) lebih kuat
         const isCenter = r >= 3 && r <= 5 && c >= 1 && c <= 4;
         if (isCenter) unitValue += 50;
 
         if (cell.owner === 2) {
-          // AI (Player 2)
           score += unitValue;
           aiUnitCount++;
           if (cell.type === "Leader") p2LeaderPos = [r, c];
         } else {
-          // Manusia (Player 1)
           score -= unitValue;
           playerUnitCount++;
           if (cell.type === "Leader") p1LeaderPos = [r, c];
@@ -647,11 +479,9 @@ const GameSection = ({ onBack }) => {
       }
     }
 
-    // Jika salah satu Leader hilang (seharusnya dicover checkWinCondition, tapi untuk safety)
-    if (!p2LeaderPos) return -100000; // AI Kalah
-    if (!p1LeaderPos) return 100000; // AI Menang
+    if (!p2LeaderPos) return -100000;
+    if (!p1LeaderPos) return 100000;
 
-    // --- B. EVALUASI KEAMANAN LEADER AI (DEFENSE) ---
     const neighborsAI = getNeighbors(p2LeaderPos[0], p2LeaderPos[1]);
     let safeGuards = 0;
     let threatsToAI = 0;
@@ -659,16 +489,14 @@ const GameSection = ({ onBack }) => {
     neighborsAI.forEach(([nr, nc]) => {
       const nCell = simBoard[nr] && simBoard[nr][nc];
       if (nCell) {
-        if (nCell.owner === 2) safeGuards++; // Dilindungi teman
-        if (nCell.owner === 1) threatsToAI++; // Ada musuh di sebelah!
+        if (nCell.owner === 2) safeGuards++;
+        if (nCell.owner === 1) threatsToAI++;
       }
     });
 
-    // Poin Defense
-    score += safeGuards * 150; // Bagus punya bodyguard
-    score -= threatsToAI * 3000; // BAHAYA BESAR jika musuh nempel Leader AI
+    score += safeGuards * 150;
+    score -= threatsToAI * 3000;
 
-    // --- C. EVALUASI AGRESI KE LEADER MANUSIA (ATTACK) ---
     const neighborsPlayer = getNeighbors(p1LeaderPos[0], p1LeaderPos[1]);
     let threatsToPlayer = 0;
 
@@ -679,17 +507,13 @@ const GameSection = ({ onBack }) => {
       }
     });
 
-    // Poin Attack
-    score += threatsToPlayer * 8000; // Tekan Leader musuh!
+    score += threatsToPlayer * 8000;
 
-    // --- D. MOBILITAS & JARAK (Tie Breaker) ---
-    // Jika tidak ada ancaman, AI lebih suka mendekat sedikit (agresif terkontrol)
     const dist =
       Math.abs(p2LeaderPos[0] - p1LeaderPos[0]) +
       Math.abs(p2LeaderPos[1] - p1LeaderPos[1]);
-    score -= dist * 20; // Semakin dekat, skor sedikit bertambah (karena pengurangan berkurang)
+    score -= dist * 20;
 
-    // Bonus jika AI menang jumlah unit
     if (aiUnitCount > playerUnitCount) score += 500;
 
     return score;
@@ -702,7 +526,6 @@ const GameSection = ({ onBack }) => {
         const cell = simBoard[r][c];
         if (cell && cell.owner === owner && !cell.moved) {
           getNeighbors(r, c).forEach(([nr, nc]) => {
-            // FIX: Ensure target slot exists
             if (simBoard[nr] && typeof simBoard[nr][nc] !== "undefined") {
               if (!simBoard[nr][nc]) moves.push({ from: [r, c], to: [nr, nc] });
             }
@@ -741,6 +564,11 @@ const GameSection = ({ onBack }) => {
 
   const runAITurn = useCallback(async () => {
     if (gameOver) return;
+    
+    // FIX: Lock AI to prevent double execution on re-render
+    if (isAiProcessing.current) return;
+    isAiProcessing.current = true;
+
     await new Promise((r) => setTimeout(r, 600));
 
     let currentBoard = board.map((row) =>
@@ -759,7 +587,7 @@ const GameSection = ({ onBack }) => {
         if (instantWin === "AI") {
           bestMove = m;
           bestScore = Infinity;
-          break; // Langsung ambil langkah ini, tak perlu mikir lagi
+          break;
         }
         const s = alphaBeta(sim, 2, -Infinity, Infinity, false);
         const randomBias = Math.random() * 5;
@@ -780,17 +608,21 @@ const GameSection = ({ onBack }) => {
     if (w) {
       setGameOver(w);
       setGameLog(w === "AI" ? "AI Wins" : "You Win");
+      isAiProcessing.current = false;
       return;
     }
 
     await new Promise((r) => setTimeout(r, 400));
+    
     let aiCount = 0;
     currentBoard.forEach((row) =>
       row.forEach((c) => {
         if (c && c.owner === 2) aiCount++;
       })
     );
-    if (aiCount < 5 && deck.length > 0) {
+
+    // AI RECRUITMENT - USING SHARED DECK TO PREVENT DUPLICATES
+    if (aiCount < 5 && visibleDeck.length > 0) {
       const spots = [];
       for (let r = 0; r <= 2; r++)
         for (let c = 0; c < currentBoard[r].length; c++)
@@ -799,15 +631,25 @@ const GameSection = ({ onBack }) => {
 
       if (spots.length > 0) {
         const spot = spots[Math.floor(Math.random() * spots.length)];
+        // Pick from visible shared deck
         const pickIdx = Math.floor(Math.random() * visibleDeck.length);
         const card = visibleDeck[pickIdx];
 
+        // 1. Update Decks
         const newV = [...visibleDeck];
         const newD = [...deck];
-        newD.length > 0 ? (newV[pickIdx] = newD[0]) : newV.splice(pickIdx, 1);
-        setDeck(newD.length > 0 ? newD.slice(1) : []);
+        
+        if (newD.length > 0) {
+            newV[pickIdx] = newD[0];
+            newD.shift();
+        } else {
+            newV.splice(pickIdx, 1);
+        }
+        
+        setDeck(newD);
         setVisibleDeck(newV);
 
+        // 2. Place on Board
         currentBoard[spot[0]][spot[1]] = {
           type: "Unit",
           owner: 2,
@@ -820,11 +662,15 @@ const GameSection = ({ onBack }) => {
     setBoard(currentBoard);
     setTurn(1);
     setGameLog("Your Turn");
+    
+    // Reset move flags
     setBoard((prev) =>
       prev.map((row) =>
         row.map((c) => (c ? { ...c, moved: false, isNew: false } : null))
       )
     );
+    
+    isAiProcessing.current = false;
   }, [board, deck, visibleDeck, gameOver]);
 
   useEffect(() => {
@@ -832,37 +678,6 @@ const GameSection = ({ onBack }) => {
   }, [turn, runAITurn]);
 
   // --- USER INTERACTIONS ---
-
-  const calculateUnitMoves = (currentBoard, r, c) => {
-    const unit = currentBoard[r][c];
-
-    if (!unit) {
-      return [];
-    }
-
-    const neighbors = getNeighbors(r, c);
-    let potentialMoves = [];
-
-    switch (unit.cardId) {
-      case "rider":
-        neighbors.forEach(([n1r, n1c]) => {
-          if (!currentBoard[n1r][n1c]) {
-            potentialMoves.push([n1r, n1c]);
-
-            const neighbors2 = getNeighbors(n1r, n1c);
-            neighbors2.forEach(([n2r, n2c]) => {
-              if ((n2r !== r || n2c !== c) && !currentBoard[n2r][n2c]) {
-                potentialMoves.push([n2r, n2c]);
-              }
-            });
-          }
-        });
-        break;
-
-      default:
-        break;
-    }
-  };
 
   const handleSelectUnit = (r, c) => {
     if (gameOver || turn !== 1) return;
@@ -888,9 +703,14 @@ const GameSection = ({ onBack }) => {
   const handleBoardClick = (r, c) => {
     if (gameOver) return;
 
+    // --- PLAYER RECRUITMENT ---
     if (turn === 2 && recruitSelectionIndex !== null) {
       if (!board[r][c] && isRecruitZone(r, c, 1)) {
+        
+        // 1. Get Card from Market
         const card = visibleDeck[recruitSelectionIndex];
+        
+        // 2. Place on Board
         const newBoard = board.map((row) =>
           row.map((c) => (c ? { ...c, isNew: false } : null))
         );
@@ -903,12 +723,18 @@ const GameSection = ({ onBack }) => {
         };
         setBoard(newBoard);
 
+        // 3. Update Shared Decks (Remove card, draw new)
         const newV = [...visibleDeck];
         const newD = [...deck];
-        newD.length > 0
-          ? (newV[recruitSelectionIndex] = newD[0])
-          : newV.splice(recruitSelectionIndex, 1);
-        setDeck(newD.length > 0 ? newD.slice(1) : []);
+        
+        if (newD.length > 0) {
+            newV[recruitSelectionIndex] = newD[0];
+            newD.shift();
+        } else {
+            newV.splice(recruitSelectionIndex, 1);
+        }
+        
+        setDeck(newD);
         setVisibleDeck(newV);
 
         setRecruitSelectionIndex(null);
@@ -919,6 +745,7 @@ const GameSection = ({ onBack }) => {
       return;
     }
 
+    // --- PLAYER MOVEMENT ---
     if (turn === 1) {
       if (board[r][c] && board[r][c].owner === 1) {
         handleSelectUnit(r, c);
@@ -953,7 +780,7 @@ const GameSection = ({ onBack }) => {
         if (c && c.owner === 1) count++;
       })
     );
-    if (count < 5) {
+    if (count < 5 && visibleDeck.length > 0) {
       setTurn(2);
       setMobileTab("recruit");
       setGameLog("Recruit Phase");
@@ -973,7 +800,7 @@ const GameSection = ({ onBack }) => {
               SLOT
             </span>
             <span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">
-              KOSONG
+              EMPTY
             </span>
           </div>
         </div>
