@@ -1,5 +1,5 @@
 import logo from "../assets/logo.png";
-import background from "../assets/background.jpg"; // Pastikan path sesuai
+import background from "../assets/background.jpg";
 import { Link } from "react-router-dom";
 
 const HomePage = () => {
@@ -8,13 +8,10 @@ const HomePage = () => {
       className="flex flex-col min-h-screen justify-center items-center p-4 bg-cover bg-center font-serif text-[#EFEBE9]"
       style={{ backgroundImage: `url(${background})` }}
     >
-      {/* Overlay tipis agar background tidak terlalu kontras dengan teks jika diperlukan */}
       <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
 
-      {/* Main Card Container: Gaya Kayu Gelap / Kulit dengan Border Emas */}
       <div className="relative z-10 bg-[#2a1e1a]/95 rounded-2xl p-10 flex flex-col items-center gap-6 shadow-[0_0_30px_rgba(0,0,0,0.6)] border-2 border-[#8D6E63] max-w-md w-full">
         
-        {/* Logo */}
         <img
           src={logo}
           alt="The Leaders Logo"
@@ -22,13 +19,20 @@ const HomePage = () => {
         />
 
         {/* Buttons Section */}
-        <div className="flex flex-col gap-3 w-full">
+        <div className="flex flex-col gap-4 w-full">
+          {/* VS AI */}
           <Link to={"/game"} className="w-full">
-            <button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-[#2a1e1a] font-extrabold text-lg py-3 rounded-lg shadow-lg border-t border-amber-400 transition-all transform hover:-translate-y-1 active:scale-95 tracking-wider uppercase">
-              Play VS AI
+            <button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-[#2a1e1a] font-extrabold text-lg py-3 rounded-lg shadow-lg border-t border-amber-400 transition-all transform hover:-translate-y-1 active:scale-95 tracking-wider uppercase flex items-center justify-center gap-2">
+              <span>🤖</span> Play VS AI
             </button>
           </Link>
-          {/* Tombol tambahan jika ada di masa depan bisa ditaruh sini */}
+
+          {/* VS PLAYER */}
+          <Link to={"/versus"} className="w-full">
+            <button className="w-full bg-gradient-to-r from-[#5D4037] to-[#4E342E] hover:from-[#6D4C41] hover:to-[#5D4037] text-[#EFEBE9] font-extrabold text-lg py-3 rounded-lg shadow-lg border-t border-[#8D6E63] transition-all transform hover:-translate-y-1 active:scale-95 tracking-wider uppercase flex items-center justify-center gap-2">
+               <span>⚔️</span> Player VS Player
+            </button>
+          </Link>
         </div>
 
         {/* Credits Section */}
@@ -50,8 +54,6 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-
-      
     </div>
   );
 };
