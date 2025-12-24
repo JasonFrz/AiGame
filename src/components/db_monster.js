@@ -159,62 +159,21 @@ const checkStraightLine = (startR, startC, targetR, targetC, board, getNeighbors
                 break;
             }
             
-            // Check obstacle in path (excluding start & end)
             if (board[currentR] && board[currentR][currentC]) {
                 blocked = true; 
             }
-
-            // Move to next in line
-            // We need to find the "Next" neighbor that continues the straight line
-            // In Hex, if A -> B is direction, Next is neighbor of B that is "Opposite" to A relative to B?
-            // Easier way: Pre-calculate lines or use slope logic.
             
-            // Since we don't have strict geometry, we use "Common Neighbor" logic extension
-            // A straight line in hex grid preserves one coordinate axis (x, y, or z) in Cube coords.
-            // Without cube coords, we can brute-force by checking if we can reach Target
-            // by moving deeper in the "same direction".
-            
-            // HACK: Re-using getNeighbors is tricky because indices are irregular.
-            // BETTER: Use visual raycasting based on the specific neighbors map logic.
-            
-            // Let's implement a recursive "continue direction" check.
-            // We need to know WHICH neighbor index (0-5) we picked.
-            // But neighbor array order isn't guaranteed sorted by angle.
-            
-            // ALTERNATIVE: Since we don't have true hex math here, 
-            // we assume the `getNeighbors` returns neighbors.
-            // We can try to "walk" from Start to Target.
-            // If the distance decreases by 1 every step, it's a direct path.
-            // Is it straight? Only if we keep picking the 'best' neighbor? No.
-            
-            break; // Fallback to simpler check below
+            break; 
         }
         if(found) return { visible: !blocked, valid: true };
     }
     
-    // FALLBACK: Since implementing true hex raycasting without cube coords on a custom jagged array is hard,
-    // We will use a "Line of Sight" approximation valid for this game board size.
-    // Logic: If we can form a path of length D where every step is the "same relative direction".
-    
-    // MANUAL RAYCASTING based on Board Layout Observation:
-    // A straight line exists if we can reach target by repeatedly applying a specific (dr, dc) delta?
-    // No, hex rows are offset.
-    
-    // SOLUTION: Use the neighbor graph.
-    // For each of the 6 neighbors of Start, treat that as a "Direction".
-    // Keep moving from Neighbor to ITS neighbor that is "Straight ahead".
-    // How to define straight ahead? It shares the same "Direction Index".
-    // We need to map neighbors to indices 0-5.
-    
     return checkLineBFS(startR, startC, targetR, targetC, board, getNeighbors);
 };
 
-// Robust Line Checker using Neighbor Graph
 const checkLineBFS = (r1, c1, r2, c2, board, getNeighbors) => {
-    // 1. Get neighbors of Start
+ 
     const startN = getNeighbors(r1, c1);
-    
-    // 2. For each neighbor, try to extend the line
     for (let i = 0; i < startN.length; i++) {
         let currR = startN[i][0];
         let currC = startN[i][1];
@@ -224,17 +183,12 @@ const checkLineBFS = (r1, c1, r2, c2, board, getNeighbors) => {
         let pathBlocked = false;
         if (board[currR][currC] && (currR !== r2 || currC !== c2)) pathBlocked = true;
 
-        // If immediate neighbor is target
         if (currR === r2 && currC === c2) return { isStraight: true, blocked: false };
 
-        // Raycast loop
         for (let step = 0; step < 8; step++) {
-            // Find "Opposite" of Prev relative to Curr? No, find "Straight" continuation.
-            // In Hex grid, straight line = Curr + (Curr - Prev)?
-            // We need to find the neighbor of Curr that aligns with Prev->Curr.
             
             const nextStep = getNextInLine(prevR, prevC, currR, currC, getNeighbors);
-            if (!nextStep) break; // End of line/board
+            if (!nextStep) break; 
             
             if (board[nextStep[0]][nextStep[1]] && (nextStep[0] !== r2 || nextStep[1] !== c2)) {
                 pathBlocked = true;
@@ -253,62 +207,33 @@ const checkLineBFS = (r1, c1, r2, c2, board, getNeighbors) => {
     return { isStraight: false, blocked: true };
 };
 
-// Find the neighbor of (cr, cc) that continues the line from (pr, pc)
 const getNextInLine = (pr, pc, cr, cc, getNeighbors) => {
     const neighbors = getNeighbors(cr, cc);
-    // In valid Hex grid, if we came from index K, straight is index (K+3)%6.
-    // We need to find which index (pr, pc) corresponds to.
-    
-    // Hardcoded logic isn't reliable with custom map.
-    // Heuristic: The "Straight" next node maximizes distance from Previous node?
-    // In hex, dist(Prev, Next) = 2 if straight.
     
     for (let [nr, nc] of neighbors) {
-        // Check if (nr, nc) is "far" from (pr, pc)
-        // Since we don't have hex dist, we can't be 100% sure without cube coords.
-        // BUT, given the board is small, we can assume a line if:
-        // The node is NOT (pr, pc) AND is not a common neighbor of (pr, pc) and (cr, cc).
         
         if (nr === pr && nc === pc) continue;
         
-        // Check if common neighbor (turning 60 degrees)
         const pNeighbors = getNeighbors(pr, pc);
         const isCommon = pNeighbors.some(pn => pn[0] === nr && pn[1] === nc);
         
         if (!isCommon) {
-            // This node is likely straight ahead (120 or 180 degrees).
-            // On a strict hex grid, there are 2 such nodes usually (120 deg turns).
-            // True straight is 180.
-            // Let's rely on coordinate trend.
-            
-            // Vertical trend (Same Column)
             if (pc === cc && nc === cc) return [nr, nc]; 
             
-            // Diagonal Trend check is hard with jagged array.
-            
-            // FINAL FALLBACK: Manual Map for Directions? Too big.
-            // Let's assume for this game logic: 
-            // "Straight Line" means reachable by jumping over neighbors.
-            return [nr, nc]; // This is imperfect but works for many cases.
+            return [nr, nc];
         }
     }
     return null;
 };
 
-// REPLACEMENT: ACCURATE HEX LINE CHECKER (Using Cube Coords Concept)
-// We map the jagged array to virtual cube coordinates (q, r, s).
 const getCube = (row, col) => {
-    // Offset to Cube (Odd-r shoves odd rows by +1/2)
     var q = col - (row - (row&1)) / 2;
     var r = row;
     return { q: q, r: r, s: -q-r };
 };
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
-    // 1. Check geometrical straightness
-    // In Cube coords, a line has constant q, r, or s.
-    // Due to the custom map (jagged), standard conversion might fail.
-    // Let's use the Neighbors Graph Search for exactness.
+   
     
     const startN = getNeighbors(r1, c1);
     
@@ -317,27 +242,21 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
         let [prevR, prevC] = [r1, c1];
         let pathBlocked = false;
         
-        // Initial check
         if (currR === r2 && currC === c2) return { valid: true, blocked: false };
         if (board[currR][currC]) pathBlocked = true;
 
         // Project ray
         for (let i = 0; i < 8; i++) {
-            // Find next node that aligns with prev->curr vector
-            // In a hex grid, if you have Prev and Curr, the Next straight node
-            // is the one that is NOT a neighbor of Prev.
             
             const nextCandidates = getNeighbors(currR, currC);
             const prevNeighbors = getNeighbors(prevR, prevC);
             
-            // Filter: Next node must NOT be Prev, and NOT be a neighbor of Prev
             const straightNodes = nextCandidates.filter(([nr, nc]) => {
                 if (nr === prevR && nc === prevC) return false;
                 const isCommon = prevNeighbors.some(pn => pn[0] === nr && pn[1] === nc);
                 return !isCommon;
             });
             
-            // If straight line, there should be exactly 1 such node (or 0 if edge)
             if (straightNodes.length === 1) {
                 let [nextR, nextC] = straightNodes[0];
                 
@@ -364,10 +283,6 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
     return { valid: false, blocked: true };
 };
 
-
-// ==========================================
-// 4. LOGIC MOVES & ABILITIES (EXPORTED)
-// ==========================================
 
 const isProtected = (r, c, board, getNeighbors) => {
   const neighbors = getNeighbors(r, c);
@@ -408,11 +323,8 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
     case 'acrobat':
       neighbors.forEach(([nr, nc]) => {
         if (board[nr][nc]) { 
-          // Acrobat doesn't need straight line, just "jump over adjacent"
-          // We check neighbors of the adjacent unit that are NOT the starting unit
           const landingSpots = getNeighbors(nr, nc); 
           landingSpots.forEach(([lr, lc]) => {
-             // Check straightness: Start -> Obstacle -> Land must be straight
              const lineCheck = isHexStraight(r, c, lr, lc, board, getNeighbors);
              if (lineCheck.valid && !board[lr][lc]) {
                  actions.push({ r: lr, c: lc, type: 'move' }); 
@@ -423,12 +335,9 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'rider':
-      // Rider needs 2 empty spaces in straight line
       board.forEach((row, tr) => row.forEach((_, tc) => {
           if (!board[tr][tc]) { // Empty target
              const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-             // Logic: Must be distance 2 (not checked by isHexStraight, it just checks line)
-             // We can check if it's a neighbor of a neighbor
              const isDist2 = neighbors.some(([n1r, n1c]) => {
                  const n2s = getNeighbors(n1r, n1c);
                  return n2s.some(n2 => n2[0] === tr && n2[1] === tc);
@@ -445,8 +354,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       neighbors.forEach(([nr, nc]) => {
         const target = board[nr][nc];
         if (target && target.owner === enemyOwner && !isProtected(nr, nc, board, getNeighbors)) {
-          // Push target to opposite space
-          // Opposite means: Start -> Target -> PushSpot is straight line
           const potentialPush = getNeighbors(nr, nc);
           potentialPush.forEach(([pr, pc]) => {
               const line = isHexStraight(r, c, pr, pc, board, getNeighbors);
@@ -496,10 +403,7 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
           const isAdj = neighbors.some(n => n[0] === ir && n[1] === ic);
           if (!isAdj) {
              const line = isHexStraight(r, c, ir, ic, board, getNeighbors);
-             if (line.valid) { // Illusionist ignores blocking units (Visual only) -> Rules say "Visible"
-                 // Rules: "Visible character". Usually means unblocked line of sight.
-                 // If line.blocked is true, it means there's a unit in between.
-                 // Assuming "Visible" means unblocked:
+             if (line.valid) { 
                  if (!line.blocked) {
                      if (target.owner === enemyOwner && isProtected(ir, ic, board, getNeighbors)) return;
                      actions.push({ r: ir, c: ic, type: 'ability_swap' });
@@ -515,15 +419,12 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
            if (line.valid && !line.blocked) {
-               // ACTION 1: Pull (Target moves to adjacent empty spot on line)
-               // Find the empty spot next to Claw on this line
                const pullSpot = neighbors.find(([nr, nc]) => isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid);
                
                if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
                    actions.push({ r: tr, c: tc, type: 'ability_claw_pull', pullTo: pullSpot });
                }
 
-               // ACTION 2: Move (Claw moves to adjacent empty spot of target)
                const targetNeighbors = getNeighbors(tr, tc);
                const chargeSpot = targetNeighbors.find(([tnr, tnc]) => isHexStraight(r, c, tnr, tnc, board, getNeighbors).valid);
                
@@ -536,9 +437,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
     
     case 'manipulator':
-      // Move non-adjacent enemy in straight line away/towards?
-      // Rules: "Moves a non-adjacent enemy, visible in straight line, by one space."
-      // Implied: Move them 1 space along that line (Push/Pull).
       board.forEach((row, tr) => row.forEach((target, tc) => {
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
            const isAdj = neighbors.some(n => n[0] === tr && n[1] === tc);
