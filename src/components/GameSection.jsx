@@ -2,15 +2,14 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // --- IMPORT DARI DB MONSTER ---
-import {
-  TOTAL_CARDS_DATA,
-  UNIT_VALUES,
+import { 
+  TOTAL_CARDS_DATA, 
+  UNIT_VALUES, 
   getCardData,
   calculateBasicMoves,
-  calculateAbilityMoves,
-} from "./db_monster";
+  calculateAbilityMoves
+} from "./db_monster"; 
 
-// --- ASSETS UI UTAMA ---
 import gameLogo from "../assets/logo.png";
 import gameBackground from "../assets/background.jpg";
 import board_img from "../assets/Leaders_Board.png";
@@ -27,327 +26,83 @@ const GameSection = ({ onBack }) => {
     }
     .animate-spawn { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .neon-border { box-shadow: 0 0 15px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
-    
     .action-move { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; animation: pulse-green 1.5s infinite; }
     .action-ability { box-shadow: 0 0 15px #F44336, inset 0 0 10px #F44336; border-color: #F44336; animation: pulse-red 1s infinite; }
-    
     @keyframes pulse-green { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     @keyframes pulse-red { 0% { opacity: 0.7; } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); } }
-
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- CONFIG (COORDINATES & NEIGHBORS) ---
+  // --- CONFIG ---
   const SLOT_COORDINATES = [
     [{ top: "9%", left: "50%" }],
-    [
-      { top: "16.3%", left: "36.5%" },
-      { top: "16.3%", left: "63.5%" },
-      { top: "23%", left: "23%" },
-      { top: "23%", left: "76.5%" },
-    ],
-    [
-      { top: "30%", left: "9.8%" },
-      { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" },
-      { top: "30%", left: "63.5%" },
-      { top: "30%", left: "90.3%" },
-    ],
-    [
-      { top: "43%", left: "9.8%" },
-      { top: "36.6%", left: "23%" },
-      { top: "43%", left: "36.8%" },
-      { top: "36.6%", left: "50%" },
-      { top: "36.6%", left: "76.5%" },
-      { top: "43%", left: "90.3%" },
-    ],
-    [
-      { top: "56.8%", left: "9.8%" },
-      { top: "49.8%", left: "23%" },
-      { top: "49.8%", left: "50%" },
-      { top: "43%", left: "63.5%" },
-      { top: "49.8%", left: "76.8%" },
-    ],
-    [
-      { top: "63.5%", left: "23%" },
-      { top: "56.8%", left: "36.5%" },
-      { top: "63.5%", left: "50%" },
-      { top: "56.8%", left: "63.5%" },
-      { top: "56.8%", left: "76.8%" },
-      { top: "56.8%", left: "90.3%" },
-    ],
-    [
-      { top: "70.2%", left: "9.8%" },
-      { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" },
-      { top: "70.2%", left: "63.5%" },
-      { top: "70.2%", left: "90.3%" },
-    ],
-    [
-      { top: "77%", left: "23%" },
-      { top: "83.8%", left: "36.5%" },
-      { top: "83.8%", left: "63.5%" },
-      { top: "77%", left: "76.7%" },
-    ],
+    [{ top: "16.3%", left: "36.5%" }, { top: "16.3%", left: "63.5%" }, { top: "23%", left: "23%" }, { top: "23%", left: "76.5%" }],
+    [{ top: "30%", left: "9.8%" }, { top: "30%", left: "36.5%" }, { top: "23%", left: "50%" }, { top: "30%", left: "63.5%" }, { top: "30%", left: "90.3%" }],
+    [{ top: "43%", left: "9.8%" }, { top: "36.6%", left: "23%" }, { top: "43%", left: "36.8%" }, { top: "36.6%", left: "50%" }, { top: "36.6%", left: "76.5%" }, { top: "43%", left: "90.3%" }],
+    [{ top: "56.8%", left: "9.8%" }, { top: "49.8%", left: "23%" }, { top: "49.8%", left: "50%" }, { top: "43%", left: "63.5%" }, { top: "49.8%", left: "76.8%" }],
+    [{ top: "63.5%", left: "23%" }, { top: "56.8%", left: "36.5%" }, { top: "63.5%", left: "50%" }, { top: "56.8%", left: "63.5%" }, { top: "56.8%", left: "76.8%" }, { top: "56.8%", left: "90.3%" }],
+    [{ top: "70.2%", left: "9.8%" }, { top: "70.2%", left: "36.5%" }, { top: "77%", left: "50%" }, { top: "70.2%", left: "63.5%" }, { top: "70.2%", left: "90.3%" }],
+    [{ top: "77%", left: "23%" }, { top: "83.8%", left: "36.5%" }, { top: "83.8%", left: "63.5%" }, { top: "77%", left: "76.7%" }],
     [{ top: "90.5%", left: "50%" }],
   ];
 
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      "0,0": [
-        [1, 0],
-        [1, 1],
-        [2, 2],
-      ],
-      "1,0": [
-        [2, 0],
-        [2, 1],
-        [0, 0],
-      ],
-      "1,1": [
-        [0, 0],
-        [2, 1],
-        [2, 2],
-      ],
-      "1,2": [
-        [2, 2],
-        [2, 3],
-      ],
-      "1,3": [
-        [2, 3],
-        [2, 4],
-      ],
-      "2,0": [
-        [1, 0],
-        [3, 0],
-        [3, 1],
-      ],
-      "2,1": [
-        [1, 0],
-        [1, 1],
-        [3, 1],
-        [3, 2],
-      ],
-      "2,2": [
-        [1, 1],
-        [1, 2],
-        [3, 2],
-        [3, 3],
-        [0, 0],
-      ],
-      "2,3": [
-        [1, 2],
-        [1, 3],
-        [3, 3],
-        [3, 4],
-      ],
-      "2,4": [
-        [1, 3],
-        [3, 4],
-        [3, 5],
-      ],
-      "3,0": [
-        [2, 0],
-        [4, 0],
-      ],
-      "3,1": [
-        [2, 0],
-        [2, 1],
-        [4, 0],
-        [4, 1],
-      ],
-      "3,2": [
-        [2, 1],
-        [2, 2],
-        [4, 1],
-        [4, 2],
-      ],
-      "3,3": [
-        [2, 2],
-        [2, 3],
-        [4, 2],
-        [4, 3],
-      ],
-      "3,4": [
-        [2, 3],
-        [2, 4],
-        [4, 3],
-        [4, 4],
-      ],
-      "3,5": [
-        [2, 4],
-        [4, 4],
-      ],
-      "4,0": [
-        [3, 0],
-        [3, 1],
-        [5, 0],
-        [5, 1],
-      ],
-      "4,1": [
-        [3, 1],
-        [3, 2],
-        [5, 1],
-        [5, 2],
-      ],
-      "4,2": [
-        [3, 2],
-        [3, 3],
-        [5, 2],
-        [5, 3],
-      ],
-      "4,3": [
-        [3, 3],
-        [3, 4],
-        [5, 3],
-        [5, 4],
-      ],
-      "4,4": [
-        [3, 4],
-        [3, 5],
-        [5, 4],
-        [5, 5],
-      ],
-      "5,0": [
-        [4, 0],
-        [6, 0],
-      ],
-      "5,1": [
-        [4, 0],
-        [4, 1],
-        [6, 0],
-        [6, 1],
-      ],
-      "5,2": [
-        [4, 1],
-        [4, 2],
-        [6, 1],
-        [6, 2],
-      ],
-      "5,3": [
-        [4, 2],
-        [4, 3],
-        [6, 2],
-        [6, 3],
-      ],
-      "5,4": [
-        [4, 3],
-        [4, 4],
-        [6, 3],
-        [6, 4],
-      ],
-      "5,5": [
-        [4, 4],
-        [6, 4],
-      ],
-      "6,0": [
-        [5, 0],
-        [5, 1],
-        [7, 0],
-      ],
-      "6,1": [
-        [5, 1],
-        [5, 2],
-        [7, 0],
-        [7, 1],
-      ],
-      "6,2": [
-        [5, 2],
-        [5, 3],
-        [7, 1],
-        [7, 2],
-        [8, 0],
-      ],
-      "6,3": [
-        [5, 3],
-        [5, 4],
-        [7, 2],
-        [7, 3],
-      ],
-      "6,4": [
-        [5, 4],
-        [5, 5],
-        [7, 3],
-      ],
-      "7,0": [
-        [6, 0],
-        [6, 1],
-      ],
-      "7,1": [
-        [6, 1],
-        [6, 2],
-        [8, 0],
-      ],
-      "7,2": [
-        [6, 2],
-        [6, 3],
-        [8, 0],
-      ],
-      "7,3": [
-        [6, 3],
-        [6, 4],
-      ],
-      "8,0": [
-        [7, 1],
-        [7, 2],
-        [6, 2],
-      ],
+      "0,0": [[1, 0], [1, 1], [2, 2]], "1,0": [[2, 0], [2, 1], [0, 0]], "1,1": [[0, 0], [2, 1], [2, 2]], "1,2": [[2, 2], [2, 3]], "1,3": [[2, 3], [2, 4]],
+      "2,0": [[1, 0], [3, 0], [3, 1]], "2,1": [[1, 0], [1, 1], [3, 1], [3, 2]], "2,2": [[1, 1], [1, 2], [3, 2], [3, 3], [0, 0]], "2,3": [[1, 2], [1, 3], [3, 3], [3, 4]], "2,4": [[1, 3], [3, 4], [3, 5]],
+      "3,0": [[2, 0], [4, 0]], "3,1": [[2, 0], [2, 1], [4, 0], [4, 1]], "3,2": [[2, 1], [2, 2], [4, 1], [4, 2]], "3,3": [[2, 2], [2, 3], [4, 2], [4, 3]], "3,4": [[2, 3], [2, 4], [4, 3], [4, 4]], "3,5": [[2, 4], [4, 4]],
+      "4,0": [[3, 0], [3, 1], [5, 0], [5, 1]], "4,1": [[3, 1], [3, 2], [5, 1], [5, 2]], "4,2": [[3, 2], [3, 3], [5, 2], [5, 3]], "4,3": [[3, 3], [3, 4], [5, 3], [5, 4]], "4,4": [[3, 4], [3, 5], [5, 4], [5, 5]],
+      "5,0": [[4, 0], [6, 0]], "5,1": [[4, 0], [4, 1], [6, 0], [6, 1]], "5,2": [[4, 1], [4, 2], [6, 1], [6, 2]], "5,3": [[4, 2], [4, 3], [6, 2], [6, 3]], "5,4": [[4, 3], [4, 4], [6, 3], [6, 4]], "5,5": [[4, 4], [6, 4]],
+      "6,0": [[5, 0], [5, 1], [7, 0]], "6,1": [[5, 1], [5, 2], [7, 0], [7, 1]], "6,2": [[5, 2], [5, 3], [7, 1], [7, 2], [8, 0]], "6,3": [[5, 3], [5, 4], [7, 2], [7, 3]], "6,4": [[5, 4], [5, 5], [7, 3]],
+      "7,0": [[6, 0], [6, 1]], "7,1": [[6, 1], [6, 2], [8, 0]], "7,2": [[6, 2], [6, 3], [8, 0]], "7,3": [[6, 3], [6, 4]],
+      "8,0": [[7, 1], [7, 2], [6, 2]],
     };
     return manualMap[mapKey] || [];
   };
 
   const isRecruitZone = (r, c, player) => {
-    if (player === 1)
-      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3"].includes(`${r},${c}`);
-    if (player === 2)
-      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1"].includes(`${r},${c}`);
+    if (player === 1) return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3"].includes(`${r},${c}`);
+    if (player === 2) return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1"].includes(`${r},${c}`);
     return false;
   };
 
   // --- STATE ---
   const [board, setBoard] = useState([]);
-  const [turn, setTurn] = useState(1); // 1: Player Act, 2: Player Rec, 3: AI Turn
+  const [turn, setTurn] = useState(1);
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
   const [playerRoster, setPlayerRoster] = useState([]);
   const [selectedPos, setSelectedPos] = useState(null);
-
-  // State Action Button (Sama seperti Versus)
+  
   const [validMoves, setValidMoves] = useState([]);
-  const [actionMode, setActionMode] = useState("move"); // 'move' or 'ability'
-  const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
+  const [actionMode, setActionMode] = useState('move'); 
+  const [selectedUnitAbility, setSelectedUnitAbility] = useState(null); 
 
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Your Turn");
 
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
-  const [recruitStep, setRecruitStep] = useState(0);
+  const [recruitStep, setRecruitStep] = useState(0); 
   const [mobileTab, setMobileTab] = useState(null);
 
   const isAiProcessing = useRef(false);
 
-  useEffect(() => {
-    initializeGame();
-  }, []);
+  useEffect(() => { initializeGame(); }, []);
 
   useEffect(() => {
     if (board.length === 0) return;
     const myUnits = [];
-    board.forEach((row, r) =>
-      row.forEach((cell, c) => {
-        if (cell && cell.owner === 1) myUnits.push({ ...cell, r, c });
-      })
-    );
+    board.forEach((row, r) => row.forEach((cell, c) => {
+      if (cell && cell.owner === 1) myUnits.push({ ...cell, r, c });
+    }));
     myUnits.sort((a, b) => (a.cardId.includes("leader") ? -1 : 1));
     setPlayerRoster(myUnits);
   }, [board]);
 
   const initializeGame = () => {
-    const b = Array(9)
-      .fill(null)
-      .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+    const b = Array(9).fill(null).map((_, i) => Array([1,4,5,6,5,6,5,4,1][i]).fill(null));
     b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
     b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
     setBoard(b);
@@ -364,12 +119,10 @@ const GameSection = ({ onBack }) => {
   // --- WIN CONDITION ---
   const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
-    currentBoard.forEach((row, r) =>
-      row.forEach((c, cIdx) => {
-        if (c && c.cardId === "leader") p1Pos = [r, cIdx];
-        if (c && c.cardId === "leader2") p2Pos = [r, cIdx];
-      })
-    );
+    currentBoard.forEach((row, r) => row.forEach((c, cIdx) => {
+        if (c && c.cardId === 'leader') p1Pos = [r, cIdx];
+        if (c && c.cardId === 'leader2') p2Pos = [r, cIdx];
+    }));
 
     if (!p1Pos) return "AI";
     if (!p2Pos) return "Player";
@@ -384,14 +137,12 @@ const GameSection = ({ onBack }) => {
         const cell = currentBoard[nr][nc];
         if (cell) {
           occupiedNeighbors++;
-          if (cell.owner === enemyOwner && cell.cardId !== "cub")
-            adjacentEnemies++;
+          if (cell.owner === enemyOwner && cell.cardId !== 'cub') adjacentEnemies++;
         }
       });
 
       if (adjacentEnemies >= 2) return true;
-      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length)
-        return true;
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length) return true;
       return false;
     };
 
@@ -401,132 +152,183 @@ const GameSection = ({ onBack }) => {
   };
 
   // ==========================================
-  // AI LOGIC: MINIMAX + ALPHA-BETA PRUNING
+  // AI LOGIC: TOTAL WAR (MOBILIZATION)
   // ==========================================
 
-  const cloneBoard = (b) =>
-    b.map((row) => row.map((c) => (c ? { ...c } : null)));
+  const cloneBoard = (b) => b.map(row => row.map(c => c ? { ...c } : null));
 
   const applySimMove = (simBoard, move) => {
     const { from, to, type, pushTo, pullTo } = move;
     const unit = simBoard[from[0]][from[1]];
+    if (!unit) return simBoard; 
     unit.moved = true;
 
-    if (type === "move") {
+    if (type === 'move') {
       simBoard[to[0]][to[1]] = unit;
       simBoard[from[0]][from[1]] = null;
-    } else if (type === "ability_swap") {
+    } 
+    else if (type === 'ability_swap') {
       const target = simBoard[to[0]][to[1]];
       simBoard[from[0]][from[1]] = target;
       simBoard[to[0]][to[1]] = unit;
-    } else if (type === "ability_push" && pushTo) {
+    }
+    else if (type === 'ability_push' && pushTo) {
       const target = simBoard[to[0]][to[1]];
       simBoard[pushTo[0]][pushTo[1]] = target;
       simBoard[to[0]][to[1]] = unit;
       simBoard[from[0]][from[1]] = null;
-    } else if (type === "ability_claw_pull" && pullTo) {
+    }
+    else if (type === 'ability_claw_pull' && pullTo) {
       const target = simBoard[to[0]][to[1]];
       simBoard[pullTo[0]][pullTo[1]] = target;
       simBoard[to[0]][to[1]] = null;
-    } else if (type === "ability_manipulate_select") {
-      const tNeighbors = getNeighbors(to[0], to[1]);
-      const empty = tNeighbors.find((n) => !simBoard[n[0]][n[1]]);
-      if (empty) {
-        simBoard[empty[0]][empty[1]] = simBoard[to[0]][to[1]];
-        simBoard[to[0]][to[1]] = null;
-      }
+    }
+    else if (type === 'ability_manipulate_select') {
+       const tNeighbors = getNeighbors(to[0], to[1]);
+       const empty = tNeighbors.find(n => !simBoard[n[0]][n[1]]);
+       if(empty) {
+         simBoard[empty[0]][empty[1]] = simBoard[to[0]][to[1]];
+         simBoard[to[0]][to[1]] = null;
+       }
     }
     return simBoard;
   };
 
   const getAllValidMoves = (simBoard, owner) => {
     let allMoves = [];
-    simBoard.forEach((row, r) =>
-      row.forEach((cell, c) => {
-        if (cell && cell.owner === owner && !cell.moved) {
-          const basics = calculateBasicMoves(
-            r,
-            c,
-            cell,
-            simBoard,
-            getNeighbors
-          );
-          const abilities = calculateAbilityMoves(
-            r,
-            c,
-            cell,
-            simBoard,
-            getNeighbors
-          );
-          [...basics, ...abilities].forEach((m) => {
-            allMoves.push({ ...m, from: [r, c], to: [m.r, m.c] });
-          });
-        }
-      })
-    );
+    simBoard.forEach((row, r) => row.forEach((cell, c) => {
+      if (cell && cell.owner === owner && !cell.moved) {
+        const basics = calculateBasicMoves(r, c, cell, simBoard, getNeighbors);
+        const abilities = calculateAbilityMoves(r, c, cell, simBoard, getNeighbors);
+        [...basics, ...abilities].forEach(m => {
+          allMoves.push({ ...m, from: [r, c], to: [m.r, m.c] });
+        });
+      }
+    }));
     return allMoves;
   };
 
+  // --- BRAIN UPGRADE: TOTAL MOBILIZATION & COWARDLY KING ---
   const evaluateBoardState = (simBoard) => {
     let score = 0;
-    let aiLeader = null,
-      pLeader = null;
+    let aiLeader = null, pLeader = null;
 
-    simBoard.forEach((row, r) =>
-      row.forEach((c, cIdx) => {
-        if (c) {
-          const val = UNIT_VALUES[c.cardId] || 100;
-          if (c.owner === 2) {
-            score += val;
-            if (c.cardId === "leader2") aiLeader = [r, cIdx];
+    // 1. MATERIAL & POSITION SCAN
+    let aiUnitsForward = 0;
+    let aiUnitsIdle = 0;
+
+    simBoard.forEach((row, r) => row.forEach((c, cIdx) => {
+      if (c) {
+        const val = UNIT_VALUES[c.cardId] || 200;
+        if (c.owner === 2) { 
+          score += val;
+          if (c.cardId === 'leader2') {
+              aiLeader = [r, cIdx];
           } else {
-            score -= val;
-            if (c.cardId === "leader") pLeader = [r, cIdx];
+              // Analyze Unit Position
+              if (r >= 3) aiUnitsForward++; // Unit is advancing
+              if (r <= 1) aiUnitsIdle++;    // Unit is stuck at home
           }
+        } else { 
+          score -= val;
+          if (c.cardId === 'leader') pLeader = [r, cIdx];
         }
-      })
-    );
+      }
+    }));
 
-    if (!aiLeader) return -100000;
-    if (!pLeader) return 100000;
+    if (!aiLeader) return -5000000;
+    if (!pLeader) return 5000000;
 
-    const dist =
-      Math.abs(aiLeader[0] - pLeader[0]) + Math.abs(aiLeader[1] - pLeader[1]);
-    score -= dist * 50;
+    // --- 2. LEADER SURVIVAL (PRIORITY #1) ---
+    const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
+    let aiThreats = 0;
+    
+    // Check threats adjacent to leader
+    aiNeighbors.forEach(([nr, nc]) => {
+        const cell = simBoard[nr][nc];
+        if (cell && cell.owner === 1 && cell.cardId !== 'cub') aiThreats++;
+    });
 
+    // Check Ranged Threats (Claw, Illusionist, Rider)
+    simBoard.forEach((r, idx) => r.forEach((c, cdx) => {
+        if (c && c.owner === 1 && c.cardId !== 'cub') {
+            const dist = Math.abs(idx - aiLeader[0]) + Math.abs(cdx - aiLeader[1]);
+            if (['rider', 'claw', 'assassin', 'illusionist'].includes(c.cardId) && dist <= 3) {
+                aiThreats += 2; // Treat as major threat
+            } else if (dist <= 2) {
+                aiThreats++; // Potential threat
+            }
+        }
+    }));
+
+    if (aiThreats > 0) score -= 100000 * aiThreats; // HUGE PENALTY FOR DANGER
+
+    // LEADER COWARDICE: Penalize leader moving forward unless necessary
+    if (aiLeader[0] > 1) score -= 5000; // Stay back!
+
+    // --- 3. TOTAL MOBILIZATION (PRIORITY #2) ---
+    // Force AI to move ALL units forward, not just one.
+    // Penalty for having units stuck in back rows (0 and 1)
+    score -= aiUnitsIdle * 2000; 
+    
+    // Bonus for having units in the "Kill Zone" (Rows 4-8 near player)
+    score += aiUnitsForward * 1000;
+
+    // --- 4. SWARM LOGIC (PRIORITY #3) ---
+    // Count how many AI units are close to Player Leader
+    let swarmCount = 0;
+    let attackDist = 0;
+    
+    simBoard.forEach((r, idx) => r.forEach((c, cdx) => {
+        if(c && c.owner === 2 && c.cardId !== 'leader2') {
+            const d = Math.abs(idx - pLeader[0]) + Math.abs(cdx - pLeader[1]);
+            if (d <= 3) swarmCount++;
+            attackDist += d;
+        }
+    }));
+
+    score += swarmCount * 5000; // Reward swarming
+    if (attackDist > 0) score -= attackDist * 100; // Minimize avg distance to enemy
+
+    // --- 5. CHECKMATE ---
     const pNeighbors = getNeighbors(pLeader[0], pLeader[1]);
     let pThreats = 0;
     pNeighbors.forEach(([nr, nc]) => {
-      const cell = simBoard[nr][nc];
-      if (cell && cell.owner === 2 && cell.cardId !== "cub") pThreats++;
+        const cell = simBoard[nr][nc];
+        if (cell && cell.owner === 2 && cell.cardId !== 'cub') pThreats++;
     });
-    if (pThreats === 1) score += 2000;
-    if (pThreats >= 2) score += 50000;
 
-    const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
-    let aiThreats = 0;
-    aiNeighbors.forEach(([nr, nc]) => {
-      const cell = simBoard[nr][nc];
-      if (cell && cell.owner === 1 && cell.cardId !== "cub") aiThreats++;
-    });
-    score -= aiThreats * 3000;
-
-    if (aiLeader[0] >= 3 && aiLeader[0] <= 5) score += 100;
+    if (pThreats === 1) score += 50000; // Check
+    if (pThreats >= 2) score += 2000000; // Mate
 
     return score;
   };
 
   const minimax = (simBoard, depth, alpha, beta, isMaximizing) => {
     const winState = checkWinCondition(simBoard);
-    if (winState === "AI") return 100000 + depth;
-    if (winState === "Player") return -100000 - depth;
+    if (winState === "AI") return 1000000 + depth;
+    if (winState === "Player") return -1000000 - depth;
     if (depth === 0) return evaluateBoardState(simBoard);
 
-    const moves = getAllValidMoves(simBoard, isMaximizing ? 2 : 1);
-    moves.sort((a, b) => {
-      if (a.type.includes("ability")) return -1;
-      return 0;
-    });
+    let moves = getAllValidMoves(simBoard, isMaximizing ? 2 : 1);
+    
+    // SORTING FOR "TOTAL WAR"
+    if (isMaximizing) {
+       moves.sort((a, b) => {
+           const unitA = simBoard[a.from[0]][a.from[1]];
+           const unitB = simBoard[b.from[0]][b.from[1]];
+           
+           // 1. Prioritize attacking Leader
+           // 2. Prioritize moving idle units (from back rows)
+           const isIdleA = a.from[0] <= 1;
+           const isIdleB = b.from[0] <= 1;
+           
+           if (isIdleA && !isIdleB) return -1; // Move idle units first!
+           if (!isIdleA && isIdleB) return 1;
+           
+           return 0;
+       });
+    }
 
     if (moves.length === 0) return evaluateBoardState(simBoard);
 
@@ -558,7 +360,7 @@ const GameSection = ({ onBack }) => {
     if (gameOver || isAiProcessing.current) return;
     isAiProcessing.current = true;
 
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
 
     let currentBoard = cloneBoard(board);
     const possibleMoves = getAllValidMoves(currentBoard, 2);
@@ -566,161 +368,158 @@ const GameSection = ({ onBack }) => {
     let bestValue = -Infinity;
 
     if (possibleMoves.length > 0) {
-      const DEPTH = 3;
-      for (let move of possibleMoves) {
-        const simState = applySimMove(cloneBoard(currentBoard), move);
-        if (checkWinCondition(simState) === "AI") {
-          bestMove = move;
-          break;
+        const DEPTH = 3; 
+        
+        for (let move of possibleMoves) {
+            const simState = applySimMove(cloneBoard(currentBoard), move);
+            
+            // KILLER MOVE
+            if (checkWinCondition(simState) === "AI") {
+                bestMove = move;
+                bestValue = Infinity;
+                break;
+            }
+            
+            // SUICIDE PREVENTION
+            const opponentWin = checkWinCondition(simState);
+            if (opponentWin === "Player") continue;
+
+            const score = minimax(simState, DEPTH - 1, -Infinity, Infinity, false);
+            const jitter = Math.random() * 20; 
+            
+            if (score + jitter > bestValue) {
+                bestValue = score + jitter;
+                bestMove = move;
+            }
         }
-        const score = minimax(simState, DEPTH - 1, -Infinity, Infinity, false);
-        if (score > bestValue) {
-          bestValue = score;
-          bestMove = move;
+    }
+
+    // Fallback: Avoid Leader moves if possible
+    if (!bestMove && possibleMoves.length > 0) {
+        const nonLeaderMoves = possibleMoves.filter(m => {
+            const u = currentBoard[m.from[0]][m.from[1]];
+            return u && u.cardId !== 'leader2';
+        });
+        if (nonLeaderMoves.length > 0) {
+            bestMove = nonLeaderMoves[Math.floor(Math.random() * nonLeaderMoves.length)];
+        } else {
+            bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         }
-      }
     }
 
     if (bestMove) {
-      const { from, to, type, pushTo, pullTo } = bestMove;
-      const newBoard = cloneBoard(board);
-      const unit = newBoard[from[0]][from[1]];
-      unit.moved = true;
+        const { from, to, type, pushTo, pullTo } = bestMove;
+        const newBoard = cloneBoard(board);
+        const unit = newBoard[from[0]][from[1]];
+        unit.moved = true;
 
-      if (type === "move") {
-        newBoard[to[0]][to[1]] = unit;
-        newBoard[from[0]][from[1]] = null;
-      } else if (type === "ability_swap") {
-        const target = newBoard[to[0]][to[1]];
-        newBoard[from[0]][from[1]] = target;
-        newBoard[to[0]][to[1]] = unit;
-      } else if (type === "ability_push" && pushTo) {
-        const target = newBoard[to[0]][to[1]];
-        newBoard[pushTo[0]][pushTo[1]] = target;
-        newBoard[to[0]][to[1]] = unit;
-        newBoard[from[0]][from[1]] = null;
-      } else if (type === "ability_claw_pull" && pullTo) {
-        const target = newBoard[to[0]][to[1]];
-        newBoard[pullTo[0]][pullTo[1]] = target;
-        newBoard[to[0]][to[1]] = null;
-      } else if (type === "ability_manipulate_select") {
-        const tNeighbors = getNeighbors(to[0], to[1]);
-        const empty = tNeighbors.find((n) => !newBoard[n[0]][n[1]]);
-        if (empty) {
-          newBoard[empty[0]][empty[1]] = newBoard[to[0]][to[1]];
-          newBoard[to[0]][to[1]] = null;
+        if (type === 'move') {
+            newBoard[to[0]][to[1]] = unit;
+            newBoard[from[0]][from[1]] = null;
+        } 
+        else if (type === 'ability_swap') {
+            const target = newBoard[to[0]][to[1]];
+            newBoard[from[0]][from[1]] = target;
+            newBoard[to[0]][to[1]] = unit;
         }
-      }
-
-      setBoard(newBoard);
-
-      const win = checkWinCondition(newBoard);
-      if (win) {
-        setGameOver(win);
-        setGameLog(win === "AI" ? "AI Wins!" : "You Win!");
-        isAiProcessing.current = false;
-        return;
-      }
-      currentBoard = newBoard;
+        else if (type === 'ability_push') {
+            const target = newBoard[to[0]][to[1]];
+            newBoard[pushTo[0]][pushTo[1]] = target;
+            newBoard[to[0]][to[1]] = unit;
+            newBoard[from[0]][from[1]] = null;
+        }
+        else if (type === 'ability_claw_pull' && pullTo) {
+            const target = newBoard[to[0]][to[1]];
+            newBoard[pullTo[0]][pullTo[1]] = target;
+            newBoard[to[0]][to[1]] = null;
+        }
+        else if (type === 'ability_manipulate_select') {
+            const tNeighbors = getNeighbors(to[0], to[1]);
+            const empty = tNeighbors.find(n => !newBoard[n[0]][n[1]]);
+            if(empty) {
+                newBoard[empty[0]][empty[1]] = newBoard[to[0]][to[1]];
+                newBoard[to[0]][to[1]] = null;
+            }
+        }
+        
+        setBoard(newBoard);
+        
+        const win = checkWinCondition(newBoard);
+        if (win) {
+            setGameOver(win);
+            setGameLog(win === "AI" ? "AI Wins!" : "You Win!");
+            isAiProcessing.current = false;
+            return;
+        }
+        currentBoard = newBoard;
     }
 
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 400));
 
+    // RECRUITMENT LOGIC (AGGRESSIVE FORWARD)
     let aiUnitCount = 0;
-    currentBoard.forEach((row) =>
-      row.forEach((c) => {
-        if (c && c.owner === 2 && c.cardId !== "cub") aiUnitCount++;
-      })
-    );
+    currentBoard.forEach(row => row.forEach(c => { if(c && c.owner===2 && c.cardId!=='cub') aiUnitCount++; }));
 
     if (aiUnitCount < 5 && visibleDeck.length > 0) {
-      let bestCardIdx = 0;
-      let maxVal = -1;
-      visibleDeck.forEach((c, i) => {
-        const val = UNIT_VALUES[c.id] || 0;
-        if (val > maxVal) {
-          maxVal = val;
-          bestCardIdx = i;
-        }
-      });
-      const cardToRecruit = visibleDeck[bestCardIdx];
+        let bestCardIdx = 0;
+        let maxVal = -1;
+        visibleDeck.forEach((c, i) => {
+            const val = UNIT_VALUES[c.id] || 0;
+            if (val > maxVal) { maxVal = val; bestCardIdx = i; }
+        });
+        const cardToRecruit = visibleDeck[bestCardIdx];
 
-      const spots = [];
-      for (let r = 0; r <= 2; r++) {
-        for (let c = 0; c < currentBoard[r].length; c++) {
-          if (isRecruitZone(r, c, 2) && !currentBoard[r][c]) {
-            spots.push([r, c]);
-          }
+        const spots = [];
+        for (let r = 0; r <= 2; r++) {
+            for (let c = 0; c < currentBoard[r].length; c++) {
+                if (isRecruitZone(r, c, 2) && !currentBoard[r][c]) {
+                    spots.push([r, c]);
+                }
+            }
         }
-      }
-      spots.sort((a, b) => Math.abs(a[0] - 4) - Math.abs(b[0] - 4));
+        
+        // Spawn units as far forward as possible
+        spots.sort((a, b) => b[0] - a[0]);
 
-      if (spots.length > 0) {
-        const finalBoard = cloneBoard(currentBoard);
-        if (cardToRecruit.id === "hermit" && spots.length >= 2) {
-          finalBoard[spots[0][0]][spots[0][1]] = {
-            type: "Unit",
-            owner: 2,
-            cardId: "hermit",
-            moved: false,
-            isNew: true,
-          };
-          finalBoard[spots[1][0]][spots[1][1]] = {
-            type: "Unit",
-            owner: 2,
-            cardId: "cub",
-            moved: false,
-            isNew: true,
-          };
-        } else {
-          const bestSpot = spots[0];
-          finalBoard[bestSpot[0]][bestSpot[1]] = {
-            type: "Unit",
-            owner: 2,
-            cardId: cardToRecruit.id,
-            moved: false,
-            isNew: true,
-          };
-        }
+        if (spots.length > 0) {
+            const finalBoard = cloneBoard(currentBoard);
+            if (cardToRecruit.id === 'hermit' && spots.length >= 2) {
+                finalBoard[spots[0][0]][spots[0][1]] = { type: "Unit", owner: 2, cardId: "hermit", moved: false, isNew: true };
+                finalBoard[spots[1][0]][spots[1][1]] = { type: "Unit", owner: 2, cardId: "cub", moved: false, isNew: true };
+            } else {
+                const bestSpot = spots[0];
+                finalBoard[bestSpot[0]][bestSpot[1]] = { type: "Unit", owner: 2, cardId: cardToRecruit.id, moved: false, isNew: true };
+            }
 
-        setBoard(finalBoard);
-        const newV = [...visibleDeck];
-        const newD = [...deck];
-        if (newD.length > 0) {
-          newV[bestCardIdx] = newD[0];
-          newD.shift();
-        } else {
-          newV.splice(bestCardIdx, 1);
+            setBoard(finalBoard);
+            const newV = [...visibleDeck];
+            const newD = [...deck];
+            if (newD.length > 0) { newV[bestCardIdx] = newD[0]; newD.shift(); } else { newV.splice(bestCardIdx, 1); }
+            setDeck(newD);
+            setVisibleDeck(newV);
         }
-        setDeck(newD);
-        setVisibleDeck(newV);
-      }
     }
 
-    setBoard((prev) =>
-      prev.map((row) =>
-        row.map((c) => (c ? { ...c, moved: false, isNew: false } : null))
-      )
-    );
+    setBoard(prev => prev.map(row => row.map(c => c ? { ...c, moved: false, isNew: false } : null)));
     setTurn(1);
     setGameLog("Your Turn");
     isAiProcessing.current = false;
+
   }, [board, deck, visibleDeck, gameOver]);
 
   useEffect(() => {
     if (turn === 3) runAITurn();
   }, [turn, runAITurn]);
 
-  // --- PLAYER INTERACTIONS (UPDATED FOR BUTTON TOGGLE) ---
+  // --- PLAYER INTERACTIONS ---
 
   const handleSelectUnit = (r, c) => {
     if (gameOver || turn !== 1) return;
     const unit = board[r][c];
 
-    // Reset UI State
     setSelectedPos(null);
     setValidMoves([]);
-    setActionMode("move"); // Default to move mode
+    setActionMode('move'); 
     setSelectedUnitAbility(null);
 
     if (unit && unit.owner === 1) {
@@ -728,17 +527,15 @@ const GameSection = ({ onBack }) => {
         setGameLog("Unit already moved.");
         return;
       }
-
+      
       const unitData = getCardData(unit.cardId);
       setSelectedPos([r, c]);
       setGameLog(`Selected ${unitData?.name || "Unit"}`);
 
-      // DEFAULT: Show Basic Moves (Green)
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
 
-      // Check Active Ability for Toggle Button
-      if (unitData.type === "Active") {
+      if (unitData.type === 'Active') {
         setSelectedUnitAbility(unitData);
       }
     }
@@ -749,153 +546,126 @@ const GameSection = ({ onBack }) => {
     const [r, c] = selectedPos;
     const unit = board[r][c];
 
-    if (actionMode === "move") {
-      // Switch to Ability
-      setActionMode("ability");
+    if (actionMode === 'move') {
+      setActionMode('ability');
       const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
       setValidMoves(abilities);
-      if (abilities.length === 0) setGameLog("No ability targets available!");
-      else setGameLog("Ability Mode: Select Target (Red)");
+      if (abilities.length === 0) setGameLog("No ability targets!");
+      else setGameLog("Targeting Ability...");
     } else {
-      // Switch back to Move
-      setActionMode("move");
+      setActionMode('move');
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
-      setGameLog("Move Mode: Select Tile (Green)");
+      setGameLog("Select Move Destination");
     }
   };
 
   const handleBoardClick = (r, c) => {
     if (gameOver) return;
 
-    // Player Recruit
     if (turn === 2 && recruitSelectionIndex !== null) {
-      if (!board[r][c] && isRecruitZone(r, c, 1)) {
-        const card = visibleDeck[recruitSelectionIndex];
-        if (card.id === "hermit") {
-          if (recruitStep === 0) {
-            const nb = cloneBoard(board);
-            nb[r][c] = {
-              type: "Unit",
-              owner: 1,
-              cardId: "hermit",
-              moved: true,
-              isNew: true,
-            };
-            setBoard(nb);
-            setRecruitStep(1);
-            setGameLog("Place Cub");
-            return;
-          } else {
-            finalizePlayerRecruitment(r, c, "cub");
-            setRecruitStep(0);
-            return;
-          }
+        if (!board[r][c] && isRecruitZone(r, c, 1)) {
+            const card = visibleDeck[recruitSelectionIndex];
+            if (card.id === 'hermit') {
+                if (recruitStep === 0) {
+                    const nb = cloneBoard(board);
+                    nb[r][c] = { type: "Unit", owner: 1, cardId: 'hermit', moved: true, isNew: true };
+                    setBoard(nb); setRecruitStep(1); setGameLog("Place Cub"); return;
+                } else {
+                    finalizePlayerRecruitment(r, c, 'cub'); setRecruitStep(0); return;
+                }
+            }
+            finalizePlayerRecruitment(r, c, card.id);
         }
-        finalizePlayerRecruitment(r, c, card.id);
-      }
-      return;
+        return;
     }
 
-    // Player Move/Ability Execution
     if (turn === 1) {
       if (board[r][c] && board[r][c].owner === 1) {
         handleSelectUnit(r, c);
         return;
       }
-
-      const action = validMoves.find((m) => m.r === r && m.c === c);
+      
+      const action = validMoves.find(m => m.r === r && m.c === c);
       if (selectedPos && action) {
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
         const unit = newBoard[sr][sc];
         unit.moved = true;
 
-        if (action.type === "move") {
-          newBoard[r][c] = unit;
-          newBoard[sr][sc] = null;
-        } else if (action.type === "ability_swap") {
-          const target = newBoard[r][c];
-          newBoard[sr][sc] = target;
-          newBoard[r][c] = unit;
-        } else if (action.type === "ability_push") {
-          const target = newBoard[r][c];
-          newBoard[action.pushTo[0]][action.pushTo[1]] = target;
-          newBoard[r][c] = unit;
-          newBoard[sr][sc] = null;
-        } else if (action.type === "ability_claw_pull") {
-          const target = newBoard[r][c];
-          newBoard[action.pullTo[0]][action.pullTo[1]] = target;
-          newBoard[r][c] = null;
-        } else if (action.type === "ability_manipulate_select") {
-          const tNeighbors = getNeighbors(r, c);
-          const empty = tNeighbors.find((n) => !newBoard[n[0]][n[1]]);
-          if (empty) {
-            newBoard[empty[0]][empty[1]] = newBoard[r][c];
+        if (action.type === 'move') {
+            newBoard[r][c] = unit;
+            newBoard[sr][sc] = null;
+        }
+        else if (action.type === 'ability_swap') {
+            const target = newBoard[r][c];
+            newBoard[sr][sc] = target;
+            newBoard[r][c] = unit;
+        }
+        else if (action.type === 'ability_push') {
+            const target = newBoard[r][c];
+            newBoard[action.pushTo[0]][action.pushTo[1]] = target;
+            newBoard[r][c] = unit;
+            newBoard[sr][sc] = null;
+        }
+        else if (action.type === 'ability_claw_pull') {
+            const target = newBoard[r][c];
+            newBoard[action.pullTo[0]][action.pullTo[1]] = target;
             newBoard[r][c] = null;
-          }
-        } else if (action.type === "ability_brew_select") {
-          const tNeighbors = getNeighbors(r, c);
-          const empty = tNeighbors.find((n) => !newBoard[n[0]][n[1]]);
-          if (empty) {
-            newBoard[empty[0]][empty[1]] = newBoard[r][c];
-            newBoard[r][c] = null;
-          }
+        }
+        else if (action.type === 'ability_manipulate_select') {
+            const tNeighbors = getNeighbors(r, c);
+            const empty = tNeighbors.find(n => !newBoard[n[0]][n[1]]);
+            if(empty) {
+                newBoard[empty[0]][empty[1]] = newBoard[r][c];
+                newBoard[r][c] = null;
+            }
+        }
+        else if (action.type === 'ability_brew_select') {
+             const tNeighbors = getNeighbors(r, c);
+             const empty = tNeighbors.find(n => !newBoard[n[0]][n[1]]);
+             if(empty) {
+                newBoard[empty[0]][empty[1]] = newBoard[r][c];
+                newBoard[r][c] = null;
+            }
         }
 
         setBoard(newBoard);
         setSelectedPos(null);
         setValidMoves([]);
-        setActionMode("move");
+        setActionMode('move');
         setSelectedUnitAbility(null);
 
         const w = checkWinCondition(newBoard);
-        if (w) {
-          setGameOver(w);
-          setGameLog(w === "AI" ? "AI Wins" : "You Win");
-        }
+        if (w) { setGameOver(w); setGameLog(w === "AI" ? "AI Wins" : "You Win"); }
       }
     }
   };
 
   const finalizePlayerRecruitment = (r, c, cardId) => {
-    const newBoard = cloneBoard(board);
-    newBoard[r][c] = {
-      type: "Unit",
-      owner: 1,
-      cardId: cardId,
-      moved: true,
-      isNew: true,
-    };
-    setBoard(newBoard);
+      const newBoard = cloneBoard(board);
+      newBoard[r][c] = { type: "Unit", owner: 1, cardId: cardId, moved: true, isNew: true };
+      setBoard(newBoard);
 
-    if (cardId === "hermit") return;
+      if (cardId === 'hermit') return;
 
-    const newV = [...visibleDeck];
-    const newD = [...deck];
-    if (newD.length > 0) {
-      newV[recruitSelectionIndex] = newD[0];
-      newD.shift();
-    } else {
-      newV.splice(recruitSelectionIndex, 1);
-    }
-
-    setDeck(newD);
-    setVisibleDeck(newV);
-    setRecruitSelectionIndex(null);
-    setMobileTab(null);
-    setTurn(3); // Pass to AI
-    setGameLog("AI Thinking...");
+      const newV = [...visibleDeck];
+      const newD = [...deck];
+      if (newD.length > 0) { newV[recruitSelectionIndex] = newD[0]; newD.shift(); } 
+      else { newV.splice(recruitSelectionIndex, 1); }
+      
+      setDeck(newD);
+      setVisibleDeck(newV);
+      setRecruitSelectionIndex(null);
+      setMobileTab(null);
+      setTurn(3);
+      setGameLog("AI Thinking...");
   };
 
   const handleEndAction = () => {
     let cardCount = 0;
-    board.forEach((row) =>
-      row.forEach((c) => {
-        if (c && c.owner === 1 && c.cardId !== "cub") cardCount++;
-      })
-    );
-
+    board.forEach(row => row.forEach(c => { if (c && c.owner === 1 && c.cardId !== 'cub') cardCount++; }));
+    
     if (cardCount < 5 && visibleDeck.length > 0) {
       setTurn(2);
       setMobileTab("recruit");
@@ -907,317 +677,131 @@ const GameSection = ({ onBack }) => {
   };
 
   const CardUI = ({ data, onClick, isSelected, isEmpty }) => {
-    if (isEmpty)
-      return (
+    if (isEmpty) return (
         <div className="w-24 h-36 md:w-40 md:h-60 bg-[#2a1e1a]/50 border-2 border-dashed border-[#8D6E63]/50 rounded-lg flex items-center justify-center shrink-0">
-          <div className="text-center opacity-50">
-            <span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">
-              EMPTY
-            </span>
-          </div>
+          <div className="text-center opacity-50"><span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">EMPTY</span></div>
         </div>
-      );
+    );
     const info = getCardData(data.cardId || data.id);
     return (
-      <div
-        onClick={onClick}
-        className={`w-24 h-36 md:w-40 md:h-60 bg-[#1a1210] rounded-xl border-[3px] relative overflow-hidden cursor-pointer transition-all duration-300 shrink-0 group shadow-lg ${
-          isSelected
-            ? "neon-border scale-105 z-10"
-            : "border-[#5D4037] hover:border-[#FFCA28]"
-        }`}
-      >
+      <div onClick={onClick} className={`w-24 h-36 md:w-40 md:h-60 bg-[#1a1210] rounded-xl border-[3px] relative overflow-hidden cursor-pointer transition-all duration-300 shrink-0 group shadow-lg ${isSelected ? "neon-border scale-105 z-10" : "border-[#5D4037] hover:border-[#FFCA28]"}`}>
         <div className="h-[65%] w-full bg-[#2a1e1a] relative">
-          <img
-            src={info.cardImg}
-            alt={info.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+          <img src={info.cardImg} alt={info.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
           <div className="absolute top-2 right-2 shadow-sm">
-            <div
-              className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[9px] md:text-[11px] font-extrabold border-2 border-white/20 shadow-md ${
-                info.type === "Active"
-                  ? "bg-red-700 text-white"
-                  : info.type === "Passive"
-                  ? "bg-blue-700 text-white"
-                  : "bg-amber-600 text-black"
-              }`}
-            >
-              {info.type === "Active"
-                ? "A"
-                : info.type === "Passive"
-                ? "P"
-                : "S"}
+             <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[9px] md:text-[11px] font-extrabold border-2 border-white/20 shadow-md ${info.type === "Active" ? "bg-red-700 text-white" : info.type === "Passive" ? "bg-blue-700 text-white" : "bg-amber-600 text-black"}`}>
+              {info.type === "Active" ? "A" : info.type === "Passive" ? "P" : "S"}
             </div>
           </div>
         </div>
         <div className="h-[35%] w-full bg-gradient-to-b from-[#3E2723] to-[#2E1E1A] p-2 flex flex-col items-center justify-center text-center border-t-[3px] border-[#5D4037]">
-          <h3 className="text-[#FFECB3] font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 font-serif">
-            {info.name}
-          </h3>
-          <p className="text-[8px] md:text-[10px] text-[#D7CCC8] leading-tight line-clamp-3 px-1">
-            {info.desc}
-          </p>
+          <h3 className="text-[#FFECB3] font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 font-serif">{info.name}</h3>
+          <p className="text-[8px] md:text-[10px] text-[#D7CCC8] leading-tight line-clamp-3 px-1">{info.desc}</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div
-      className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center"
-      style={{ backgroundImage: `url(${gameBackground})` }}
-    >
+    <div className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center" style={{ backgroundImage: `url(${gameBackground})` }}>
       <style>{styles}</style>
 
       {/* NAVBAR */}
       <div className="h-14 md:h-16 bg-[#2a1e1a] border-b-4 border-[#8D6E63] shadow-2xl flex items-center justify-between px-4 md:px-8 z-50 shrink-0 relative">
-        <img
-          src={gameLogo}
-          alt="Logo"
-          className="h-10 md:h-12 w-auto object-contain drop-shadow"
-        />
-        <div
-          className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${
-            gameOver
-              ? "bg-[#3E2723] text-[#FFECB3]"
-              : turn === 1 || turn === 2
-              ? "bg-blue-900 text-blue-100 border-blue-500"
-              : "bg-red-900 text-red-100 border-red-500"
-          }`}
-        >
-          {gameOver ? (
-            `🏆 ${gameOver} WINS!`
-          ) : (
-            <span className="animate-pulse tracking-wide uppercase">
-              {gameLog}
-            </span>
-          )}
+        <img src={gameLogo} alt="Logo" className="h-10 md:h-12 w-auto object-contain drop-shadow" />
+        <div className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${gameOver ? "bg-[#3E2723] text-[#FFECB3]" : (turn === 1 || turn === 2) ? "bg-blue-900 text-blue-100 border-blue-500" : "bg-red-900 text-red-100 border-red-500"}`}>
+          {gameOver ? `🏆 ${gameOver} WINS!` : <span className="animate-pulse tracking-wide uppercase">{gameLog}</span>}
         </div>
         <div className="flex gap-3">
-          {turn === 1 && (
-            <button
-              onClick={handleEndAction}
-              className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase"
-            >
-              End Turn
-            </button>
-          )}
-          <button
-            onClick={() => navigate("/")}
-            className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm shadow-md"
-          >
-            Exit
-          </button>
+          {turn === 1 && <button onClick={handleEndAction} className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase">End Turn</button>}
+          <button onClick={() => navigate("/")} className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm shadow-md">Exit</button>
         </div>
       </div>
 
       {/* MAIN GAME */}
       <div className="flex-grow flex flex-col md:flex-row w-full h-full overflow-hidden relative">
         {/* MARKET */}
-        <div
-          className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-r-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
-            mobileTab === "recruit"
-              ? "translate-y-0"
-              : "translate-y-full md:translate-y-0 hidden md:flex"
-          }`}
-        >
+        <div className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-r-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${mobileTab === "recruit" ? "translate-y-0" : "translate-y-full md:translate-y-0 hidden md:flex"}`}>
           <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md">
-            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">
-              Recruitment
-            </h2>
-            <button
-              onClick={() => setMobileTab(null)}
-              className="md:hidden text-2xl font-bold text-[#D7CCC8]"
-            >
-              &times;
-            </button>
+            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">Recruitment</h2>
+            <button onClick={() => setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8]">&times;</button>
           </div>
           <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-opacity-10">
             <div className="flex flex-wrap md:flex-col justify-center items-center gap-4">
               {visibleDeck.map((card, idx) => (
-                <CardUI
-                  key={card.id || idx}
-                  data={card}
-                  onClick={() => {
-                    if (turn === 2) {
-                      setRecruitSelectionIndex(idx);
-                      setMobileTab(null);
-                      setGameLog("Place unit on zone");
-                    }
-                  }}
-                  isSelected={turn === 2 && recruitSelectionIndex === idx}
-                />
+                <CardUI key={card.id || idx} data={card} onClick={() => { if (turn === 2) { setRecruitSelectionIndex(idx); setMobileTab(null); setGameLog("Place unit on zone"); } }} isSelected={turn === 2 && recruitSelectionIndex === idx} />
               ))}
-              {visibleDeck.length === 0 && (
-                <div className="text-[#8D6E63] text-sm opacity-70">
-                  Deck Empty
-                </div>
-              )}
+              {visibleDeck.length === 0 && <div className="text-[#8D6E63] text-sm opacity-70">Deck Empty</div>}
             </div>
           </div>
         </div>
 
         {/* BOARD */}
         <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 overflow-hidden">
-          {/* TOGGLE BUTTON FOR PLAYER */}
-          {selectedPos && selectedUnitAbility && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn">
-              <button
-                onClick={toggleActionMode}
-                className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2
-                            ${
-                              actionMode === "move"
-                                ? "bg-red-700 hover:bg-red-600 border-red-900 text-white"
-                                : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"
-                            }
+            
+            {/* TOGGLE BUTTON FOR PLAYER */}
+            {selectedPos && selectedUnitAbility && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn">
+                    <button 
+                        onClick={toggleActionMode}
+                        className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2
+                            ${actionMode === 'move' 
+                                ? "bg-red-700 hover:bg-red-600 border-red-900 text-white" 
+                                : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"}
                         `}
-              >
-                {actionMode === "move" ? (
-                  <>
-                    <span>⚡</span> USE ABILITY
-                  </>
-                ) : (
-                  <>
-                    <span>✖</span> CANCEL ABILITY
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+                    >
+                        {actionMode === 'move' ? (
+                            <><span>⚡</span> USE ABILITY</>
+                        ) : (
+                            <><span>✖</span> CANCEL ABILITY</>
+                        )}
+                    </button>
+                </div>
+            )}
 
           <div className="relative w-full h-full flex items-center justify-center z-10">
             <div className="relative max-h-full max-w-full aspect-[650/750] transition-all duration-500">
-              <img
-                src={board_img}
-                alt="Board"
-                className="w-full h-full object-contain pointer-events-none drop-shadow-2xl"
-              />
-              {board.map((row, r) =>
-                row.map((cell, c) => {
-                  if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c])
-                    return null;
+              <img src={board_img} alt="Board" className="w-full h-full object-contain pointer-events-none drop-shadow-2xl" />
+              {board.map((row, r) => row.map((cell, c) => {
+                  if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) return null;
                   const coords = SLOT_COORDINATES[r][c];
-                  const moveAction = validMoves.find(
-                    (m) => m.r === r && m.c === c
-                  );
-                  const isRecruitValid =
-                    turn === 2 &&
-                    recruitSelectionIndex !== null &&
-                    !cell &&
-                    isRecruitZone(r, c, 1);
-                  const isSelectedUnit =
-                    selectedPos && selectedPos[0] === r && selectedPos[1] === c;
+                  const moveAction = validMoves.find(m => m.r === r && m.c === c);
+                  const isRecruitValid = turn === 2 && recruitSelectionIndex !== null && !cell && isRecruitZone(r, c, 1);
+                  const isSelectedUnit = selectedPos && selectedPos[0] === r && selectedPos[1] === c;
 
                   return (
-                    <div
-                      key={`${r}-${c}`}
-                      onClick={() => handleBoardClick(r, c)}
-                      style={{
-                        position: "absolute",
-                        top: coords.top,
-                        left: coords.left,
-                        transform: "translate(-50%, -50%)",
-                      }}
+                    <div key={`${r}-${c}`} onClick={() => handleBoardClick(r, c)}
+                      style={{ position: "absolute", top: coords.top, left: coords.left, transform: "translate(-50%, -50%)" }}
                       className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200 
-                        ${
-                          moveAction || isRecruitValid
-                            ? "cursor-pointer z-30 scale-110"
-                            : ""
-                        }`}
+                        ${(moveAction || isRecruitValid) ? "cursor-pointer z-30 scale-110" : ""}`}
                     >
-                      {moveAction && (
-                        <div
-                          className={`absolute w-full h-full rounded-full border-2 ${
-                            moveAction.type.includes("ability")
-                              ? "bg-red-500/30 action-ability"
-                              : "bg-green-500/30 action-move"
-                          }`}
-                        ></div>
-                      )}
-                      {isRecruitValid && (
-                        <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>
-                      )}
-                      {isSelectedUnit && (
-                        <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>
-                      )}
-
+                      {moveAction && <div className={`absolute w-full h-full rounded-full border-2 ${moveAction.type.includes('ability') ? 'bg-red-500/30 action-ability' : 'bg-green-500/30 action-move'}`}></div>}
+                      {isRecruitValid && <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>}
+                      {isSelectedUnit && <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>}
+                      
                       {cell && (
-                        <div
-                          className={`relative w-[95%] h-[95%] transition-all duration-300 ${
-                            cell.isNew ? "animate-spawn" : ""
-                          } ${
-                            cell.moved
-                              ? "grayscale-[0.8] opacity-80"
-                              : "hover:scale-110 cursor-pointer"
-                          }`}
-                        >
-                          <img
-                            src={getCardData(cell.cardId).unitImg}
-                            className={`w-full h-full object-contain drop-shadow-md ${
-                              cell.owner === 2
-                                ? "filter hue-rotate-[160deg] brightness-90"
-                                : ""
-                            }`}
-                          />
-                          <div
-                            className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${
-                              cell.owner === 1
-                                ? "border-blue-500"
-                                : "border-red-600"
-                            }`}
-                          ></div>
+                        <div className={`relative w-[95%] h-[95%] transition-all duration-300 ${cell.isNew ? "animate-spawn" : ""} ${cell.moved ? "grayscale-[0.8] opacity-80" : "hover:scale-110 cursor-pointer"}`}>
+                          <img src={getCardData(cell.cardId).unitImg} className={`w-full h-full object-contain drop-shadow-md ${cell.owner === 2 ? "filter hue-rotate-[160deg] brightness-90" : ""}`} />
+                          <div className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${cell.owner === 1 ? "border-blue-500" : "border-red-600"}`}></div>
                         </div>
                       )}
                     </div>
                   );
-                })
-              )}
+                }))}
             </div>
           </div>
         </div>
 
         {/* ROSTER */}
-        <div
-          className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-l-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
-            mobileTab === "roster"
-              ? "translate-y-0"
-              : "translate-y-full md:translate-y-0 hidden md:flex"
-          }`}
-        >
+        <div className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-l-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${mobileTab === "roster" ? "translate-y-0" : "translate-y-full md:translate-y-0 hidden md:flex"}`}>
           <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md">
-            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">
-              Party
-            </h2>
-            <button
-              onClick={() => setMobileTab(null)}
-              className="md:hidden text-2xl font-bold text-[#D7CCC8]"
-            >
-              &times;
-            </button>
+            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">Party</h2>
+            <button onClick={() => setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8]">&times;</button>
           </div>
           <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-opacity-10">
             <div className="flex flex-wrap md:flex-col justify-center items-center gap-4">
-              {Array(5)
-                .fill(null)
-                .map((_, idx) => {
-                  const unit = playerRoster.filter((u) => u.cardId !== "cub")[
-                    idx
-                  ];
-                  return unit ? (
-                    <CardUI
-                      key={idx}
-                      data={unit}
-                      onClick={() => handleSelectUnit(unit.r, unit.c)}
-                      isSelected={
-                        selectedPos &&
-                        selectedPos[0] === unit.r &&
-                        selectedPos[1] === unit.c
-                      }
-                    />
-                  ) : (
-                    <CardUI key={idx} isEmpty={true} />
-                  );
+              {Array(5).fill(null).map((_, idx) => {
+                  const unit = playerRoster.filter(u => u.cardId !== "cub")[idx];
+                  return unit ? <CardUI key={idx} data={unit} onClick={() => handleSelectUnit(unit.r, unit.c)} isSelected={selectedPos && selectedPos[0] === unit.r && selectedPos[1] === unit.c} /> : <CardUI key={idx} isEmpty={true} />;
                 })}
             </div>
           </div>
@@ -1225,37 +809,9 @@ const GameSection = ({ onBack }) => {
 
         {/* MOBILE NAV */}
         <div className="md:hidden h-16 bg-[#2a1e1a] flex items-center justify-around shrink-0 z-50 text-[#D7CCC8] border-t-4 border-[#5D4037]">
-          <button
-            onClick={() =>
-              setMobileTab(mobileTab === "recruit" ? null : "recruit")
-            }
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === "recruit" ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">🎴</span>
-            <span className="text-[9px] font-bold uppercase">Recruit</span>
-          </button>
-          <button
-            onClick={() => setMobileTab(null)}
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === null ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">♟️</span>
-            <span className="text-[9px] font-bold uppercase">Board</span>
-          </button>
-          <button
-            onClick={() =>
-              setMobileTab(mobileTab === "roster" ? null : "roster")
-            }
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === "roster" ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">🛡️</span>
-            <span className="text-[9px] font-bold uppercase">Deck</span>
-          </button>
+          <button onClick={() => setMobileTab(mobileTab === "recruit" ? null : "recruit")} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === "recruit" ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">🎴</span><span className="text-[9px] font-bold uppercase">Recruit</span></button>
+          <button onClick={() => setMobileTab(null)} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === null ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">♟️</span><span className="text-[9px] font-bold uppercase">Board</span></button>
+          <button onClick={() => setMobileTab(mobileTab === "roster" ? null : "roster")} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === "roster" ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">🛡️</span><span className="text-[9px] font-bold uppercase">Deck</span></button>
         </div>
       </div>
     </div>
