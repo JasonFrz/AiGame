@@ -67,25 +67,25 @@ export const ABILITY_DB = {
 };
 
 export const UNIT_VALUES = {
-  leader: 10000,
-  assassin: 800,
-  manipulator: 700,
-  guard: 600,
-  archer: 600,
-  rider: 500,
-  bruiser: 500,
-  claw: 450,
-  jailer: 400,
-  illusionist: 400,
-  wanderer: 350,
-  protector: 300,
-  acrobat: 300,
-  nemesis: 300,
-  hermit: 300,
-  cub: 150,
-  vizier: 200,
-  brewmaster: 200,
-  unknown: 100,
+leader: 100000,   // RAJA: Nyawa AI. Harus dijaga mati-matian.
+  leader2: 100000,
+  assassin: 2000,   // Sangat berharga untuk membunuh
+  manipulator: 1800,// Bisa mengacaukan formasi lawan
+  claw: 1700,       // Bisa menarik musuh (penculikan)
+  guard: 1500,      // Bodyguard
+  illusionist: 1400,// Mobilitas tinggi
+  archer: 1300,
+  rider: 1200,
+  bruiser: 1200,
+  jailer: 1000,
+  wanderer: 900,
+  acrobat: 800,
+  protector: 800,
+  nemesis: 800,
+  vizier: 600,
+  brewmaster: 600,
+  hermit: 500,
+  cub: 100,   
 };
 
 export const TOTAL_CARDS_DATA = [
