@@ -34,9 +34,9 @@ const GameSection = ({ onBack }) => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- CONFIG ---
+  // --- CONFIG BOARD COORDINATES ---
   const SLOT_COORDINATES = [
-    [{ top: "9%", left: "50%" }],
+    [{ top: "9%", left: "50%" }], 
     [
       { top: "16.3%", left: "36.5%" },
       { top: "16.3%", left: "63.5%" },
@@ -46,7 +46,7 @@ const GameSection = ({ onBack }) => {
     [
       { top: "30%", left: "9.8%" },
       { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" },
+      { top: "23%", left: "50%" }, // Center Row 2 (Connected to Leader 1)
       { top: "30%", left: "63.5%" },
       { top: "30%", left: "90.3%" },
     ],
@@ -76,7 +76,7 @@ const GameSection = ({ onBack }) => {
     [
       { top: "70.2%", left: "9.8%" },
       { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" },
+      { top: "77%", left: "50%" }, // Center Row 6 (Connected to Leader 2)
       { top: "70.2%", left: "63.5%" },
       { top: "70.2%", left: "90.3%" },
     ],
@@ -86,223 +86,69 @@ const GameSection = ({ onBack }) => {
       { top: "83.8%", left: "63.5%" },
       { top: "77%", left: "76.7%" },
     ],
-    [{ top: "90.5%", left: "50%" }],
+    [{ top: "90.5%", left: "50%" }], 
   ];
 
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      "0,0": [
-        [1, 0],
-        [1, 1],
-        [2, 2],
-      ],
-      "1,0": [
-        [2, 0],
-        [2, 1],
-        [0, 0],
-      ],
-      "1,1": [
-        [0, 0],
-        [2, 1],
-        [2, 2],
-      ],
-      "1,2": [
-        [2, 2],
-        [2, 3],
-      ],
-      "1,3": [
-        [2, 3],
-        [2, 4],
-      ],
-      "2,0": [
-        [1, 0],
-        [3, 0],
-        [3, 1],
-      ],
-      "2,1": [
-        [1, 0],
-        [1, 1],
-        [3, 1],
-        [3, 2],
-      ],
-      "2,2": [
-        [1, 1],
-        [1, 2],
-        [3, 2],
-        [3, 3],
-        [0, 0],
-      ],
-      "2,3": [
-        [1, 2],
-        [1, 3],
-        [3, 3],
-        [3, 4],
-      ],
-      "2,4": [
-        [1, 3],
-        [3, 4],
-        [3, 5],
-      ],
-      "3,0": [
-        [2, 0],
-        [4, 0],
-      ],
-      "3,1": [
-        [2, 0],
-        [2, 1],
-        [4, 0],
-        [4, 1],
-      ],
-      "3,2": [
-        [2, 1],
-        [2, 2],
-        [4, 1],
-        [4, 2],
-      ],
-      "3,3": [
-        [2, 2],
-        [2, 3],
-        [4, 2],
-        [4, 3],
-      ],
-      "3,4": [
-        [2, 3],
-        [2, 4],
-        [4, 3],
-        [4, 4],
-      ],
-      "3,5": [
-        [2, 4],
-        [4, 4],
-      ],
-      "4,0": [
-        [3, 0],
-        [3, 1],
-        [5, 0],
-        [5, 1],
-      ],
-      "4,1": [
-        [3, 1],
-        [3, 2],
-        [5, 1],
-        [5, 2],
-      ],
-      "4,2": [
-        [3, 2],
-        [3, 3],
-        [5, 2],
-        [5, 3],
-      ],
-      "4,3": [
-        [3, 3],
-        [3, 4],
-        [5, 3],
-        [5, 4],
-      ],
-      "4,4": [
-        [3, 4],
-        [3, 5],
-        [5, 4],
-        [5, 5],
-      ],
-      "5,0": [
-        [4, 0],
-        [6, 0],
-      ],
-      "5,1": [
-        [4, 0],
-        [4, 1],
-        [6, 0],
-        [6, 1],
-      ],
-      "5,2": [
-        [4, 1],
-        [4, 2],
-        [6, 1],
-        [6, 2],
-      ],
-      "5,3": [
-        [4, 2],
-        [4, 3],
-        [6, 2],
-        [6, 3],
-      ],
-      "5,4": [
-        [4, 3],
-        [4, 4],
-        [6, 3],
-        [6, 4],
-      ],
-      "5,5": [
-        [4, 4],
-        [6, 4],
-      ],
-      "6,0": [
-        [5, 0],
-        [5, 1],
-        [7, 0],
-      ],
-      "6,1": [
-        [5, 1],
-        [5, 2],
-        [7, 0],
-        [7, 1],
-      ],
-      "6,2": [
-        [5, 2],
-        [5, 3],
-        [7, 1],
-        [7, 2],
-        [8, 0],
-      ],
-      "6,3": [
-        [5, 3],
-        [5, 4],
-        [7, 2],
-        [7, 3],
-      ],
-      "6,4": [
-        [5, 4],
-        [5, 5],
-        [7, 3],
-      ],
-      "7,0": [
-        [6, 0],
-        [6, 1],
-      ],
-      "7,1": [
-        [6, 1],
-        [6, 2],
-        [8, 0],
-      ],
-      "7,2": [
-        [6, 2],
-        [6, 3],
-        [8, 0],
-      ],
-      "7,3": [
-        [6, 3],
-        [6, 4],
-      ],
-      "8,0": [
-        [7, 1],
-        [7, 2],
-        [6, 2],
-      ],
+      // Leader Top (0,0) moves to 1,0; 1,1; and 2,2 (Vertical jump)
+      "0,0": [[1, 0], [1, 1], [2, 2]], 
+      "1,0": [[0, 0], [2, 0], [2, 1]],
+      "1,1": [[0, 0], [2, 1], [2, 2]],
+      "1,2": [[2, 2], [2, 3]],
+      "1,3": [[2, 3], [2, 4]],
+      
+      "2,0": [[1, 0], [3, 0], [3, 1]],
+      "2,1": [[1, 0], [1, 1], [3, 1], [3, 2]],
+      // 2,2 connects back to 0,0
+      "2,2": [[1, 1], [1, 2], [3, 2], [3, 3], [0, 0]], 
+      "2,3": [[1, 2], [1, 3], [3, 3], [3, 4]],
+      "2,4": [[1, 3], [3, 4], [3, 5]],
+
+      "3,0": [[2, 0], [4, 0]],
+      "3,1": [[2, 0], [2, 1], [4, 0], [4, 1]],
+      "3,2": [[2, 1], [2, 2], [4, 1], [4, 2]],
+      "3,3": [[2, 2], [2, 3], [4, 2], [4, 3]],
+      "3,4": [[2, 3], [2, 4], [4, 3], [4, 4]],
+      "3,5": [[2, 4], [4, 4]],
+
+      "4,0": [[3, 0], [3, 1], [5, 0], [5, 1]],
+      "4,1": [[3, 1], [3, 2], [5, 1], [5, 2]],
+      "4,2": [[3, 2], [3, 3], [5, 2], [5, 3]],
+      "4,3": [[3, 3], [3, 4], [5, 3], [5, 4]],
+      "4,4": [[3, 4], [3, 5], [5, 4], [5, 5]],
+
+      "5,0": [[4, 0], [6, 0]],
+      "5,1": [[4, 0], [4, 1], [6, 0], [6, 1]],
+      "5,2": [[4, 1], [4, 2], [6, 1], [6, 2]],
+      "5,3": [[4, 2], [4, 3], [6, 2], [6, 3]],
+      "5,4": [[4, 3], [4, 4], [6, 3], [6, 4]],
+      "5,5": [[4, 4], [6, 4]],
+
+      "6,0": [[5, 0], [5, 1], [7, 0]],
+      "6,1": [[5, 1], [5, 2], [7, 0], [7, 1]],
+      // 6,2 connects down to 8,0 (Leader Bottom)
+      "6,2": [[5, 2], [5, 3], [7, 1], [7, 2], [8, 0]], 
+      "6,3": [[5, 3], [5, 4], [7, 2], [7, 3]],
+      "6,4": [[5, 4], [5, 5], [7, 3]],
+
+      "7,0": [[6, 0], [6, 1], [8, 0]],
+      "7,1": [[6, 1], [6, 2], [8, 0]],
+      "7,2": [[6, 2], [6, 3], [8, 0]], 
+      "7,3": [[6, 3], [6, 4]],
+      
+      // Leader Bottom (8,0) moves to 7,1; 7,2; and 6,2 (Vertical jump)
+      "8,0": [[7, 1], [7, 2], [6, 2]], 
     };
     return manualMap[mapKey] || [];
   };
 
   const isRecruitZone = (r, c, player) => {
     if (player === 1)
-      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3", "8,0"].includes(
-        `${r},${c}`
-      );
+      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3", "8,0"].includes(`${r},${c}`);
     if (player === 2)
-      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1", "0,0"].includes(
-        `${r},${c}`
-      );
+      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1", "0,0"].includes(`${r},${c}`);
     return false;
   };
 
@@ -313,18 +159,14 @@ const GameSection = ({ onBack }) => {
   const [visibleDeck, setVisibleDeck] = useState([]);
   const [playerRoster, setPlayerRoster] = useState([]);
   const [selectedPos, setSelectedPos] = useState(null);
-
   const [validMoves, setValidMoves] = useState([]);
   const [actionMode, setActionMode] = useState("move");
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
-
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Your Turn");
-
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
-
   const isAiProcessing = useRef(false);
 
   useEffect(() => {
@@ -360,7 +202,7 @@ const GameSection = ({ onBack }) => {
     isAiProcessing.current = false;
   };
 
-  // --- WIN CONDITION ---
+  // --- WIN CONDITION LOGIC (FIXED FOR ARCHER RULE) ---
   const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
     currentBoard.forEach((row, r) =>
@@ -386,21 +228,22 @@ const GameSection = ({ onBack }) => {
           occupiedNeighbors++;
           if (cell.owner === enemyOwner) {
             enemyOccupied++;
-            // Cub cannot capture leader by rule, but occupies space
-            if (cell.cardId !== "cub") adjacentEnemies++;
+            if (cell.cardId !== "cub" && cell.cardId !== "archer") {
+                adjacentEnemies++;
+            }
           }
         }
       });
 
-      // CAPTURED: 2 enemy characters adjacent (Cub doesn't count for this)
       if (adjacentEnemies >= 2) return true;
-      // SURROUNDED: All adjacent spaces occupied (by anyone), at least 2 are enemies
+      
       if (
         neighbors.length > 0 &&
         occupiedNeighbors === neighbors.length &&
-        enemyOccupied >= 2 // Logic: if surrounded, must have enemies involved
+        enemyOccupied >= 2 
       )
         return true;
+        
       return false;
     };
 
@@ -410,10 +253,9 @@ const GameSection = ({ onBack }) => {
   };
 
   // ==========================================
-  // AI LOGIC: PRO STRATEGY
+  // AI STRATEGY: PRO MINIMAX
   // ==========================================
 
-  // Fast Clone Board
   const cloneBoard = (b) => {
     const len = b.length;
     const newB = new Array(len);
@@ -432,7 +274,6 @@ const GameSection = ({ onBack }) => {
 
   const getDist = (r1, c1, r2, c2) => Math.abs(r1 - r2) + Math.abs(c1 - c2);
 
-  // --- PRO HEURISTIC EVALUATION ---
   const evaluateBoardState = (simBoard) => {
     let score = 0;
     let aiLeader = null;
@@ -440,7 +281,6 @@ const GameSection = ({ onBack }) => {
     let aiUnits = [];
     let pUnits = [];
 
-    // 1. Scan Board
     simBoard.forEach((row, r) => {
       row.forEach((c, cIdx) => {
         if (c) {
@@ -461,79 +301,54 @@ const GameSection = ({ onBack }) => {
     if (!aiLeader) return -999999;
     if (!pLeader) return 999999;
 
-    // 2. SAFETY & THREAT ANALYSIS (The most critical part)
     const analyzeLeader = (pos, owner) => {
       const neighbors = getNeighbors(pos[0], pos[1]);
       const enemyOwner = owner === 1 ? 2 : 1;
       let directThreats = 0;
       let blockedSpaces = 0;
-      let supportUnits = 0;
 
       neighbors.forEach(([nr, nc]) => {
         const u = simBoard[nr][nc];
         if (u) {
           blockedSpaces++;
-          if (u.owner === enemyOwner && u.cardId !== "cub") directThreats++;
-          if (u.owner === owner) supportUnits++;
+          if (u.owner === enemyOwner && u.cardId !== "cub" && u.cardId !== "archer") {
+             directThreats++;
+          }
         }
       });
-      return { directThreats, blockedSpaces, total: neighbors.length, supportUnits };
+      return { directThreats, blockedSpaces, total: neighbors.length };
     };
 
     const aiStatus = analyzeLeader(aiLeader, 2);
     const pStatus = analyzeLeader(pLeader, 1);
 
-    // WIN / LOSE CONDITIONS
-    // If AI Leader has >= 2 enemies adjacent -> DEAD
-    if (aiStatus.directThreats >= 2) return -500000;
-    // If AI Leader is surrounded and has >= 2 enemies involved -> DEAD
-    if (aiStatus.blockedSpaces === aiStatus.total && aiStatus.directThreats >= 1) { 
-        // Logic check: rules say "Surrounded... occupied by characters". 
-        // Winning condition usually implies you are trapped. 
-        // We penalize heavily if trapped and enemies are near.
-        return -500000;
-    }
+    if (aiStatus.directThreats >= 2) return -500000; 
+    if (pStatus.directThreats >= 2) return 500000; 
+    if (aiStatus.blockedSpaces === aiStatus.total && aiStatus.directThreats >= 1) return -400000;
+    if (pStatus.blockedSpaces === pStatus.total && pStatus.directThreats >= 1) return 400000;
 
-    // If Player Leader has >= 2 enemies adjacent -> WIN
-    if (pStatus.directThreats >= 2) return 500000;
-    if (pStatus.blockedSpaces === pStatus.total && pStatus.directThreats >= 1) return 500000;
+    if (aiStatus.directThreats === 1) score -= 25000; 
+    if (pStatus.directThreats === 1) score += 25000; 
 
-    // 3. POSITIONAL SCORING
-    
-    // Penalty: AI Leader Danger (1 enemy adjacent is very bad)
-    if (aiStatus.directThreats === 1) score -= 15000; 
-    
-    // Reward: Pressuring Player Leader
-    if (pStatus.directThreats === 1) score += 15000;
-
-    // Reward: Distance to enemy leader (Aggression)
-    aiUnits.forEach(u => {
-        const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
-        if (d === 2) score += 300; // Ready to strike
-        if (d <= 4) score += (5 - d) * 50;
-        
-        // Bonus for specific units
-        if (u.id === 'assassin' && d <= 2) score += 1000;
-        if (u.id === 'archer' && d <= 3) score += 500;
-    });
-
-    // Penalty: Distance of enemy units to AI Leader (Defense)
     pUnits.forEach(u => {
         const d = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
-        if (d <= 2) score -= 500;
-        if (d <= 1) score -= 2000; // RED ALERT
+        if (d <= 2) score -= 1000; 
+    });
+
+    aiUnits.forEach(u => {
+        const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
+        if (d <= 2) score += 500; 
+        if (u.id === 'assassin' && d <= 3) score += 2000;
+        if (u.id === 'protector' && getDist(u.r, u.c, aiLeader[0], aiLeader[1]) <= 1) score += 1000;
     });
 
     return score;
   };
 
-  // Apply Move Logic (Simulator)
   const applySimMove = (simBoard, move) => {
     const { from, to, type, pushTo, pullTo } = move;
     const unit = simBoard[from[0]][from[1]];
     if (!unit) return simBoard;
-    // Note: We don't mark 'moved' property in simBoard to allow calculating chain moves 
-    // if we were doing deep recursive, but for this step-wise AI, we just update position.
     
     if (type === "move") {
       simBoard[to[0]][to[1]] = unit;
@@ -551,27 +366,15 @@ const GameSection = ({ onBack }) => {
       const target = simBoard[to[0]][to[1]];
       simBoard[pullTo[0]][pullTo[1]] = target;
       simBoard[to[0]][to[1]] = null;
-    } else if (type === "ability_manipulate_select") {
-        // AI Simplification: For manipulation, try to move enemy closer to AI or away from Player
-        // For simulation, we just pick the first empty neighbor (basic) or a specific direction if implemented
-        // Here we assume the move object contains the full destination if pre-calculated,
-        // but since ability_manipulate usually requires a second click, we simulate a "generic" bad outcome for opponent
-        // For MVP Pro AI: We assume the 'move' passed here is fully resolved.
-        // If the generator didn't provide specific destination, we skip effect or default to simple move.
-        // *Correction*: db_monster doesn't generate the "second step" for manipulator. 
-        // We will skip complex 2-step ability simulation in this fast Minimax and focus on positioning.
     }
     return simBoard;
   };
 
-  // --- LOCALIZED MINIMAX ---
-  // Calculates best move for a SINGLE unit given the current board state
   const getBestMoveForUnit = (unit, currentBoard) => {
     const { r, c } = unit;
     const basics = calculateBasicMoves(r, c, unit, currentBoard, getNeighbors);
     const abilities = calculateAbilityMoves(r, c, unit, currentBoard, getNeighbors);
     
-    // Flatten moves
     let allMoves = [
         ...basics.map(m => ({...m, from: [r, c], to: [m.r, m.c]})),
         ...abilities.map(m => ({...m, from: [r, c], to: [m.r, m.c]}))
@@ -582,52 +385,33 @@ const GameSection = ({ onBack }) => {
     let bestScore = -Infinity;
     let bestMove = null;
 
-    // Shallow search (Depth 1 + Evaluation)
-    // We don't do deep Minimax here because we are iterating through multiple units sequentially.
-    // The "Pro" aspect comes from the evaluation function and the sequential execution.
     for (let move of allMoves) {
-        // Simulation
         const simBoard = applySimMove(cloneBoard(currentBoard), move);
-        
-        // Check Immediate Win
         const win = checkWinCondition(simBoard);
-        if (win === "AI") return { move, score: Infinity };
-        if (win === "Player") continue; // Suicide move
-
-        // Evaluate
-        let score = evaluateBoardState(simBoard);
         
-        // Bonus: Action economy (using abilities is often better than just walking)
-        if (move.type.includes("ability")) score += 50;
+        if (win === "AI") return { move, score: Infinity }; 
+        if (win === "Player") continue; 
 
-        // Static Stability Check (Micro-Minimax)
-        // If I make this move, can the enemy immediately kill me or the leader?
-        // We sample the opponent's best response briefly
-        // (Simplified for performance: just check Leader safety again strictly)
+        let score = evaluateBoardState(simBoard);
+        if (move.type.includes("ability")) score += 100; 
 
         if (score > bestScore) {
             bestScore = score;
             bestMove = move;
         }
     }
-
-    // Heuristic: If current position is already very good (e.g., blocking the leader safely), 
-    // and moving lowers the score, DON'T move.
+    
     const currentScore = evaluateBoardState(currentBoard);
-    // Bias towards action, but don't commit suicide. 
-    // If moving drops score significantly, stay put.
-    if (bestScore < currentScore - 100) return null; 
+    if (bestScore < currentScore - 200) return null; 
 
     return { move: bestMove, score: bestScore };
   };
 
-
-  // --- MAIN AI TURN EXECUTION ---
+  // --- AI EXECUTION ---
   const runAITurn = useCallback(async () => {
     if (gameOver || isAiProcessing.current) return;
     isAiProcessing.current = true;
 
-    // 1. Check Start Game Win
     const winStart = checkWinCondition(board);
     if (winStart) {
       setGameOver(winStart);
@@ -638,13 +422,6 @@ const GameSection = ({ onBack }) => {
     setGameLog("AI Planning...");
     await new Promise(r => setTimeout(r, 600));
 
-    // 2. Identify and Sort Units
-    // "Pro" Strategy: Order matters.
-    // Priority:
-    // 1. Leader (if in danger)
-    // 2. Units that can kill enemy Leader
-    // 3. Crowd Control Units (Manipulator, Claw)
-    // 4. Regular Units
     let aiUnits = [];
     let pLeaderPos = null;
     let aiLeaderPos = null;
@@ -660,72 +437,47 @@ const GameSection = ({ onBack }) => {
         }
     }));
 
-    // Analyze Threat Level for Sorting
     const isLeaderThreatened = () => {
         if (!aiLeaderPos) return false;
         const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
         return neighbors.some(([nr, nc]) => {
             const u = board[nr][nc];
-            return u && u.owner === 1 && u.cardId !== 'cub';
+            return u && u.owner === 1 && u.cardId !== 'cub' && u.cardId !== 'archer';
         });
     };
 
-    const distToEnemy = (u) => pLeaderPos ? getDist(u.r, u.c, pLeaderPos[0], pLeaderPos[1]) : 10;
-
-    // Sorting Logic
     aiUnits.sort((a, b) => {
-        // 1. Save Leader
         if (a.cardId === 'leader2' && isLeaderThreatened()) return -1;
         if (b.cardId === 'leader2' && isLeaderThreatened()) return 1;
 
-        // 2. Assassin Priority
-        if (a.cardId === 'assassin' && distToEnemy(a) <= 3) return -1;
-        if (b.cardId === 'assassin' && distToEnemy(b) <= 3) return 1;
+        const d1 = pLeaderPos ? getDist(a.r, a.c, pLeaderPos[0], pLeaderPos[1]) : 10;
+        const d2 = pLeaderPos ? getDist(b.r, b.c, pLeaderPos[0], pLeaderPos[1]) : 10;
+        if (a.cardId === 'assassin' && d1 <= 3) return -1;
 
-        // 3. Controllers
-        const controllers = ['manipulator', 'claw', 'bruiser'];
-        const aC = controllers.includes(a.cardId);
-        const bC = controllers.includes(b.cardId);
-        if (aC && !bC) return -1;
-        if (!aC && bC) return 1;
+        const controllers = ['manipulator', 'claw'];
+        if (controllers.includes(a.cardId) && !controllers.includes(b.cardId)) return -1;
 
-        // 4. Closeness to Enemy
-        return distToEnemy(a) - distToEnemy(b);
+        return d1 - d2; 
     });
 
-    // 3. Execute Moves Sequentially
     let currentBoard = cloneBoard(board);
     let somethingMoved = false;
 
-    // Loop through sorted units
-    // The Rules say: "Choose up to ONE action for EACH of your characters."
     for (let unit of aiUnits) {
-        // Re-fetch unit from currentBoard because previous moves might have displaced it or blocked it
         const freshUnit = currentBoard[unit.r][unit.c];
         
-        // Verify unit is still there and hasn't moved (in this turn sim)
         if (!freshUnit || freshUnit.owner !== 2 || freshUnit.moved) continue;
-        // Verify unit wasn't moved by another effect (like a swap)
         if (freshUnit.cardId !== unit.cardId) continue; 
 
-        // Find Best Move
         const result = getBestMoveForUnit({ ...freshUnit, r: unit.r, c: unit.c }, currentBoard);
 
         if (result && result.move) {
-            // Apply Move Locally
             currentBoard = applySimMove(currentBoard, result.move);
-            // Mark as moved in our tracking (board structure uses 'moved' flag)
-            // Note: In applySimMove for real execution, we need to handle the visual update
-            
-            // Visual Update Sequence
             setBoard(cloneBoard(currentBoard)); 
-            setGameLog(`AI moving ${getCardData(unit.cardId).name}...`);
+            setGameLog(`AI moves ${getCardData(unit.cardId).name}`);
             somethingMoved = true;
+            await new Promise(r => setTimeout(r, 450)); 
             
-            // Small delay between moves for "Human-like" feel
-            await new Promise(r => setTimeout(r, 400));
-            
-            // Win Check after each move
             const midWin = checkWinCondition(currentBoard);
             if (midWin) {
                 setGameOver(midWin);
@@ -741,107 +493,71 @@ const GameSection = ({ onBack }) => {
         await new Promise(r => setTimeout(r, 500));
     }
 
-    // 4. Smart Recruitment
-    await smartRecruit(currentBoard);
-
-    // 5. Pass Turn
+    await smartRecruit(currentBoard, aiLeaderPos);
     isAiProcessing.current = false;
   }, [board, gameOver]); 
 
-  // --- SMART RECRUITMENT ---
-  const smartRecruit = async (currentBoard) => {
+  const smartRecruit = async (currentBoard, aiLeaderPos) => {
     let aiCount = 0;
-    let aiLeaderPos = null;
-    currentBoard.forEach((row, r) => row.forEach((c, idx) => {
-        if (c && c.owner === 2) {
-             if (c.cardId !== 'cub') aiCount++;
-             if (c.cardId === 'leader2') aiLeaderPos = [r, idx];
-        }
+    currentBoard.forEach(row => row.forEach(c => {
+        if (c && c.owner === 2 && c.cardId !== 'cub') aiCount++;
     }));
 
     if (aiCount < 5 && visibleDeck.length > 0) {
         setGameLog("AI Recruiting...");
         await new Promise(r => setTimeout(r, 500));
 
-        // Evaluate Needs
-        let priority = "value"; // default
+        let priority = "attack";
         if (aiLeaderPos) {
              const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
-             let threats = 0;
-             neighbors.forEach(([nr, nc]) => {
+             const threats = neighbors.filter(([nr, nc]) => {
                  const u = currentBoard[nr][nc];
-                 if (u && u.owner === 1) threats++;
-             });
+                 return u && u.owner === 1 && u.cardId !== 'archer';
+             }).length;
              if (threats > 0) priority = "defense";
         }
 
-        // Select Card
         let bestIdx = 0;
         let bestScore = -1;
 
         visibleDeck.forEach((card, i) => {
             let score = UNIT_VALUES[card.id] || 0;
-            
-            // Contextual Bonuses
-            if (priority === "defense") {
-                if (['protector', 'guard', 'jailer'].includes(card.id)) score += 5000;
-            } else {
-                if (['assassin', 'manipulator'].includes(card.id)) score += 1000;
-            }
-            
-            if (score > bestScore) {
-                bestScore = score;
-                bestIdx = i;
-            }
+            if (priority === "defense" && ['protector', 'guard', 'jailer'].includes(card.id)) score += 5000;
+            if (priority === "attack" && ['assassin', 'manipulator', 'claw'].includes(card.id)) score += 2000;
+            if (score > bestScore) { bestScore = score; bestIdx = i; }
         });
 
         const chosenCard = visibleDeck[bestIdx];
-
-        // Find Spawn Point (Closest to front line or defensive based on need)
         const spots = [];
         for (let r = 0; r <= 2; r++) {
             for (let c = 0; c < currentBoard[r].length; c++) {
-                if (isRecruitZone(r, c, 2) && !currentBoard[r][c]) {
-                    spots.push([r, c]);
-                }
+                if (isRecruitZone(r, c, 2) && !currentBoard[r][c]) spots.push([r, c]);
             }
         }
 
         if (spots.length > 0) {
-            // Sort spots: higher Row index = closer to center (better for attack)
-            // Lower Row index = safer (better for defense)
             spots.sort((a, b) => priority === "defense" ? a[0] - b[0] : b[0] - a[0]);
-            
             const spot = spots[0];
             const finalBoard = cloneBoard(currentBoard);
 
-            // Handle Hermit (Special Case)
             if (chosenCard.id === "hermit" && spots.length >= 2) {
                 finalBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: "hermit", moved: false, isNew: true };
-                // Hermit puts Cub in next best spot
                 const spot2 = spots[1]; 
                 finalBoard[spot2[0]][spot2[1]] = { type: "Unit", owner: 2, cardId: "cub", moved: false, isNew: true };
             } else {
                 finalBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: chosenCard.id, moved: false, isNew: true };
             }
             
-            // Update Deck
             const newVis = [...visibleDeck];
             const newD = [...deck];
-            if (newD.length > 0) {
-                newVis[bestIdx] = newD[0];
-                newD.shift();
-            } else {
-                newVis.splice(bestIdx, 1);
-            }
+            if (newD.length > 0) { newVis[bestIdx] = newD[0]; newD.shift(); } 
+            else { newVis.splice(bestIdx, 1); }
             
             setDeck(newD);
             setVisibleDeck(newVis);
             setBoard(finalBoard);
         }
     }
-
-    // End Turn Cleanup
     setBoard(prev => prev.map(row => row.map(c => c ? { ...c, moved: false, isNew: false } : null)));
     setTurn(1);
     setGameLog("Your Turn");
@@ -851,7 +567,6 @@ const GameSection = ({ onBack }) => {
     if (turn === 3) runAITurn();
   }, [turn, runAITurn]);
 
-  // --- PLAYER INTERACTIONS ---
   const handleSelectUnit = (r, c) => {
     if (gameOver || turn !== 1) return;
     const unit = board[r][c];
@@ -901,13 +616,7 @@ const GameSection = ({ onBack }) => {
         if (card.id === "hermit") {
           if (recruitStep === 0) {
             const nb = cloneBoard(board);
-            nb[r][c] = {
-              type: "Unit",
-              owner: 1,
-              cardId: "hermit",
-              moved: true,
-              isNew: true,
-            };
+            nb[r][c] = { type: "Unit", owner: 1, cardId: "hermit", moved: true, isNew: true };
             setBoard(nb);
             setRecruitStep(1);
             setGameLog("Place Cub");
@@ -951,23 +660,7 @@ const GameSection = ({ onBack }) => {
           const target = newBoard[r][c];
           newBoard[action.pullTo[0]][action.pullTo[1]] = target;
           newBoard[r][c] = null;
-        } else if (action.type === "ability_manipulate_select") {
-          // Player interaction for manipulation is complex, keeping basic swap/move for now
-          // or implementation specific to db_monster ability
-          const tNeighbors = getNeighbors(r, c);
-          const empty = tNeighbors.find((n) => !newBoard[n[0]][n[1]]);
-          if (empty) {
-            newBoard[empty[0]][empty[1]] = newBoard[r][c];
-            newBoard[r][c] = null;
-          }
-        } else if (action.type === "ability_brew_select") {
-          const tNeighbors = getNeighbors(r, c);
-          const empty = tNeighbors.find((n) => !newBoard[n[0]][n[1]]);
-          if (empty) {
-            newBoard[empty[0]][empty[1]] = newBoard[r][c];
-            newBoard[r][c] = null;
-          }
-        }
+        } 
 
         setBoard(newBoard);
         setSelectedPos(null);
@@ -986,24 +679,14 @@ const GameSection = ({ onBack }) => {
 
   const finalizePlayerRecruitment = (r, c, cardId) => {
     const newBoard = cloneBoard(board);
-    newBoard[r][c] = {
-      type: "Unit",
-      owner: 1,
-      cardId: cardId,
-      moved: true,
-      isNew: true,
-    };
+    newBoard[r][c] = { type: "Unit", owner: 1, cardId: cardId, moved: true, isNew: true };
     setBoard(newBoard);
     if (cardId === "hermit") return;
 
     const newV = [...visibleDeck];
     const newD = [...deck];
-    if (newD.length > 0) {
-      newV[recruitSelectionIndex] = newD[0];
-      newD.shift();
-    } else {
-      newV.splice(recruitSelectionIndex, 1);
-    }
+    if (newD.length > 0) { newV[recruitSelectionIndex] = newD[0]; newD.shift(); } 
+    else { newV.splice(recruitSelectionIndex, 1); }
     setDeck(newD);
     setVisibleDeck(newV);
     setRecruitSelectionIndex(null);
@@ -1014,21 +697,10 @@ const GameSection = ({ onBack }) => {
 
   const handleEndAction = () => {
     const win = checkWinCondition(board);
-    if (win) {
-      setGameOver(win);
-      setGameLog(win === "AI" ? "AI Wins!" : "You Win!");
-      return;
-    }
+    if (win) { setGameOver(win); return; }
 
     let cardCount = 0;
-    board.forEach((row) =>
-      row.forEach((c) => {
-        if (c && c.owner === 1 && c.cardId !== "cub") cardCount++;
-      })
-    );
-    
-    // Reset moved status for player's next turn (will be handled by AI turn end, but good for safety)
-    // Actually, logic is: Player Actions -> Player Recruit -> AI Actions -> AI Recruit -> Repeat
+    board.forEach(row => row.forEach(c => { if (c && c.owner === 1 && c.cardId !== "cub") cardCount++; }));
     
     if (cardCount < 5 && visibleDeck.length > 0) {
       setTurn(2);
@@ -1045,9 +717,7 @@ const GameSection = ({ onBack }) => {
       return (
         <div className="w-24 h-36 md:w-40 md:h-60 bg-[#2a1e1a]/50 border-2 border-dashed border-[#8D6E63]/50 rounded-lg flex items-center justify-center shrink-0">
           <div className="text-center opacity-50">
-            <span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">
-              EMPTY
-            </span>
+            <span className="text-[#8D6E63] font-bold text-xs tracking-widest uppercase">EMPTY</span>
           </div>
         </div>
       );
@@ -1062,128 +732,55 @@ const GameSection = ({ onBack }) => {
         }`}
       >
         <div className="h-[65%] w-full bg-[#2a1e1a] relative">
-          <img
-            src={info.cardImg}
-            alt={info.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+          <img src={info.cardImg} alt={info.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
           <div className="absolute top-2 right-2 shadow-sm">
-            <div
-              className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[9px] md:text-[11px] font-extrabold border-2 border-white/20 shadow-md ${
-                info.type === "Active"
-                  ? "bg-red-700 text-white"
-                  : info.type === "Passive"
-                  ? "bg-blue-700 text-white"
-                  : "bg-amber-600 text-black"
-              }`}
-            >
-              {info.type === "Active"
-                ? "A"
-                : info.type === "Passive"
-                ? "P"
-                : "S"}
+            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[9px] md:text-[11px] font-extrabold border-2 border-white/20 shadow-md ${
+                info.type === "Active" ? "bg-red-700 text-white" : info.type === "Passive" ? "bg-blue-700 text-white" : "bg-amber-600 text-black"
+              }`}>
+              {info.type === "Active" ? "A" : info.type === "Passive" ? "P" : "S"}
             </div>
           </div>
         </div>
         <div className="h-[35%] w-full bg-gradient-to-b from-[#3E2723] to-[#2E1E1A] p-2 flex flex-col items-center justify-center text-center border-t-[3px] border-[#5D4037]">
-          <h3 className="text-[#FFECB3] font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 font-serif">
-            {info.name}
-          </h3>
-          <p className="text-[8px] md:text-[10px] text-[#D7CCC8] leading-tight line-clamp-3 px-1">
-            {info.desc}
-          </p>
+          <h3 className="text-[#FFECB3] font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 font-serif">{info.name}</h3>
+          <p className="text-[8px] md:text-[10px] text-[#D7CCC8] leading-tight line-clamp-3 px-1">{info.desc}</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div
-      className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center"
-      style={{ backgroundImage: `url(${gameBackground})` }}
-    >
+    <div className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center" style={{ backgroundImage: `url(${gameBackground})` }}>
       <style>{styles}</style>
       <div className="h-14 md:h-16 bg-[#2a1e1a] border-b-4 border-[#8D6E63] shadow-2xl flex items-center justify-between px-4 md:px-8 z-50 shrink-0 relative">
-        <img
-          src={gameLogo}
-          alt="Logo"
-          className="h-10 md:h-12 w-auto object-contain drop-shadow"
-        />
-        <div
-          className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${
-            gameOver
-              ? "bg-[#3E2723] text-[#FFECB3]"
-              : turn === 1 || turn === 2
-              ? "bg-blue-900 text-blue-100 border-blue-500"
-              : "bg-red-900 text-red-100 border-red-500"
-          }`}
-        >
-          {gameOver ? (
-            `🏆 ${gameOver} WINS!`
-          ) : (
-            <span className="animate-pulse tracking-wide uppercase">
-              {gameLog}
-            </span>
-          )}
+        <img src={gameLogo} alt="Logo" className="h-10 md:h-12 w-auto object-contain drop-shadow" />
+        <div className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${
+            gameOver ? "bg-[#3E2723] text-[#FFECB3]" : turn === 1 || turn === 2 ? "bg-blue-900 text-blue-100 border-blue-500" : "bg-red-900 text-red-100 border-red-500"
+          }`}>
+          {gameOver ? `🏆 ${gameOver} WINS!` : <span className="animate-pulse tracking-wide uppercase">{gameLog}</span>}
         </div>
         <div className="flex gap-3">
           {turn === 1 && (
-            <button
-              onClick={handleEndAction}
-              className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase"
-            >
+            <button onClick={handleEndAction} className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase">
               End Turn
             </button>
           )}
-          <button
-            onClick={() => navigate("/")}
-            className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm shadow-md"
-          >
-            Exit
-          </button>
+          <button onClick={() => navigate("/")} className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm shadow-md">Exit</button>
         </div>
       </div>
 
       <div className="flex-grow flex flex-col md:flex-row w-full h-full overflow-hidden relative">
-        <div
-          className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-r-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
-            mobileTab === "recruit"
-              ? "translate-y-0"
-              : "translate-y-full md:translate-y-0 hidden md:flex"
-          }`}
-        >
+        <div className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-r-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${mobileTab === "recruit" ? "translate-y-0" : "translate-y-full md:translate-y-0 hidden md:flex"}`}>
           <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md">
-            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">
-              Recruitment
-            </h2>
-            <button
-              onClick={() => setMobileTab(null)}
-              className="md:hidden text-2xl font-bold text-[#D7CCC8]"
-            >
-              &times;
-            </button>
+            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">Recruitment</h2>
+            <button onClick={() => setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8]">&times;</button>
           </div>
           <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-opacity-10">
             <div className="flex flex-wrap md:flex-col justify-center items-center gap-4">
               {visibleDeck.map((card, idx) => (
-                <CardUI
-                  key={card.id || idx}
-                  data={card}
-                  onClick={() => {
-                    if (turn === 2) {
-                      setRecruitSelectionIndex(idx);
-                      setMobileTab(null);
-                      setGameLog("Place unit on zone");
-                    }
-                  }}
-                  isSelected={turn === 2 && recruitSelectionIndex === idx}
-                />
+                <CardUI key={card.id || idx} data={card} onClick={() => { if (turn === 2) { setRecruitSelectionIndex(idx); setMobileTab(null); setGameLog("Place unit on zone"); } }} isSelected={turn === 2 && recruitSelectionIndex === idx} />
               ))}
-              {visibleDeck.length === 0 && (
-                <div className="text-[#8D6E63] text-sm opacity-70">
-                  Deck Empty
-                </div>
-              )}
+              {visibleDeck.length === 0 && <div className="text-[#8D6E63] text-sm opacity-70">Deck Empty</div>}
             </div>
           </div>
         </div>
@@ -1191,105 +788,30 @@ const GameSection = ({ onBack }) => {
         <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 overflow-hidden">
           {selectedPos && selectedUnitAbility && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn">
-              <button
-                onClick={toggleActionMode}
-                className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2 ${
-                  actionMode === "move"
-                    ? "bg-red-700 hover:bg-red-600 border-red-900 text-white"
-                    : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"
-                }`}
-              >
-                {actionMode === "move" ? (
-                  <>
-                    <span>⚡</span> USE ABILITY
-                  </>
-                ) : (
-                  <>
-                    <span>✖</span> CANCEL ABILITY
-                  </>
-                )}
+              <button onClick={toggleActionMode} className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2 ${actionMode === "move" ? "bg-red-700 hover:bg-red-600 border-red-900 text-white" : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"}`}>
+                {actionMode === "move" ? <><span>⚡</span> USE ABILITY</> : <><span>✖</span> CANCEL ABILITY</>}
               </button>
             </div>
           )}
           <div className="relative w-full h-full flex items-center justify-center z-10">
             <div className="relative max-h-full max-w-full aspect-[650/750] transition-all duration-500">
-              <img
-                src={board_img}
-                alt="Board"
-                className="w-full h-full object-contain pointer-events-none drop-shadow-2xl"
-              />
-              {board.map((row, r) =>
-                row.map((cell, c) => {
-                  if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c])
-                    return null;
+              <img src={board_img} alt="Board" className="w-full h-full object-contain pointer-events-none drop-shadow-2xl" />
+              {board.map((row, r) => row.map((cell, c) => {
+                  if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) return null;
                   const coords = SLOT_COORDINATES[r][c];
-                  const moveAction = validMoves.find(
-                    (m) => m.r === r && m.c === c
-                  );
-                  const isRecruitValid =
-                    turn === 2 &&
-                    recruitSelectionIndex !== null &&
-                    !cell &&
-                    isRecruitZone(r, c, 1);
-                  const isSelectedUnit =
-                    selectedPos && selectedPos[0] === r && selectedPos[1] === c;
+                  const moveAction = validMoves.find((m) => m.r === r && m.c === c);
+                  const isRecruitValid = turn === 2 && recruitSelectionIndex !== null && !cell && isRecruitZone(r, c, 1);
+                  const isSelectedUnit = selectedPos && selectedPos[0] === r && selectedPos[1] === c;
 
                   return (
-                    <div
-                      key={`${r}-${c}`}
-                      onClick={() => handleBoardClick(r, c)}
-                      style={{
-                        position: "absolute",
-                        top: coords.top,
-                        left: coords.left,
-                        transform: "translate(-50%, -50%)",
-                      }}
-                      className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200 ${
-                        moveAction || isRecruitValid
-                          ? "cursor-pointer z-30 scale-110"
-                          : ""
-                      }`}
-                    >
-                      {moveAction && (
-                        <div
-                          className={`absolute w-full h-full rounded-full border-2 ${
-                            moveAction.type.includes("ability")
-                              ? "bg-red-500/30 action-ability"
-                              : "bg-green-500/30 action-move"
-                          }`}
-                        ></div>
-                      )}
-                      {isRecruitValid && (
-                        <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>
-                      )}
-                      {isSelectedUnit && (
-                        <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>
-                      )}
+                    <div key={`${r}-${c}`} onClick={() => handleBoardClick(r, c)} style={{ position: "absolute", top: coords.top, left: coords.left, transform: "translate(-50%, -50%)" }} className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200 ${moveAction || isRecruitValid ? "cursor-pointer z-30 scale-110" : ""}`}>
+                      {moveAction && <div className={`absolute w-full h-full rounded-full border-2 ${moveAction.type.includes("ability") ? "bg-red-500/30 action-ability" : "bg-green-500/30 action-move"}`}></div>}
+                      {isRecruitValid && <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>}
+                      {isSelectedUnit && <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>}
                       {cell && (
-                        <div
-                          className={`relative w-[95%] h-[95%] transition-all duration-300 ${
-                            cell.isNew ? "animate-spawn" : ""
-                          } ${
-                            cell.moved
-                              ? "grayscale-[0.8] opacity-80"
-                              : "hover:scale-110 cursor-pointer"
-                          }`}
-                        >
-                          <img
-                            src={getCardData(cell.cardId).unitImg}
-                            className={`w-full h-full object-contain drop-shadow-md ${
-                              cell.owner === 2
-                                ? "filter hue-rotate-[160deg] brightness-90"
-                                : ""
-                            }`}
-                          />
-                          <div
-                            className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${
-                              cell.owner === 1
-                                ? "border-blue-500"
-                                : "border-red-600"
-                            }`}
-                          ></div>
+                        <div className={`relative w-[95%] h-[95%] transition-all duration-300 ${cell.isNew ? "animate-spawn" : ""} ${cell.moved ? "grayscale-[0.8] opacity-80" : "hover:scale-110 cursor-pointer"}`}>
+                          <img src={getCardData(cell.cardId).unitImg} className={`w-full h-full object-contain drop-shadow-md ${cell.owner === 2 ? "filter hue-rotate-[160deg] brightness-90" : ""}`} />
+                          <div className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${cell.owner === 1 ? "border-blue-500" : "border-red-600"}`}></div>
                         </div>
                       )}
                     </div>
@@ -1300,84 +822,24 @@ const GameSection = ({ onBack }) => {
           </div>
         </div>
 
-        <div
-          className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-l-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
-            mobileTab === "roster"
-              ? "translate-y-0"
-              : "translate-y-full md:translate-y-0 hidden md:flex"
-          }`}
-        >
+        <div className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-l-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${mobileTab === "roster" ? "translate-y-0" : "translate-y-full md:translate-y-0 hidden md:flex"}`}>
           <div className="p-4 bg-[#2a1e1a] border-b border-[#5D4037] flex justify-between items-center shadow-md">
-            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">
-              Party
-            </h2>
-            <button
-              onClick={() => setMobileTab(null)}
-              className="md:hidden text-2xl font-bold text-[#D7CCC8]"
-            >
-              &times;
-            </button>
+            <h2 className="text-[#FFCA28] font-bold text-sm md:text-base uppercase tracking-[0.2em]">Party</h2>
+            <button onClick={() => setMobileTab(null)} className="md:hidden text-2xl font-bold text-[#D7CCC8]">&times;</button>
           </div>
           <div className="flex-grow overflow-y-auto no-scrollbar p-4 md:p-6 bg-opacity-10">
             <div className="flex flex-wrap md:flex-col justify-center items-center gap-4">
-              {Array(5)
-                .fill(null)
-                .map((_, idx) => {
-                  const unit = playerRoster.filter((u) => u.cardId !== "cub")[
-                    idx
-                  ];
-                  return unit ? (
-                    <CardUI
-                      key={idx}
-                      data={unit}
-                      onClick={() => handleSelectUnit(unit.r, unit.c)}
-                      isSelected={
-                        selectedPos &&
-                        selectedPos[0] === unit.r &&
-                        selectedPos[1] === unit.c
-                      }
-                    />
-                  ) : (
-                    <CardUI key={idx} isEmpty={true} />
-                  );
+              {Array(5).fill(null).map((_, idx) => {
+                  const unit = playerRoster.filter((u) => u.cardId !== "cub")[idx];
+                  return unit ? <CardUI key={idx} data={unit} onClick={() => handleSelectUnit(unit.r, unit.c)} isSelected={selectedPos && selectedPos[0] === unit.r && selectedPos[1] === unit.c} /> : <CardUI key={idx} isEmpty={true} />;
                 })}
             </div>
           </div>
         </div>
-
         <div className="md:hidden h-16 bg-[#2a1e1a] flex items-center justify-around shrink-0 z-50 text-[#D7CCC8] border-t-4 border-[#5D4037]">
-          <button
-            onClick={() =>
-              setMobileTab(mobileTab === "recruit" ? null : "recruit")
-            }
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === "recruit" ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">🎴</span>
-            <span className="text-[9px] font-bold uppercase">Recruit</span>
-          </button>
-
-          <button
-            onClick={() => setMobileTab(null)}
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === null ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">♟️</span>
-            <span className="text-[9px] font-bold uppercase">Board</span>
-          </button>
-          <button
-            onClick={() =>
-              setMobileTab(mobileTab === "roster" ? null : "roster")
-            }
-            className={`flex flex-col items-center p-2 rounded w-20 ${
-              mobileTab === "roster" ? "text-[#FFCA28]" : "opacity-70"
-            }`}
-          >
-            <span className="text-xl">🛡️</span>
-            <span className="text-[9px] font-bold uppercase">Deck</span>
-          </button>
+          <button onClick={() => setMobileTab(mobileTab === "recruit" ? null : "recruit")} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === "recruit" ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">🎴</span><span className="text-[9px] font-bold uppercase">Recruit</span></button>
+          <button onClick={() => setMobileTab(null)} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === null ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">♟️</span><span className="text-[9px] font-bold uppercase">Board</span></button>
+          <button onClick={() => setMobileTab(mobileTab === "roster" ? null : "roster")} className={`flex flex-col items-center p-2 rounded w-20 ${mobileTab === "roster" ? "text-[#FFCA28]" : "opacity-70"}`}><span className="text-xl">🛡️</span><span className="text-[9px] font-bold uppercase">Deck</span></button>
         </div>
       </div>
     </div>
