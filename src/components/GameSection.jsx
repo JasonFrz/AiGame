@@ -46,7 +46,7 @@ const GameSection = ({ onBack }) => {
     [
       { top: "30%", left: "9.8%" },
       { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" }, // Center Row 2 (Connected to Leader 1)
+      { top: "23%", left: "50%" }, 
       { top: "30%", left: "63.5%" },
       { top: "30%", left: "90.3%" },
     ],
@@ -76,7 +76,7 @@ const GameSection = ({ onBack }) => {
     [
       { top: "70.2%", left: "9.8%" },
       { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" }, // Center Row 6 (Connected to Leader 2)
+      { top: "77%", left: "50%" }, 
       { top: "70.2%", left: "63.5%" },
       { top: "70.2%", left: "90.3%" },
     ],
@@ -92,53 +92,42 @@ const GameSection = ({ onBack }) => {
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      // Leader Top (0,0) moves to 1,0; 1,1; and 2,2 (Vertical jump)
       "0,0": [[1, 0], [1, 1], [2, 2]], 
       "1,0": [[0, 0], [2, 0], [2, 1]],
       "1,1": [[0, 0], [2, 1], [2, 2]],
       "1,2": [[2, 2], [2, 3]],
       "1,3": [[2, 3], [2, 4]],
-      
       "2,0": [[1, 0], [3, 0], [3, 1]],
       "2,1": [[1, 0], [1, 1], [3, 1], [3, 2]],
-      // 2,2 connects back to 0,0
       "2,2": [[1, 1], [1, 2], [3, 2], [3, 3], [0, 0]], 
       "2,3": [[1, 2], [1, 3], [3, 3], [3, 4]],
       "2,4": [[1, 3], [3, 4], [3, 5]],
-
       "3,0": [[2, 0], [4, 0]],
       "3,1": [[2, 0], [2, 1], [4, 0], [4, 1]],
       "3,2": [[2, 1], [2, 2], [4, 1], [4, 2]],
       "3,3": [[2, 2], [2, 3], [4, 2], [4, 3]],
       "3,4": [[2, 3], [2, 4], [4, 3], [4, 4]],
       "3,5": [[2, 4], [4, 4]],
-
       "4,0": [[3, 0], [3, 1], [5, 0], [5, 1]],
       "4,1": [[3, 1], [3, 2], [5, 1], [5, 2]],
       "4,2": [[3, 2], [3, 3], [5, 2], [5, 3]],
       "4,3": [[3, 3], [3, 4], [5, 3], [5, 4]],
       "4,4": [[3, 4], [3, 5], [5, 4], [5, 5]],
-
       "5,0": [[4, 0], [6, 0]],
       "5,1": [[4, 0], [4, 1], [6, 0], [6, 1]],
       "5,2": [[4, 1], [4, 2], [6, 1], [6, 2]],
       "5,3": [[4, 2], [4, 3], [6, 2], [6, 3]],
       "5,4": [[4, 3], [4, 4], [6, 3], [6, 4]],
       "5,5": [[4, 4], [6, 4]],
-
       "6,0": [[5, 0], [5, 1], [7, 0]],
       "6,1": [[5, 1], [5, 2], [7, 0], [7, 1]],
-      // 6,2 connects down to 8,0 (Leader Bottom)
       "6,2": [[5, 2], [5, 3], [7, 1], [7, 2], [8, 0]], 
       "6,3": [[5, 3], [5, 4], [7, 2], [7, 3]],
       "6,4": [[5, 4], [5, 5], [7, 3]],
-
       "7,0": [[6, 0], [6, 1], [8, 0]],
       "7,1": [[6, 1], [6, 2], [8, 0]],
       "7,2": [[6, 2], [6, 3], [8, 0]], 
       "7,3": [[6, 3], [6, 4]],
-      
-      // Leader Bottom (8,0) moves to 7,1; 7,2; and 6,2 (Vertical jump)
       "8,0": [[7, 1], [7, 2], [6, 2]], 
     };
     return manualMap[mapKey] || [];
@@ -162,12 +151,20 @@ const GameSection = ({ onBack }) => {
   const [validMoves, setValidMoves] = useState([]);
   const [actionMode, setActionMode] = useState("move");
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
+  const [clawMode, setClawMode] = useState("pull"); // 'pull' or 'dash'
+  
+  // NEW STATE: Tracks if the turn is locked to 'move' or 'ability'
+  const [turnPhaseType, setTurnPhaseType] = useState(null); 
+
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Your Turn");
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
+  
+  // Track AI state
   const isAiProcessing = useRef(false);
+  const aiTurnCounter = useRef(0);
 
   useEffect(() => {
     initializeGame();
@@ -196,13 +193,16 @@ const GameSection = ({ onBack }) => {
     setDeck(shuffled.slice(3));
     setVisibleDeck(shuffled.slice(0, 3));
     setTurn(1);
+    setTurnPhaseType(null); // Reset phase type
     setGameOver(null);
     setRecruitStep(0);
+    setClawMode("pull");
     setGameLog("Your Turn");
     isAiProcessing.current = false;
+    aiTurnCounter.current = 0;
   };
 
-  // --- WIN CONDITION LOGIC (FIXED FOR ARCHER RULE) ---
+  // --- WIN CONDITION LOGIC ---
   const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
     currentBoard.forEach((row, r) =>
@@ -236,14 +236,7 @@ const GameSection = ({ onBack }) => {
       });
 
       if (adjacentEnemies >= 2) return true;
-      
-      if (
-        neighbors.length > 0 &&
-        occupiedNeighbors === neighbors.length &&
-        enemyOccupied >= 2 
-      )
-        return true;
-        
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length && enemyOccupied >= 2) return true;
       return false;
     };
 
@@ -253,7 +246,7 @@ const GameSection = ({ onBack }) => {
   };
 
   // ==========================================
-  // AI STRATEGY: PRO MINIMAX
+  // AI STRATEGY
   // ==========================================
 
   const cloneBoard = (b) => {
@@ -346,7 +339,7 @@ const GameSection = ({ onBack }) => {
   };
 
   const applySimMove = (simBoard, move) => {
-    const { from, to, type, pushTo, pullTo } = move;
+    const { from, to, type, pushTo, pullTo, landAt } = move;
     const unit = simBoard[from[0]][from[1]];
     if (!unit) return simBoard;
     
@@ -366,13 +359,65 @@ const GameSection = ({ onBack }) => {
       const target = simBoard[to[0]][to[1]];
       simBoard[pullTo[0]][pullTo[1]] = target;
       simBoard[to[0]][to[1]] = null;
+    } else if (type === "ability_claw_dash" && landAt) {
+      simBoard[landAt[0]][landAt[1]] = unit;
+      simBoard[from[0]][from[1]] = null;
     }
     return simBoard;
   };
 
+  const calculateRiderMoves = (startR, startC, unit, currentBoard) => {
+    const moves = [];
+    const startCoords = SLOT_COORDINATES[startR][startC];
+    const neighbors1 = getNeighbors(startR, startC);
+
+    neighbors1.forEach(([r1, c1]) => {
+        if (currentBoard[r1][c1]) return; 
+
+        const coords1 = SLOT_COORDINATES[r1][c1];
+        const neighbors2 = getNeighbors(r1, c1);
+
+        neighbors2.forEach(([r2, c2]) => {
+            if (r2 === startR && c2 === startC) return;
+            
+            const cell2 = currentBoard[r2][c2];
+            if (cell2 && cell2.owner === unit.owner) return; 
+
+            const coords2 = SLOT_COORDINATES[r2][c2];
+
+            const x0 = parseFloat(startCoords.left);
+            const y0 = parseFloat(startCoords.top);
+            const x1 = parseFloat(coords1.left);
+            const y1 = parseFloat(coords1.top);
+            const x2 = parseFloat(coords2.left);
+            const y2 = parseFloat(coords2.top);
+
+            const dx1 = x1 - x0;
+            const dy1 = y1 - y0;
+            const dx2 = x2 - x1;
+            const dy2 = y2 - y1;
+
+            const angle1 = Math.atan2(dy1, dx1);
+            const angle2 = Math.atan2(dy2, dx2);
+
+            if (Math.abs(angle1 - angle2) < 0.2) { 
+                 moves.push({ r: r2, c: c2, type: "move" });
+            }
+        });
+    });
+    return moves;
+  };
+
   const getBestMoveForUnit = (unit, currentBoard) => {
     const { r, c } = unit;
-    const basics = calculateBasicMoves(r, c, unit, currentBoard, getNeighbors);
+    
+    let basics;
+    if (unit.cardId === 'rider') {
+        basics = calculateRiderMoves(r, c, unit, currentBoard);
+    } else {
+        basics = calculateBasicMoves(r, c, unit, currentBoard, getNeighbors);
+    }
+
     const abilities = calculateAbilityMoves(r, c, unit, currentBoard, getNeighbors);
     
     let allMoves = [
@@ -411,6 +456,9 @@ const GameSection = ({ onBack }) => {
   const runAITurn = useCallback(async () => {
     if (gameOver || isAiProcessing.current) return;
     isAiProcessing.current = true;
+    
+    aiTurnCounter.current += 1;
+    const recruitLimit = aiTurnCounter.current === 1 ? 2 : 1;
 
     const winStart = checkWinCondition(board);
     if (winStart) {
@@ -449,14 +497,8 @@ const GameSection = ({ onBack }) => {
     aiUnits.sort((a, b) => {
         if (a.cardId === 'leader2' && isLeaderThreatened()) return -1;
         if (b.cardId === 'leader2' && isLeaderThreatened()) return 1;
-
         const d1 = pLeaderPos ? getDist(a.r, a.c, pLeaderPos[0], pLeaderPos[1]) : 10;
         const d2 = pLeaderPos ? getDist(b.r, b.c, pLeaderPos[0], pLeaderPos[1]) : 10;
-        if (a.cardId === 'assassin' && d1 <= 3) return -1;
-
-        const controllers = ['manipulator', 'claw'];
-        if (controllers.includes(a.cardId) && !controllers.includes(b.cardId)) return -1;
-
         return d1 - d2; 
     });
 
@@ -493,25 +535,32 @@ const GameSection = ({ onBack }) => {
         await new Promise(r => setTimeout(r, 500));
     }
 
-    await smartRecruit(currentBoard, aiLeaderPos);
+    await smartRecruit(currentBoard, aiLeaderPos, recruitLimit);
+    
     isAiProcessing.current = false;
   }, [board, gameOver]); 
 
-  const smartRecruit = async (currentBoard, aiLeaderPos) => {
-    let aiCount = 0;
-    currentBoard.forEach(row => row.forEach(c => {
-        if (c && c.owner === 2 && c.cardId !== 'cub') aiCount++;
-    }));
+  const smartRecruit = async (currentBoard, aiLeaderPos, limit) => {
+    let localBoard = cloneBoard(currentBoard);
+    let localVisible = [...visibleDeck];
+    let localDeck = [...deck];
 
-    if (aiCount < 5 && visibleDeck.length > 0) {
-        setGameLog("AI Recruiting...");
-        await new Promise(r => setTimeout(r, 500));
+    for (let i = 0; i < limit; i++) {
+        let aiCount = 0;
+        localBoard.forEach(row => row.forEach(c => {
+            if (c && c.owner === 2 && c.cardId !== 'cub') aiCount++;
+        }));
+
+        if (aiCount >= 5 || localVisible.length === 0) break;
+
+        setGameLog(`AI Recruiting (${i+1}/${limit})...`);
+        await new Promise(r => setTimeout(r, 600));
 
         let priority = "attack";
         if (aiLeaderPos) {
              const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
              const threats = neighbors.filter(([nr, nc]) => {
-                 const u = currentBoard[nr][nc];
+                 const u = localBoard[nr][nc];
                  return u && u.owner === 1 && u.cardId !== 'archer';
              }).length;
              if (threats > 0) priority = "defense";
@@ -520,46 +569,49 @@ const GameSection = ({ onBack }) => {
         let bestIdx = 0;
         let bestScore = -1;
 
-        visibleDeck.forEach((card, i) => {
+        localVisible.forEach((card, idx) => {
             let score = UNIT_VALUES[card.id] || 0;
             if (priority === "defense" && ['protector', 'guard', 'jailer'].includes(card.id)) score += 5000;
             if (priority === "attack" && ['assassin', 'manipulator', 'claw'].includes(card.id)) score += 2000;
-            if (score > bestScore) { bestScore = score; bestIdx = i; }
+            if (score > bestScore) { bestScore = score; bestIdx = idx; }
         });
 
-        const chosenCard = visibleDeck[bestIdx];
+        const chosenCard = localVisible[bestIdx];
         const spots = [];
         for (let r = 0; r <= 2; r++) {
-            for (let c = 0; c < currentBoard[r].length; c++) {
-                if (isRecruitZone(r, c, 2) && !currentBoard[r][c]) spots.push([r, c]);
+            for (let c = 0; c < localBoard[r].length; c++) {
+                if (isRecruitZone(r, c, 2) && !localBoard[r][c]) spots.push([r, c]);
             }
         }
 
         if (spots.length > 0) {
             spots.sort((a, b) => priority === "defense" ? a[0] - b[0] : b[0] - a[0]);
             const spot = spots[0];
-            const finalBoard = cloneBoard(currentBoard);
-
+            
             if (chosenCard.id === "hermit" && spots.length >= 2) {
-                finalBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: "hermit", moved: false, isNew: true };
+                localBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: "hermit", moved: false, isNew: true };
                 const spot2 = spots[1]; 
-                finalBoard[spot2[0]][spot2[1]] = { type: "Unit", owner: 2, cardId: "cub", moved: false, isNew: true };
+                localBoard[spot2[0]][spot2[1]] = { type: "Unit", owner: 2, cardId: "cub", moved: false, isNew: true };
             } else {
-                finalBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: chosenCard.id, moved: false, isNew: true };
+                localBoard[spot[0]][spot[1]] = { type: "Unit", owner: 2, cardId: chosenCard.id, moved: false, isNew: true };
             }
             
-            const newVis = [...visibleDeck];
-            const newD = [...deck];
-            if (newD.length > 0) { newVis[bestIdx] = newD[0]; newD.shift(); } 
-            else { newVis.splice(bestIdx, 1); }
+            if (localDeck.length > 0) { 
+                localVisible[bestIdx] = localDeck[0]; 
+                localDeck.shift(); 
+            } else { 
+                localVisible.splice(bestIdx, 1); 
+            }
             
-            setDeck(newD);
-            setVisibleDeck(newVis);
-            setBoard(finalBoard);
+            setDeck([...localDeck]);
+            setVisibleDeck([...localVisible]);
+            setBoard(cloneBoard(localBoard));
         }
     }
+
     setBoard(prev => prev.map(row => row.map(c => c ? { ...c, moved: false, isNew: false } : null)));
     setTurn(1);
+    setTurnPhaseType(null); // Reset phase on turn start
     setGameLog("Your Turn");
   };
 
@@ -574,6 +626,7 @@ const GameSection = ({ onBack }) => {
     setValidMoves([]);
     setActionMode("move");
     setSelectedUnitAbility(null);
+    setClawMode("pull");
 
     if (unit && unit.owner === 1) {
       if (unit.moved) {
@@ -582,28 +635,155 @@ const GameSection = ({ onBack }) => {
       }
       const unitData = getCardData(unit.cardId);
       setSelectedPos([r, c]);
-      setGameLog(`Selected ${unitData?.name || "Unit"}`);
-      const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-      setValidMoves(moves);
-      if (unitData.type === "Active") setSelectedUnitAbility(unitData);
+
+      // --- PHASE LOCKING LOGIC ---
+      if (turnPhaseType === 'ability') {
+          // TURN LOCKED TO ABILITIES
+          if (unitData.type !== 'Active') {
+              setGameLog("Turn Locked: Abilities Only!");
+              return; 
+          }
+          setGameLog("Turn Locked: Abilities");
+          
+          setActionMode("ability"); // Force ability mode
+          // Calc ability moves only
+          if (unit.cardId === 'claw') {
+              const moves = calculateLocalClawMoves(r, c, unit, board, clawMode);
+              setValidMoves(moves);
+              if(moves.length === 0) setGameLog("No ability targets");
+          } else {
+              const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+              setValidMoves(abilities);
+              if(abilities.length === 0) setGameLog("No ability targets");
+          }
+          setSelectedUnitAbility(unitData);
+
+      } else if (turnPhaseType === 'move') {
+          // TURN LOCKED TO MOVEMENT
+          setGameLog("Turn Locked: Movement");
+          
+          if (unit.cardId === 'rider') {
+              const moves = calculateRiderMoves(r, c, unit, board);
+              setValidMoves(moves);
+          } else {
+              const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+              setValidMoves(moves);
+          }
+          // Explicitly Disable Ability Button
+          setSelectedUnitAbility(null); 
+
+      } else {
+          // NO LOCK - STANDARD BEHAVIOR
+          setGameLog(`Selected ${unitData?.name || "Unit"}`);
+          if (unit.cardId === 'rider') {
+             const moves = calculateRiderMoves(r, c, unit, board);
+             setValidMoves(moves);
+             setSelectedUnitAbility(null); 
+          } else {
+             const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+             setValidMoves(moves);
+             if (unitData.type === "Active") setSelectedUnitAbility(unitData);
+          }
+      }
     }
+  };
+
+  const calculateLocalClawMoves = (r, c, unit, currentBoard, mode) => {
+    const moves = [];
+    const myCoords = SLOT_COORDINATES[r][c];
+    if (!myCoords) return [];
+    const myLeft = parseFloat(myCoords.left);
+
+    let alignedEnemies = [];
+    currentBoard.forEach((row, tr) => {
+      row.forEach((cell, tc) => {
+        if (cell && cell.owner !== unit.owner) {
+           const targetCoords = SLOT_COORDINATES[tr][tc];
+           if (!targetCoords) return;
+           const targetLeft = parseFloat(targetCoords.left);
+           if (Math.abs(myLeft - targetLeft) < 5) {
+               alignedEnemies.push({ r: tr, c: tc, dist: Math.abs(r - tr) });
+           }
+        }
+      });
+    });
+
+    const enemiesAbove = alignedEnemies.filter(e => e.r < r).sort((a, b) => a.dist - b.dist);
+    const enemiesBelow = alignedEnemies.filter(e => e.r > r).sort((a, b) => a.dist - b.dist);
+
+    const validTargets = [];
+    if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
+    if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
+
+    validTargets.forEach(target => {
+        const { r: tr, c: tc } = target;
+        if (mode === "dash") {
+             const landingRow = r < tr ? tr - 1 : tr + 1;
+             if (landingRow === r) return;
+             if (SLOT_COORDINATES[landingRow]) {
+                 const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+                 if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+                      moves.push({ r: tr, c: tc, type: "ability_claw_dash", landAt: [landingRow, landingCol] });
+                 }
+             }
+        } else {
+             const landingRow = tr > r ? r + 1 : r - 1;
+             if (SLOT_COORDINATES[landingRow]) {
+                 const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+                 if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+                      moves.push({ r: tr, c: tc, type: "ability_claw_pull", pullTo: [landingRow, landingCol] });
+                 }
+             }
+        }
+    });
+    return moves;
   };
 
   const toggleActionMode = () => {
     if (!selectedPos) return;
     const [r, c] = selectedPos;
     const unit = board[r][c];
+
+    // RESTRICT TOGGLING IF PHASE IS LOCKED
+    if (turnPhaseType === 'move' &&actionMode === 'move') return; // Can't switch to ability
+    if (turnPhaseType === 'ability' &&actionMode === 'ability') return; // Can't switch to move
+
+    if (unit.cardId === 'rider' || getCardData(unit.cardId).type === "Passive") return;
+
     if (actionMode === "move") {
       setActionMode("ability");
-      const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
-      setValidMoves(abilities);
-      if (abilities.length === 0) setGameLog("No ability targets!");
-      else setGameLog("Targeting Ability...");
+      if (unit.cardId === 'claw') {
+        const moves = calculateLocalClawMoves(r, c, unit, board, clawMode);
+        setValidMoves(moves);
+        if (moves.length === 0) setGameLog(clawMode === "pull" ? "No Pull Targets (Aligned)" : "No Dash Targets (Aligned)");
+        else setGameLog(clawMode === "pull" ? "Select Target to Pull" : "Select Dash Target");
+      } else {
+        const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+        setValidMoves(abilities);
+        if (abilities.length === 0) setGameLog("No ability targets!");
+        else setGameLog("Targeting Ability...");
+      }
     } else {
       setActionMode("move");
-      const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-      setValidMoves(moves);
+      if (unit.cardId === 'rider') {
+         setValidMoves(calculateRiderMoves(r, c, unit, board));
+      } else {
+         setValidMoves(calculateBasicMoves(r, c, unit, board, getNeighbors));
+      }
       setGameLog("Select Move Destination");
+    }
+  };
+
+  const toggleClawMode = (e) => {
+    e.stopPropagation();
+    const newMode = clawMode === "pull" ? "dash" : "pull";
+    setClawMode(newMode);
+    if (selectedPos) {
+        const [r, c] = selectedPos;
+        const unit = board[r][c];
+        const moves = calculateLocalClawMoves(r, c, unit, board, newMode);
+        setValidMoves(moves);
+        setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
     }
   };
 
@@ -660,9 +840,27 @@ const GameSection = ({ onBack }) => {
           const target = newBoard[r][c];
           newBoard[action.pullTo[0]][action.pullTo[1]] = target;
           newBoard[r][c] = null;
-        } 
+        } else if (action.type === "ability_claw_dash") {
+          if (action.landAt[0] !== sr || action.landAt[1] !== sc) {
+            newBoard[action.landAt[0]][action.landAt[1]] = unit;
+            newBoard[sr][sc] = null;
+          }
+        }
 
         setBoard(newBoard);
+        
+        // --- SET TURN PHASE LOCK ---
+        // If this is the first action of the turn, lock the phase type
+        if (turnPhaseType === null) {
+            if (action.type.includes("ability")) {
+                setTurnPhaseType('ability');
+                setGameLog("Turn Locked: ABILITIES");
+            } else {
+                setTurnPhaseType('move');
+                setGameLog("Turn Locked: MOVEMENT");
+            }
+        }
+
         setSelectedPos(null);
         setValidMoves([]);
         setActionMode("move");
@@ -787,10 +985,18 @@ const GameSection = ({ onBack }) => {
 
         <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 overflow-hidden">
           {selectedPos && selectedUnitAbility && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn">
-              <button onClick={toggleActionMode} className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2 ${actionMode === "move" ? "bg-red-700 hover:bg-red-600 border-red-900 text-white" : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"}`}>
-                {actionMode === "move" ? <><span>⚡</span> USE ABILITY</> : <><span>✖</span> CANCEL ABILITY</>}
-              </button>
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn flex flex-col items-center gap-2">
+              <div className="flex gap-2">
+                <button onClick={toggleActionMode} className={`px-6 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2 ${actionMode === "move" ? "bg-red-700 hover:bg-red-600 border-red-900 text-white" : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"}`}>
+                  {actionMode === "move" ? <><span>⚡</span> USE ABILITY</> : <><span>✖</span> CANCEL ABILITY</>}
+                </button>
+                
+                {actionMode === "ability" && getCardData(board[selectedPos[0]][selectedPos[1]].cardId).id === 'claw' && (
+                   <button onClick={toggleClawMode} className="px-4 py-3 rounded-full font-bold uppercase tracking-wider border-4 border-amber-600 bg-amber-800 text-amber-100 hover:bg-amber-700 transition-all shadow-xl">
+                      Mode: {clawMode}
+                   </button>
+                )}
+              </div>
             </div>
           )}
           <div className="relative w-full h-full flex items-center justify-center z-10">
