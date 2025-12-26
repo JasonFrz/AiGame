@@ -8,6 +8,7 @@ import {
   getCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
+  calculateVisualClawMoves, // <-- IMPORT BARU
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -648,7 +649,8 @@ const GameSection = ({ onBack }) => {
           setActionMode("ability"); // Force ability mode
           // Calc ability moves only
           if (unit.cardId === 'claw') {
-              const moves = calculateLocalClawMoves(r, c, unit, board, clawMode);
+              // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
+              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
               setValidMoves(moves);
               if(moves.length === 0) setGameLog("No ability targets");
           } else {
@@ -688,72 +690,22 @@ const GameSection = ({ onBack }) => {
     }
   };
 
-  const calculateLocalClawMoves = (r, c, unit, currentBoard, mode) => {
-    const moves = [];
-    const myCoords = SLOT_COORDINATES[r][c];
-    if (!myCoords) return [];
-    const myLeft = parseFloat(myCoords.left);
-
-    let alignedEnemies = [];
-    currentBoard.forEach((row, tr) => {
-      row.forEach((cell, tc) => {
-        if (cell && cell.owner !== unit.owner) {
-           const targetCoords = SLOT_COORDINATES[tr][tc];
-           if (!targetCoords) return;
-           const targetLeft = parseFloat(targetCoords.left);
-           if (Math.abs(myLeft - targetLeft) < 5) {
-               alignedEnemies.push({ r: tr, c: tc, dist: Math.abs(r - tr) });
-           }
-        }
-      });
-    });
-
-    const enemiesAbove = alignedEnemies.filter(e => e.r < r).sort((a, b) => a.dist - b.dist);
-    const enemiesBelow = alignedEnemies.filter(e => e.r > r).sort((a, b) => a.dist - b.dist);
-
-    const validTargets = [];
-    if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
-    if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
-
-    validTargets.forEach(target => {
-        const { r: tr, c: tc } = target;
-        if (mode === "dash") {
-             const landingRow = r < tr ? tr - 1 : tr + 1;
-             if (landingRow === r) return;
-             if (SLOT_COORDINATES[landingRow]) {
-                 const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
-                 if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
-                      moves.push({ r: tr, c: tc, type: "ability_claw_dash", landAt: [landingRow, landingCol] });
-                 }
-             }
-        } else {
-             const landingRow = tr > r ? r + 1 : r - 1;
-             if (SLOT_COORDINATES[landingRow]) {
-                 const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
-                 if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
-                      moves.push({ r: tr, c: tc, type: "ability_claw_pull", pullTo: [landingRow, landingCol] });
-                 }
-             }
-        }
-    });
-    return moves;
-  };
-
   const toggleActionMode = () => {
     if (!selectedPos) return;
     const [r, c] = selectedPos;
     const unit = board[r][c];
 
     // RESTRICT TOGGLING IF PHASE IS LOCKED
-    if (turnPhaseType === 'move' &&actionMode === 'move') return; // Can't switch to ability
-    if (turnPhaseType === 'ability' &&actionMode === 'ability') return; // Can't switch to move
+    if (turnPhaseType === 'move' && actionMode === 'move') return; // Can't switch to ability
+    if (turnPhaseType === 'ability' && actionMode === 'ability') return; // Can't switch to move
 
     if (unit.cardId === 'rider' || getCardData(unit.cardId).type === "Passive") return;
 
     if (actionMode === "move") {
       setActionMode("ability");
       if (unit.cardId === 'claw') {
-        const moves = calculateLocalClawMoves(r, c, unit, board, clawMode);
+        // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
+        const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
         setValidMoves(moves);
         if (moves.length === 0) setGameLog(clawMode === "pull" ? "No Pull Targets (Aligned)" : "No Dash Targets (Aligned)");
         else setGameLog(clawMode === "pull" ? "Select Target to Pull" : "Select Dash Target");
@@ -781,7 +733,8 @@ const GameSection = ({ onBack }) => {
     if (selectedPos) {
         const [r, c] = selectedPos;
         const unit = board[r][c];
-        const moves = calculateLocalClawMoves(r, c, unit, board, newMode);
+        // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
+        const moves = calculateVisualClawMoves(r, c, unit, board, newMode, SLOT_COORDINATES);
         setValidMoves(moves);
         setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
     }

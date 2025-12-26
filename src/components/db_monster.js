@@ -67,13 +67,13 @@ export const ABILITY_DB = {
 };
 
 export const UNIT_VALUES = {
-leader: 100000,   // RAJA: Nyawa AI. Harus dijaga mati-matian.
+  leader: 100000,
   leader2: 100000,
-  assassin: 2000,   // Sangat berharga untuk membunuh
-  manipulator: 1800,// Bisa mengacaukan formasi lawan
-  claw: 1700,       // Bisa menarik musuh (penculikan)
-  guard: 1500,      // Bodyguard
-  illusionist: 1400,// Mobilitas tinggi
+  assassin: 2000,
+  manipulator: 1800,
+  claw: 1700,
+  guard: 1500,
+  illusionist: 1400,
   archer: 1300,
   rider: 1200,
   bruiser: 1200,
@@ -116,125 +116,10 @@ export const getCardData = (id) => {
 };
 
 // ==========================================
-// 3. HEX GEOMETRY HELPER (STRAIGHT LINE CHECK)
+// 3. HEX GEOMETRY HELPER
 // ==========================================
 
-// Converting Board (Row, Col) to Cube Coordinates (q, r, s)
-// This is essential for straight line checking in Hex Grids.
-const toCube = (row, col) => {
-    // Offset coordinates to Cube coordinates conversion
-    // Assuming "Odd-r" or similar layout based on Neighbors map
-    // Custom mapping based on neighbor logic provided:
-    // We can infer directions by checking neighbor diffs.
-    
-    // Simplification: Two points are in a straight line if they share at least 1 neighbor chain
-    // OR more accurately: if the path between them is a straight line.
-    
-    // For this specific board implementation, we can use a simpler approach:
-    // Check if the target is reachable by repeatedly moving in ONE neighbor direction.
-    return { r: row, c: col };
-};
-
-// Helper: Check if (targetR, targetC) is in a straight line from (startR, startC)
-// AND visible (no obstacles blocking, unless ability allows it)
-const checkStraightLine = (startR, startC, targetR, targetC, board, getNeighbors) => {
-    const startNeighbors = getNeighbors(startR, startC);
-    
-    // Find which neighbor direction points towards target
-    for (let neighbor of startNeighbors) {
-        let [nr, nc] = neighbor;
-        
-        // Direction vector simulation
-        let currentR = nr;
-        let currentC = nc;
-        let path = [];
-        let found = false;
-        let blocked = false;
-
-        // Trace ray in this direction
-        // Limit loop to avoid infinite (max board size ~9)
-        for(let i=0; i<10; i++) {
-            if (currentR === targetR && currentC === targetC) {
-                found = true;
-                break;
-            }
-            
-            if (board[currentR] && board[currentR][currentC]) {
-                blocked = true; 
-            }
-            
-            break; 
-        }
-        if(found) return { visible: !blocked, valid: true };
-    }
-    
-    return checkLineBFS(startR, startC, targetR, targetC, board, getNeighbors);
-};
-
-const checkLineBFS = (r1, c1, r2, c2, board, getNeighbors) => {
- 
-    const startN = getNeighbors(r1, c1);
-    for (let i = 0; i < startN.length; i++) {
-        let currR = startN[i][0];
-        let currC = startN[i][1];
-        let prevR = r1;
-        let prevC = c1;
-        
-        let pathBlocked = false;
-        if (board[currR][currC] && (currR !== r2 || currC !== c2)) pathBlocked = true;
-
-        if (currR === r2 && currC === c2) return { isStraight: true, blocked: false };
-
-        for (let step = 0; step < 8; step++) {
-            
-            const nextStep = getNextInLine(prevR, prevC, currR, currC, getNeighbors);
-            if (!nextStep) break; 
-            
-            if (board[nextStep[0]][nextStep[1]] && (nextStep[0] !== r2 || nextStep[1] !== c2)) {
-                pathBlocked = true;
-            }
-
-            if (nextStep[0] === r2 && nextStep[1] === c2) {
-                return { isStraight: true, blocked: pathBlocked };
-            }
-
-            prevR = currR;
-            prevC = currC;
-            currR = nextStep[0];
-            currC = nextStep[1];
-        }
-    }
-    return { isStraight: false, blocked: true };
-};
-
-const getNextInLine = (pr, pc, cr, cc, getNeighbors) => {
-    const neighbors = getNeighbors(cr, cc);
-    
-    for (let [nr, nc] of neighbors) {
-        
-        if (nr === pr && nc === pc) continue;
-        
-        const pNeighbors = getNeighbors(pr, pc);
-        const isCommon = pNeighbors.some(pn => pn[0] === nr && pn[1] === nc);
-        
-        if (!isCommon) {
-            if (pc === cc && nc === cc) return [nr, nc]; 
-            
-            return [nr, nc];
-        }
-    }
-    return null;
-};
-
-const getCube = (row, col) => {
-    var q = col - (row - (row&1)) / 2;
-    var r = row;
-    return { q: q, r: r, s: -q-r };
-};
-
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
-   
-    
     const startN = getNeighbors(r1, c1);
     
     for (let n of startN) {
@@ -247,7 +132,6 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
 
         // Project ray
         for (let i = 0; i < 8; i++) {
-            
             const nextCandidates = getNeighbors(currR, currC);
             const prevNeighbors = getNeighbors(prevR, prevC);
             
@@ -260,29 +144,25 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
             if (straightNodes.length === 1) {
                 let [nextR, nextC] = straightNodes[0];
                 
-                // Obstacle check
                 if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
                     pathBlocked = true;
                 }
 
-                // Found target?
                 if (nextR === r2 && nextC === c2) {
                     return { valid: true, blocked: pathBlocked };
                 }
 
-                // Advance
                 prevR = currR;
                 prevC = currC;
                 currR = nextR;
                 currC = nextC;
             } else {
-                break; // Not a straight line or ambiguous
+                break; 
             }
         }
     }
     return { valid: false, blocked: true };
 };
-
 
 const isProtected = (r, c, board, getNeighbors) => {
   const neighbors = getNeighbors(r, c);
@@ -312,7 +192,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const enemyOwner = owner === 1 ? 2 : 1;
   const cardId = unit.cardId;
 
-  // Jailer Block
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === 'jailer';
@@ -336,13 +215,12 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 
     case 'rider':
       board.forEach((row, tr) => row.forEach((_, tc) => {
-          if (!board[tr][tc]) { // Empty target
+          if (!board[tr][tc]) { 
              const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
              const isDist2 = neighbors.some(([n1r, n1c]) => {
                  const n2s = getNeighbors(n1r, n1c);
                  return n2s.some(n2 => n2[0] === tr && n2[1] === tc);
              });
-             
              if (line.valid && !line.blocked && isDist2) {
                  actions.push({ r: tr, c: tc, type: 'move' });
              }
@@ -415,21 +293,15 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
       
     case 'claw':
+      // Basic AI check logic for Claw (kept for compatibility), 
+      // but Visual Logic is in calculateVisualClawMoves
       board.forEach((row, tr) => row.forEach((target, tc) => {
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
            if (line.valid && !line.blocked) {
                const pullSpot = neighbors.find(([nr, nc]) => isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid);
-               
                if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
                    actions.push({ r: tr, c: tc, type: 'ability_claw_pull', pullTo: pullSpot });
-               }
-
-               const targetNeighbors = getNeighbors(tr, tc);
-               const chargeSpot = targetNeighbors.find(([tnr, tnc]) => isHexStraight(r, c, tnr, tnc, board, getNeighbors).valid);
-               
-               if (chargeSpot && !board[chargeSpot[0]][chargeSpot[1]]) {
-                   actions.push({ r: chargeSpot[0], c: chargeSpot[1], type: 'move' });
                }
            }
         }
@@ -463,4 +335,59 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
   }
   return actions;
+};
+
+// ==========================================
+// 4. VISUAL ABILITY LOGIC (NEW)
+// ==========================================
+
+export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode, slotCoordinates) => {
+  const moves = [];
+  const myCoords = slotCoordinates[r][c];
+  if (!myCoords) return [];
+  const myLeft = parseFloat(myCoords.left);
+
+  let alignedEnemies = [];
+  currentBoard.forEach((row, tr) => {
+    row.forEach((cell, tc) => {
+      if (cell && cell.owner !== unit.owner) {
+         const targetCoords = slotCoordinates[tr] && slotCoordinates[tr][tc];
+         if (!targetCoords) return;
+         const targetLeft = parseFloat(targetCoords.left);
+         if (Math.abs(myLeft - targetLeft) < 5) {
+             alignedEnemies.push({ r: tr, c: tc, dist: Math.abs(r - tr) });
+         }
+      }
+    });
+  });
+
+  const enemiesAbove = alignedEnemies.filter(e => e.r < r).sort((a, b) => a.dist - b.dist);
+  const enemiesBelow = alignedEnemies.filter(e => e.r > r).sort((a, b) => a.dist - b.dist);
+
+  const validTargets = [];
+  if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
+  if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
+
+  validTargets.forEach(target => {
+      const { r: tr, c: tc } = target;
+      if (mode === "dash") {
+           const landingRow = r < tr ? tr - 1 : tr + 1;
+           if (landingRow === r) return;
+           if (slotCoordinates[landingRow]) {
+               const landingCol = slotCoordinates[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+               if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+                    moves.push({ r: tr, c: tc, type: "ability_claw_dash", landAt: [landingRow, landingCol] });
+               }
+           }
+      } else {
+           const landingRow = tr > r ? r + 1 : r - 1;
+           if (slotCoordinates[landingRow]) {
+               const landingCol = slotCoordinates[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+               if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+                    moves.push({ r: tr, c: tc, type: "ability_claw_pull", pullTo: [landingRow, landingCol] });
+               }
+           }
+      }
+  });
+  return moves;
 };
