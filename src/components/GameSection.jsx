@@ -1,3 +1,5 @@
+// src/components/GameSection.jsx
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,7 +10,8 @@ import {
   getCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
-  calculateVisualClawMoves, // <-- IMPORT BARU
+  calculateVisualClawMoves,
+  calculateBruiserPushTargets,
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -152,18 +155,18 @@ const GameSection = ({ onBack }) => {
   const [validMoves, setValidMoves] = useState([]);
   const [actionMode, setActionMode] = useState("move");
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
-  const [clawMode, setClawMode] = useState("pull"); // 'pull' or 'dash'
-  
-  // NEW STATE: Tracks if the turn is locked to 'move' or 'ability'
+  const [clawMode, setClawMode] = useState("pull"); 
   const [turnPhaseType, setTurnPhaseType] = useState(null); 
-
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Your Turn");
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
   
-  // Track AI state
+  // -- NEW STATE FOR BRUISER --
+  const [bruiserTarget, setBruiserTarget] = useState(null);
+  const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
+
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
 
@@ -194,11 +197,13 @@ const GameSection = ({ onBack }) => {
     setDeck(shuffled.slice(3));
     setVisibleDeck(shuffled.slice(0, 3));
     setTurn(1);
-    setTurnPhaseType(null); // Reset phase type
+    setTurnPhaseType(null); 
     setGameOver(null);
     setRecruitStep(0);
     setClawMode("pull");
     setGameLog("Your Turn");
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
     isAiProcessing.current = false;
     aiTurnCounter.current = 0;
   };
@@ -351,10 +356,11 @@ const GameSection = ({ onBack }) => {
       const target = simBoard[to[0]][to[1]];
       simBoard[from[0]][from[1]] = target;
       simBoard[to[0]][to[1]] = unit;
-    } else if (type === "ability_push" && pushTo) {
+    } else if (type === "ability_bruiser_push" && pushTo) {
+      // Simulate the Bruiser Move: Enemy moves to pushTo, Bruiser moves to Enemy's spot
       const target = simBoard[to[0]][to[1]];
-      simBoard[pushTo[0]][pushTo[1]] = target;
-      simBoard[to[0]][to[1]] = unit;
+      simBoard[pushTo[0]][pushTo[1]] = target; 
+      simBoard[to[0]][to[1]] = unit; 
       simBoard[from[0]][from[1]] = null;
     } else if (type === "ability_claw_pull" && pullTo) {
       const target = simBoard[to[0]][to[1]];
@@ -612,7 +618,7 @@ const GameSection = ({ onBack }) => {
 
     setBoard(prev => prev.map(row => row.map(c => c ? { ...c, moved: false, isNew: false } : null)));
     setTurn(1);
-    setTurnPhaseType(null); // Reset phase on turn start
+    setTurnPhaseType(null); 
     setGameLog("Your Turn");
   };
 
@@ -628,6 +634,8 @@ const GameSection = ({ onBack }) => {
     setActionMode("move");
     setSelectedUnitAbility(null);
     setClawMode("pull");
+    setBruiserTarget(null); // Reset bruiser state
+    setBruiserPendingMoves([]);
 
     if (unit && unit.owner === 1) {
       if (unit.moved) {
@@ -639,17 +647,14 @@ const GameSection = ({ onBack }) => {
 
       // --- PHASE LOCKING LOGIC ---
       if (turnPhaseType === 'ability') {
-          // TURN LOCKED TO ABILITIES
           if (unitData.type !== 'Active') {
               setGameLog("Turn Locked: Abilities Only!");
               return; 
           }
           setGameLog("Turn Locked: Abilities");
           
-          setActionMode("ability"); // Force ability mode
-          // Calc ability moves only
+          setActionMode("ability");
           if (unit.cardId === 'claw') {
-              // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
               const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
               setValidMoves(moves);
               if(moves.length === 0) setGameLog("No ability targets");
@@ -661,7 +666,6 @@ const GameSection = ({ onBack }) => {
           setSelectedUnitAbility(unitData);
 
       } else if (turnPhaseType === 'move') {
-          // TURN LOCKED TO MOVEMENT
           setGameLog("Turn Locked: Movement");
           
           if (unit.cardId === 'rider') {
@@ -671,11 +675,9 @@ const GameSection = ({ onBack }) => {
               const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
               setValidMoves(moves);
           }
-          // Explicitly Disable Ability Button
           setSelectedUnitAbility(null); 
 
       } else {
-          // NO LOCK - STANDARD BEHAVIOR
           setGameLog(`Selected ${unitData?.name || "Unit"}`);
           if (unit.cardId === 'rider') {
              const moves = calculateRiderMoves(r, c, unit, board);
@@ -695,16 +697,18 @@ const GameSection = ({ onBack }) => {
     const [r, c] = selectedPos;
     const unit = board[r][c];
 
-    // RESTRICT TOGGLING IF PHASE IS LOCKED
-    if (turnPhaseType === 'move' && actionMode === 'move') return; // Can't switch to ability
-    if (turnPhaseType === 'ability' && actionMode === 'ability') return; // Can't switch to move
+    if (turnPhaseType === 'move' && actionMode === 'move') return; 
+    if (turnPhaseType === 'ability' && actionMode === 'ability') return; 
 
     if (unit.cardId === 'rider' || getCardData(unit.cardId).type === "Passive") return;
+    
+    // Reset secondary states
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
 
     if (actionMode === "move") {
       setActionMode("ability");
       if (unit.cardId === 'claw') {
-        // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
         const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
         setValidMoves(moves);
         if (moves.length === 0) setGameLog(clawMode === "pull" ? "No Pull Targets (Aligned)" : "No Dash Targets (Aligned)");
@@ -733,7 +737,6 @@ const GameSection = ({ onBack }) => {
     if (selectedPos) {
         const [r, c] = selectedPos;
         const unit = board[r][c];
-        // --- GUNAKAN FUNCTION BARU DARI DB_MONSTER ---
         const moves = calculateVisualClawMoves(r, c, unit, board, newMode, SLOT_COORDINATES);
         setValidMoves(moves);
         setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
@@ -771,7 +774,33 @@ const GameSection = ({ onBack }) => {
         return;
       }
       const action = validMoves.find((m) => m.r === r && m.c === c);
+      
       if (selectedPos && action) {
+        // --- BRUISER INTERACTION START ---
+        // Step 1: User clicked the enemy unit (action.type === 'ability_bruiser_push')
+        if (action.type === 'ability_bruiser_push' && !bruiserTarget) {
+            // Find ALL valid push destinations for this specific enemy
+            const possiblePushes = validMoves.filter(
+                m => m.type === 'ability_bruiser_push' && m.r === r && m.c === c
+            );
+            
+            // Set local state
+            setBruiserTarget({r, c});
+            setBruiserPendingMoves(possiblePushes);
+            
+            // Update Valid Moves to show the dots at the DESTINATION spots (pushTo)
+            const destMoves = possiblePushes.map(p => ({
+                r: p.pushTo[0],
+                c: p.pushTo[1],
+                type: 'ability_bruiser_execute', // New temporary type for step 2
+            }));
+            
+            setValidMoves(destMoves);
+            setGameLog("Select Push Direction");
+            return; // Wait for the next click on the destination
+        }
+        // --- BRUISER INTERACTION END ---
+
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
         const unit = newBoard[sr][sc];
@@ -784,11 +813,23 @@ const GameSection = ({ onBack }) => {
           const target = newBoard[r][c];
           newBoard[sr][sc] = target;
           newBoard[r][c] = unit;
-        } else if (action.type === "ability_push") {
-          const target = newBoard[r][c];
-          newBoard[action.pushTo[0]][action.pushTo[1]] = target;
-          newBoard[r][c] = unit;
+        } else if (action.type === "ability_bruiser_execute") {
+          // Step 2: User clicked the destination dot
+          const enemyPos = bruiserTarget;
+          const targetEnemy = newBoard[enemyPos.r][enemyPos.c];
+          
+          // 1. Move Enemy to the Clicked Destination
+          newBoard[r][c] = targetEnemy;
+          // 2. Move Bruiser to the Enemy's Old Spot
+          newBoard[enemyPos.r][enemyPos.c] = unit;
+          // 3. Clear Bruiser's Old Spot
           newBoard[sr][sc] = null;
+          
+          // Force ability lock
+          if (turnPhaseType === null) {
+             setTurnPhaseType('ability');
+             setGameLog("Turn Locked: ABILITIES");
+          }
         } else if (action.type === "ability_claw_pull") {
           const target = newBoard[r][c];
           newBoard[action.pullTo[0]][action.pullTo[1]] = target;
@@ -803,14 +844,15 @@ const GameSection = ({ onBack }) => {
         setBoard(newBoard);
         
         // --- SET TURN PHASE LOCK ---
-        // If this is the first action of the turn, lock the phase type
         if (turnPhaseType === null) {
-            if (action.type.includes("ability")) {
-                setTurnPhaseType('ability');
-                setGameLog("Turn Locked: ABILITIES");
-            } else {
-                setTurnPhaseType('move');
-                setGameLog("Turn Locked: MOVEMENT");
+            if (action.type !== 'ability_bruiser_execute') {
+                if (action.type.includes("ability")) {
+                    setTurnPhaseType('ability');
+                    setGameLog("Turn Locked: ABILITIES");
+                } else {
+                    setTurnPhaseType('move');
+                    setGameLog("Turn Locked: MOVEMENT");
+                }
             }
         }
 
@@ -818,6 +860,8 @@ const GameSection = ({ onBack }) => {
         setValidMoves([]);
         setActionMode("move");
         setSelectedUnitAbility(null);
+        setBruiserTarget(null);
+        setBruiserPendingMoves([]);
 
         const w = checkWinCondition(newBoard);
         if (w) {

@@ -1,8 +1,5 @@
 // src/components/db_monster.js
 
-// ==========================================
-// 1. ASSETS IMPORT
-// ==========================================
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png";
 import acrobateCoin from "../assets/coins/AcrobateCoin.png";
@@ -42,7 +39,7 @@ import roiCard from "../assets/cards/Roi.png";
 import reineCard from "../assets/cards/Reine.png";
 
 // ==========================================
-// 2. DATABASE CONFIGURATION
+// CONFIGURATION
 // ==========================================
 
 export const ABILITY_DB = {
@@ -51,7 +48,7 @@ export const ABILITY_DB = {
   claw: { name: "CLAW", type: "Active", desc: "Pull enemy adjacent OR Move to enemy." },
   rider: { name: "RIDER", type: "Active", desc: "Move 2 spaces in a straight line." },
   manipulator: { name: "MANIPULATOR", type: "Active", desc: "Control enemy movement (1 space)." },
-  bruiser: { name: "BRUISER", type: "Active", desc: "Move into enemy space & push them." },
+  bruiser: { name: "BRUISER", type: "Active", desc: "Push enemy to one of the 3 opposite spaces and take their spot." },
   guard: { name: "GUARD", type: "Active", desc: "Teleport adjacent to Leader." },
   wanderer: { name: "WANDERER", type: "Active", desc: "Teleport to safe space (no enemies)." },
   illusionist: { name: "ILLUSIONIST", type: "Active", desc: "Swap with any visible unit." },
@@ -116,7 +113,7 @@ export const getCardData = (id) => {
 };
 
 // ==========================================
-// 3. HEX GEOMETRY HELPER
+// HEX HELPER FUNCTIONS
 // ==========================================
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
@@ -130,35 +127,24 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
         if (currR === r2 && currC === c2) return { valid: true, blocked: false };
         if (board[currR][currC]) pathBlocked = true;
 
-        // Project ray
         for (let i = 0; i < 8; i++) {
             const nextCandidates = getNeighbors(currR, currC);
             const prevNeighbors = getNeighbors(prevR, prevC);
-            
             const straightNodes = nextCandidates.filter(([nr, nc]) => {
                 if (nr === prevR && nc === prevC) return false;
                 const isCommon = prevNeighbors.some(pn => pn[0] === nr && pn[1] === nc);
                 return !isCommon;
             });
-            
             if (straightNodes.length === 1) {
                 let [nextR, nextC] = straightNodes[0];
-                
                 if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
                     pathBlocked = true;
                 }
-
                 if (nextR === r2 && nextC === c2) {
                     return { valid: true, blocked: pathBlocked };
                 }
-
-                prevR = currR;
-                prevC = currC;
-                currR = nextR;
-                currC = nextC;
-            } else {
-                break; 
-            }
+                prevR = currR; prevC = currC; currR = nextR; currC = nextC;
+            } else { break; }
         }
     }
     return { valid: false, blocked: true };
@@ -184,6 +170,37 @@ export const calculateBasicMoves = (r, c, unit, board, getNeighbors) => {
   });
   return actions;
 };
+
+// === HELPER FOR BRUISER: Find "Opposite 3" Spaces ===
+export const calculateBruiserPushTargets = (bruiserR, bruiserC, enemyR, enemyC, board, getNeighbors) => {
+  const enemyNeighbors = getNeighbors(enemyR, enemyC);
+  const bruiserNeighbors = getNeighbors(bruiserR, bruiserC);
+  
+  const pushOptions = [];
+
+  enemyNeighbors.forEach(([nr, nc]) => {
+    // 1. Cannot be the Bruiser's current spot
+    if (nr === bruiserR && nc === bruiserC) return;
+
+    // 2. Cannot be a shared neighbor (the 2 "side" hexes)
+    // In a hex grid, adjacent hexes share exactly 2 neighbors.
+    // Excluding Bruiser + 2 shared neighbors leaves exactly the 3 "back" hexes.
+    const isShared = bruiserNeighbors.some(([br, bc]) => br === nr && bc === nc);
+    
+    if (!isShared) {
+      // 3. Must be empty to push into
+      if (!board[nr][nc]) {
+        pushOptions.push({ r: nr, c: nc });
+      }
+    }
+  });
+
+  return pushOptions;
+};
+
+// ==========================================
+// ABILITY CALCULATION
+// ==========================================
 
 export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const actions = [];
@@ -231,14 +248,22 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
     case 'bruiser':
       neighbors.forEach(([nr, nc]) => {
         const target = board[nr][nc];
+        // Target must be enemy and NOT protected
         if (target && target.owner === enemyOwner && !isProtected(nr, nc, board, getNeighbors)) {
-          const potentialPush = getNeighbors(nr, nc);
-          potentialPush.forEach(([pr, pc]) => {
-              const line = isHexStraight(r, c, pr, pc, board, getNeighbors);
-              if (line.valid && !board[pr][pc]) {
-                  actions.push({ r: nr, c: nc, type: 'ability_push', pushTo: [pr, pc] });
-              }
-          });
+          // Calculate if there are any valid push destinations behind them
+          const validDestinations = calculateBruiserPushTargets(r, c, nr, nc, board, getNeighbors);
+          
+          if (validDestinations.length > 0) {
+            // Add separate moves for each valid destination
+            validDestinations.forEach(dest => {
+               actions.push({ 
+                 r: nr, // We click the ENEMY to initiate
+                 c: nc, 
+                 type: 'ability_bruiser_push', 
+                 pushTo: [dest.r, dest.c] 
+               });
+            });
+          }
         }
       });
       break;
@@ -281,11 +306,9 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
           const isAdj = neighbors.some(n => n[0] === ir && n[1] === ic);
           if (!isAdj) {
              const line = isHexStraight(r, c, ir, ic, board, getNeighbors);
-             if (line.valid) { 
-                 if (!line.blocked) {
-                     if (target.owner === enemyOwner && isProtected(ir, ic, board, getNeighbors)) return;
-                     actions.push({ r: ir, c: ic, type: 'ability_swap' });
-                 }
+             if (line.valid && !line.blocked) {
+                 if (target.owner === enemyOwner && isProtected(ir, ic, board, getNeighbors)) return;
+                 actions.push({ r: ir, c: ic, type: 'ability_swap' });
              }
           }
         }
@@ -293,8 +316,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
       
     case 'claw':
-      // Basic AI check logic for Claw (kept for compatibility), 
-      // but Visual Logic is in calculateVisualClawMoves
       board.forEach((row, tr) => row.forEach((target, tc) => {
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
@@ -338,7 +359,7 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 };
 
 // ==========================================
-// 4. VISUAL ABILITY LOGIC (NEW)
+// VISUAL HELPERS
 // ==========================================
 
 export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode, slotCoordinates) => {
