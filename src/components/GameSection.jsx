@@ -12,6 +12,7 @@ import {
   calculateAbilityMoves,
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
+  calculateManipulatorDestinations, // <--- NEW IMPORT
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -163,9 +164,10 @@ const GameSection = ({ onBack }) => {
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
   
-  // -- NEW STATE FOR BRUISER --
+  // -- SPECIAL UNIT STATES --
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
+  const [manipulatorTarget, setManipulatorTarget] = useState(null); // <--- NEW STATE
 
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
@@ -204,6 +206,7 @@ const GameSection = ({ onBack }) => {
     setGameLog("Your Turn");
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
+    setManipulatorTarget(null); // Reset
     isAiProcessing.current = false;
     aiTurnCounter.current = 0;
   };
@@ -357,7 +360,6 @@ const GameSection = ({ onBack }) => {
       simBoard[from[0]][from[1]] = target;
       simBoard[to[0]][to[1]] = unit;
     } else if (type === "ability_bruiser_push" && pushTo) {
-      // Simulate the Bruiser Move: Enemy moves to pushTo, Bruiser moves to Enemy's spot
       const target = simBoard[to[0]][to[1]];
       simBoard[pushTo[0]][pushTo[1]] = target; 
       simBoard[to[0]][to[1]] = unit; 
@@ -636,6 +638,7 @@ const GameSection = ({ onBack }) => {
     setClawMode("pull");
     setBruiserTarget(null); // Reset bruiser state
     setBruiserPendingMoves([]);
+    setManipulatorTarget(null); // Reset manipulator state
 
     if (unit && unit.owner === 1) {
       if (unit.moved) {
@@ -705,6 +708,7 @@ const GameSection = ({ onBack }) => {
     // Reset secondary states
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
 
     if (actionMode === "move") {
       setActionMode("ability");
@@ -777,29 +781,45 @@ const GameSection = ({ onBack }) => {
       
       if (selectedPos && action) {
         // --- BRUISER INTERACTION START ---
-        // Step 1: User clicked the enemy unit (action.type === 'ability_bruiser_push')
         if (action.type === 'ability_bruiser_push' && !bruiserTarget) {
-            // Find ALL valid push destinations for this specific enemy
             const possiblePushes = validMoves.filter(
                 m => m.type === 'ability_bruiser_push' && m.r === r && m.c === c
             );
-            
-            // Set local state
             setBruiserTarget({r, c});
             setBruiserPendingMoves(possiblePushes);
             
-            // Update Valid Moves to show the dots at the DESTINATION spots (pushTo)
             const destMoves = possiblePushes.map(p => ({
                 r: p.pushTo[0],
                 c: p.pushTo[1],
-                type: 'ability_bruiser_execute', // New temporary type for step 2
+                type: 'ability_bruiser_execute', 
             }));
             
             setValidMoves(destMoves);
             setGameLog("Select Push Direction");
-            return; // Wait for the next click on the destination
+            return; 
         }
         // --- BRUISER INTERACTION END ---
+
+        // --- MANIPULATOR INTERACTION START ---
+        if (action.type === 'ability_manipulator_target' && !manipulatorTarget) {
+            // Step 1: Clicked Enemy
+            setManipulatorTarget({r, c});
+            
+            // Calculate valid empty neighbors for this enemy
+            const dests = calculateManipulatorDestinations(r, c, board, getNeighbors);
+            
+            // Show destination dots
+            const moveOptions = dests.map(d => ({ 
+                r: d.r, 
+                c: d.c, 
+                type: 'ability_manipulator_execute' 
+            }));
+            
+            setValidMoves(moveOptions);
+            setGameLog("Select Enemy's Move");
+            return;
+        }
+        // --- MANIPULATOR INTERACTION END ---
 
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
@@ -814,22 +834,19 @@ const GameSection = ({ onBack }) => {
           newBoard[sr][sc] = target;
           newBoard[r][c] = unit;
         } else if (action.type === "ability_bruiser_execute") {
-          // Step 2: User clicked the destination dot
           const enemyPos = bruiserTarget;
           const targetEnemy = newBoard[enemyPos.r][enemyPos.c];
-          
-          // 1. Move Enemy to the Clicked Destination
           newBoard[r][c] = targetEnemy;
-          // 2. Move Bruiser to the Enemy's Old Spot
           newBoard[enemyPos.r][enemyPos.c] = unit;
-          // 3. Clear Bruiser's Old Spot
           newBoard[sr][sc] = null;
-          
-          // Force ability lock
-          if (turnPhaseType === null) {
-             setTurnPhaseType('ability');
-             setGameLog("Turn Locked: ABILITIES");
-          }
+        } else if (action.type === "ability_manipulator_execute") {
+           // MANIPULATOR STEP 2: Move the enemy unit to target location
+           const enemyPos = manipulatorTarget;
+           const enemyUnit = newBoard[enemyPos.r][enemyPos.c];
+           
+           newBoard[r][c] = enemyUnit; // Move enemy to clicked spot
+           newBoard[enemyPos.r][enemyPos.c] = null; // Clear enemy old spot
+           // Manipulator unit (at sr, sc) stays where it is.
         } else if (action.type === "ability_claw_pull") {
           const target = newBoard[r][c];
           newBoard[action.pullTo[0]][action.pullTo[1]] = target;
@@ -845,14 +862,15 @@ const GameSection = ({ onBack }) => {
         
         // --- SET TURN PHASE LOCK ---
         if (turnPhaseType === null) {
-            if (action.type !== 'ability_bruiser_execute') {
-                if (action.type.includes("ability")) {
-                    setTurnPhaseType('ability');
-                    setGameLog("Turn Locked: ABILITIES");
-                } else {
-                    setTurnPhaseType('move');
-                    setGameLog("Turn Locked: MOVEMENT");
-                }
+            // Helper to check if it's an ability or move
+            const isAbility = action.type.includes("ability");
+            
+            if (isAbility) {
+                setTurnPhaseType('ability');
+                setGameLog("Turn Locked: ABILITIES");
+            } else {
+                setTurnPhaseType('move');
+                setGameLog("Turn Locked: MOVEMENT");
             }
         }
 
@@ -862,6 +880,7 @@ const GameSection = ({ onBack }) => {
         setSelectedUnitAbility(null);
         setBruiserTarget(null);
         setBruiserPendingMoves([]);
+        setManipulatorTarget(null); // Reset
 
         const w = checkWinCondition(newBoard);
         if (w) {
