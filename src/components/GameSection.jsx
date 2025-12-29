@@ -7,12 +7,13 @@ import { useNavigate } from "react-router-dom";
 import {
   TOTAL_CARDS_DATA,
   UNIT_VALUES,
+  SLOT_COORDINATES, // <--- IMPORTED HERE
   getCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
-  calculateManipulatorDestinations, // <--- NEW IMPORT
+  calculateManipulatorDestinations,
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -39,60 +40,7 @@ const GameSection = ({ onBack }) => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- CONFIG BOARD COORDINATES ---
-  const SLOT_COORDINATES = [
-    [{ top: "9%", left: "50%" }], 
-    [
-      { top: "16.3%", left: "36.5%" },
-      { top: "16.3%", left: "63.5%" },
-      { top: "23%", left: "23%" },
-      { top: "23%", left: "76.5%" },
-    ],
-    [
-      { top: "30%", left: "9.8%" },
-      { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" }, 
-      { top: "30%", left: "63.5%" },
-      { top: "30%", left: "90.3%" },
-    ],
-    [
-      { top: "43%", left: "9.8%" },
-      { top: "36.6%", left: "23%" },
-      { top: "43%", left: "36.8%" },
-      { top: "36.6%", left: "50%" },
-      { top: "36.6%", left: "76.5%" },
-      { top: "43%", left: "90.3%" },
-    ],
-    [
-      { top: "56.8%", left: "9.8%" },
-      { top: "49.8%", left: "23%" },
-      { top: "49.8%", left: "50%" },
-      { top: "43%", left: "63.5%" },
-      { top: "49.8%", left: "76.8%" },
-    ],
-    [
-      { top: "63.5%", left: "23%" },
-      { top: "56.8%", left: "36.5%" },
-      { top: "63.5%", left: "50%" },
-      { top: "56.8%", left: "63.5%" },
-      { top: "56.8%", left: "76.8%" },
-      { top: "56.8%", left: "90.3%" },
-    ],
-    [
-      { top: "70.2%", left: "9.8%" },
-      { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" }, 
-      { top: "70.2%", left: "63.5%" },
-      { top: "70.2%", left: "90.3%" },
-    ],
-    [
-      { top: "77%", left: "23%" },
-      { top: "83.8%", left: "36.5%" },
-      { top: "83.8%", left: "63.5%" },
-      { top: "77%", left: "76.7%" },
-    ],
-    [{ top: "90.5%", left: "50%" }], 
-  ];
+  // --- CONFIG BOARD COORDINATES REMOVED (IMPORTED FROM DB) ---
 
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
@@ -167,7 +115,7 @@ const GameSection = ({ onBack }) => {
   // -- SPECIAL UNIT STATES --
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
-  const [manipulatorTarget, setManipulatorTarget] = useState(null); // <--- NEW STATE
+  const [manipulatorTarget, setManipulatorTarget] = useState(null); 
 
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
@@ -658,7 +606,7 @@ const GameSection = ({ onBack }) => {
           
           setActionMode("ability");
           if (unit.cardId === 'claw') {
-              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
+              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode); // Removed SLOT_COORDINATES
               setValidMoves(moves);
               if(moves.length === 0) setGameLog("No ability targets");
           } else {
@@ -713,7 +661,7 @@ const GameSection = ({ onBack }) => {
     if (actionMode === "move") {
       setActionMode("ability");
       if (unit.cardId === 'claw') {
-        const moves = calculateVisualClawMoves(r, c, unit, board, clawMode, SLOT_COORDINATES);
+        const moves = calculateVisualClawMoves(r, c, unit, board, clawMode); // Removed SLOT_COORDINATES
         setValidMoves(moves);
         if (moves.length === 0) setGameLog(clawMode === "pull" ? "No Pull Targets (Aligned)" : "No Dash Targets (Aligned)");
         else setGameLog(clawMode === "pull" ? "Select Target to Pull" : "Select Dash Target");
@@ -741,7 +689,7 @@ const GameSection = ({ onBack }) => {
     if (selectedPos) {
         const [r, c] = selectedPos;
         const unit = board[r][c];
-        const moves = calculateVisualClawMoves(r, c, unit, board, newMode, SLOT_COORDINATES);
+        const moves = calculateVisualClawMoves(r, c, unit, board, newMode); // Removed SLOT_COORDINATES
         setValidMoves(moves);
         setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
     }

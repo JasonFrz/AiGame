@@ -42,7 +42,65 @@ import roiCard from "../assets/cards/Roi.png";
 import reineCard from "../assets/cards/Reine.png";
 
 // ==========================================
-// 2. DATABASE CONFIGURATION
+// 2. CONFIG & COORDINATES
+// ==========================================
+
+export const SLOT_COORDINATES = [
+  [{ top: "9%", left: "50%" }], 
+  [
+    { top: "16.3%", left: "36.5%" },
+    { top: "16.3%", left: "63.5%" },
+    { top: "23%", left: "23%" },
+    { top: "23%", left: "76.5%" },
+  ],
+  [
+    { top: "30%", left: "9.8%" },
+    { top: "30%", left: "36.5%" },
+    { top: "23%", left: "50%" }, 
+    { top: "30%", left: "63.5%" },
+    { top: "30%", left: "90.3%" },
+  ],
+  [
+    { top: "43%", left: "9.8%" },
+    { top: "36.6%", left: "23%" },
+    { top: "43%", left: "36.8%" },
+    { top: "36.6%", left: "50%" },
+    { top: "36.6%", left: "76.5%" },
+    { top: "43%", left: "90.3%" },
+  ],
+  [
+    { top: "56.8%", left: "9.8%" },
+    { top: "49.8%", left: "23%" },
+    { top: "49.8%", left: "50%" },
+    { top: "43%", left: "63.5%" },
+    { top: "49.8%", left: "76.8%" },
+  ],
+  [
+    { top: "63.5%", left: "23%" },
+    { top: "56.8%", left: "36.5%" },
+    { top: "63.5%", left: "50%" },
+    { top: "56.8%", left: "63.5%" },
+    { top: "56.8%", left: "76.8%" },
+    { top: "56.8%", left: "90.3%" },
+  ],
+  [
+    { top: "70.2%", left: "9.8%" },
+    { top: "70.2%", left: "36.5%" },
+    { top: "77%", left: "50%" }, 
+    { top: "70.2%", left: "63.5%" },
+    { top: "70.2%", left: "90.3%" },
+  ],
+  [
+    { top: "77%", left: "23%" },
+    { top: "83.8%", left: "36.5%" },
+    { top: "83.8%", left: "63.5%" },
+    { top: "77%", left: "76.7%" },
+  ],
+  [{ top: "90.5%", left: "50%" }], 
+];
+
+// ==========================================
+// 3. DATABASE CONFIGURATION
 // ==========================================
 
 export const ABILITY_DB = {
@@ -54,9 +112,9 @@ export const ABILITY_DB = {
   bruiser: { name: "BRUISER", type: "Active", desc: "Push enemy to one of the 3 opposite spaces and take their spot." },
   guard: { name: "GUARD", type: "Active", desc: "Teleport adjacent to Leader." },
   wanderer: { name: "WANDERER", type: "Active", desc: "Teleport to safe space (no enemies)." },
-  illusionist: { name: "ILLUSIONIST", type: "Active", desc: "Swap with any visible unit." },
+  illusionist: { name: "ILLUSIONIST", type: "Active", desc: "Swap with non-adjacent visible unit (Ally/Enemy) on same Y-Axis." },
   brewmaster: { name: "BREWMASTER", type: "Active", desc: "Move adjacent ally 1 space." },
-  archer: { name: "ARCHER", type: "Passive", desc: "Ranged Support (Capture from 2 tiles)." },
+  archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." }, // Fixed type key
   vizier: { name: "VIZIER", type: "Passive", desc: "Leader moves +1 space." },
   hermit: { name: "HERMIT", type: "Special", desc: "Recruits with Cub." },
   cub: { name: "CUB", type: "Special", desc: "Cannot capture Leader." },
@@ -116,7 +174,7 @@ export const getCardData = (id) => {
 };
 
 // ==========================================
-// 3. HEX GEOMETRY HELPER
+// 4. HEX GEOMETRY HELPER
 // ==========================================
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
@@ -185,7 +243,6 @@ export const calculateBasicMoves = (r, c, unit, board, getNeighbors) => {
   return actions;
 };
 
-// === HELPER FOR BRUISER ===
 export const calculateBruiserPushTargets = (bruiserR, bruiserC, enemyR, enemyC, board, getNeighbors) => {
   const enemyNeighbors = getNeighbors(enemyR, enemyC);
   const bruiserNeighbors = getNeighbors(bruiserR, bruiserC);
@@ -206,14 +263,10 @@ export const calculateBruiserPushTargets = (bruiserR, bruiserC, enemyR, enemyC, 
   return pushOptions;
 };
 
-
-
-// === HELPER FOR MANIPULATOR ===
 export const calculateManipulatorDestinations = (enemyR, enemyC, board, getNeighbors) => {
   const neighbors = getNeighbors(enemyR, enemyC);
   const dests = [];
   neighbors.forEach(([nr, nc]) => {
-    // Collect ALL empty neighbors (allows moving in all 6 directions)
     if (!board[nr][nc]) {
       dests.push({ r: nr, c: nc });
     }
@@ -236,7 +289,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 
   switch (cardId) {
     case 'acrobat':
-      // ... (Keep existing acrobat logic)
       neighbors.forEach(([nr, nc]) => {
         if (board[nr][nc]) { 
           const landingSpots = getNeighbors(nr, nc); 
@@ -251,7 +303,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'rider':
-      // ... (Keep existing rider logic)
       board.forEach((row, tr) => row.forEach((_, tc) => {
           if (!board[tr][tc]) { 
              const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
@@ -267,7 +318,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'bruiser':
-      // ... (Keep existing bruiser logic)
       neighbors.forEach(([nr, nc]) => {
         const target = board[nr][nc];
         if (target && target.owner === enemyOwner && !isProtected(nr, nc, board, getNeighbors)) {
@@ -286,19 +336,10 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
     
     case 'manipulator':
       board.forEach((row, tr) => row.forEach((target, tc) => {
-        // Target MUST be enemy and NOT protected
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
-           // RULE: Non-Adjacent
            const isAdj = neighbors.some(n => n[0] === tr && n[1] === tc);
-           
            if (!isAdj) {
-               // [FIX]: Removed the brittle 'isHexStraight' check.
-               // This ensures you can target ANY non-adjacent enemy on the board
-               // provided they have at least one empty space to move into.
-               
                const dests = calculateManipulatorDestinations(tr, tc, board, getNeighbors);
-               
-               // Only allow targeting if the enemy actually has somewhere to go
                if (dests.length > 0) {
                   actions.push({ r: tr, c: tc, type: 'ability_manipulator_target' });
                }
@@ -308,7 +349,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'guard':
-      // ... (Keep existing guard logic)
       let leaderPos = null;
       board.forEach((row, lr) => row.forEach((lUnit, lc) => {
         if (lUnit && lUnit.owner === owner && (lUnit.cardId === 'leader' || lUnit.cardId === 'leader2')) {
@@ -326,7 +366,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'wanderer':
-      // ... (Keep existing wanderer logic)
       board.forEach((row, wr) => row.forEach((_, wc) => {
         if (!board[wr][wc]) { 
           const wNeighbors = getNeighbors(wr, wc);
@@ -342,25 +381,55 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'illusionist':
-      // ... (Keep existing illusionist logic)
-      board.forEach((row, ir) => row.forEach((target, ic) => {
-        if (target && (ir !== r || ic !== c)) {
-          const isAdj = neighbors.some(n => n[0] === ir && n[1] === ic);
-          if (!isAdj) {
-             const line = isHexStraight(r, c, ir, ic, board, getNeighbors);
-             if (line.valid) { 
-                 if (!line.blocked) {
-                     if (target.owner === enemyOwner && isProtected(ir, ic, board, getNeighbors)) return;
-                     actions.push({ r: ir, c: ic, type: 'ability_swap' });
-                 }
-             }
+      // Get Illusionist's visual X position
+      if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
+      const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
+
+      // Iterate all potential targets
+      board.forEach((row, tr) => row.forEach((target, tc) => {
+        // Target must exist (Ally or Enemy) and NOT be self
+        if (target && (tr !== r || tc !== c)) {
+          
+          // 1. Check Non-Adjacent
+          const isAdj = neighbors.some(n => n[0] === tr && n[1] === tc);
+          if (isAdj) return;
+
+          // 2. Check Y-Axis Alignment (Visual Vertical Line)
+          if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
+          const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
+          
+          // Allow small float tolerance for "Same Column"
+          if (Math.abs(myLeft - targetLeft) < 4) {
+            
+            // 3. Check Visibility (No units in between)
+            let pathBlocked = false;
+            const minR = Math.min(r, tr);
+            const maxR = Math.max(r, tr);
+
+            // Iterate rows between self and target
+            for (let i = minR + 1; i < maxR; i++) {
+              if (SLOT_COORDINATES[i]) {
+                // Find cell in this row that matches the vertical column
+                const colIndex = SLOT_COORDINATES[i].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 4);
+                if (colIndex !== -1 && board[i][colIndex]) {
+                  pathBlocked = true; // Obstacle found
+                  break;
+                }
+              }
+            }
+
+            if (!pathBlocked) {
+              // 4. Enemy Protection Check
+              if (target.owner === enemyOwner && isProtected(tr, tc, board, getNeighbors)) return;
+
+              actions.push({ r: tr, c: tc, type: 'ability_swap' });
+            }
           }
         }
       }));
       break;
       
     case 'claw':
-      // ... (Keep existing claw logic)
       board.forEach((row, tr) => row.forEach((target, tc) => {
         if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
@@ -375,7 +444,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case 'brewmaster':
-      // ... (Keep existing brewmaster logic)
       neighbors.forEach(([nr, nc]) => {
         const ally = board[nr][nc];
         if (ally && ally.owner === owner) {
@@ -390,17 +458,13 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   return actions;
 };
 
-// ... (Keep existing VISUAL ABILITY LOGIC and exports)
-
-
-
 // ==========================================
-// 4. VISUAL ABILITY LOGIC
+// 5. VISUAL ABILITY LOGIC
 // ==========================================
 
-export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode, slotCoordinates) => {
+export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
   const moves = [];
-  const myCoords = slotCoordinates[r][c];
+  const myCoords = SLOT_COORDINATES[r][c];
   if (!myCoords) return [];
   const myLeft = parseFloat(myCoords.left);
 
@@ -408,7 +472,7 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode, slotCoo
   currentBoard.forEach((row, tr) => {
     row.forEach((cell, tc) => {
       if (cell && cell.owner !== unit.owner) {
-         const targetCoords = slotCoordinates[tr] && slotCoordinates[tr][tc];
+         const targetCoords = SLOT_COORDINATES[tr] && SLOT_COORDINATES[tr][tc];
          if (!targetCoords) return;
          const targetLeft = parseFloat(targetCoords.left);
          if (Math.abs(myLeft - targetLeft) < 5) {
@@ -430,16 +494,16 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode, slotCoo
       if (mode === "dash") {
            const landingRow = r < tr ? tr - 1 : tr + 1;
            if (landingRow === r) return;
-           if (slotCoordinates[landingRow]) {
-               const landingCol = slotCoordinates[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+           if (SLOT_COORDINATES[landingRow]) {
+               const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
                if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
                     moves.push({ r: tr, c: tc, type: "ability_claw_dash", landAt: [landingRow, landingCol] });
                }
            }
       } else {
            const landingRow = tr > r ? r + 1 : r - 1;
-           if (slotCoordinates[landingRow]) {
-               const landingCol = slotCoordinates[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
+           if (SLOT_COORDINATES[landingRow]) {
+               const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
                if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
                     moves.push({ r: tr, c: tc, type: "ability_claw_pull", pullTo: [landingRow, landingCol] });
                }
