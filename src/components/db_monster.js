@@ -661,7 +661,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "wanderer":
-      // Loop seluruh papan (karena Wanderer bisa teleport ke mana saja)
       board.forEach((row, tr) => {
         row.forEach((cell, tc) => {
           // Syarat 1: Tile tujuan harus kosong
