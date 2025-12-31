@@ -1,13 +1,10 @@
-// src/components/GameSection.jsx
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- IMPORT DARI DB MONSTER ---
 import {
   TOTAL_CARDS_DATA,
   UNIT_VALUES,
-  SLOT_COORDINATES, // <--- IMPORTED HERE
+  SLOT_COORDINATES,
   getCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
@@ -23,7 +20,6 @@ import board_img from "../assets/Leaders_Board.png";
 const GameSection = ({ onBack }) => {
   const navigate = useNavigate();
 
-  // --- STYLES ---
   const styles = `
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -373,7 +369,7 @@ const GameSection = ({ onBack }) => {
         }
       });
     });
-  }, [board]); // <--- Akan jalan setiap kali state 'board' berubah
+  }, [board]);
 
   useEffect(() => {
     if (board.length === 0) return;
