@@ -65,7 +65,9 @@ const GameSection = ({ onBack }) => {
         [1, 0],
       ],
       "1,3": [
-        [2, 1],
+        [1, 1],
+        [2, 3],
+        [3, 4],
         [2, 4],
       ],
       "2,0": [
@@ -383,16 +385,58 @@ const GameSection = ({ onBack }) => {
     setPlayerRoster(myUnits);
   }, [board]);
 
+  // const initializeGame = () => {
+  //   const b = Array(9)
+  //     .fill(null)
+  //     .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+  //   b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
+  //   b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
+  //   setBoard(b);
+  //   const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
+  //   setDeck(shuffled.slice(3));
+  //   setVisibleDeck(shuffled.slice(0, 3));
+  //   setTurn(1);
+  //   setTurnPhaseType(null);
+  //   setGameOver(null);
+  //   setRecruitStep(0);
+  //   setClawMode("pull");
+  //   setGameLog("Your Turn");
+  //   setBruiserTarget(null);
+  //   setBruiserPendingMoves([]);
+  //   setManipulatorTarget(null); // Reset
+  //   isAiProcessing.current = false;
+  //   aiTurnCounter.current = 0;
+  // };
+
+  // DEBUG SEMUA KARTU
   const initializeGame = () => {
+    // 1. Setup Board (Sama seperti sebelumnya)
     const b = Array(9)
       .fill(null)
       .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+
+    // Set Leaders
     b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
     b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
     setBoard(b);
-    const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
-    setDeck(shuffled.slice(3));
-    setVisibleDeck(shuffled.slice(0, 3));
+
+    // --- 🔧 DEBUG MODE: AKTIFKAN SEMUA KARTU ---
+    const DEBUG_ALL_CARDS = true; // Set ke 'false' jika ingin main normal
+
+    if (DEBUG_ALL_CARDS) {
+      console.warn("🔧 DEBUG MODE ACTIVE: All cards available!");
+      // Kosongkan tumpukan kartu
+      setDeck([]);
+      // Masukkan SEMUA data kartu ke tangan (visibleDeck)
+      setVisibleDeck([...TOTAL_CARDS_DATA]);
+    } else {
+      // --- MODE NORMAL (SHUFFLE) ---
+      const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
+      setDeck(shuffled.slice(3));
+      setVisibleDeck(shuffled.slice(0, 3));
+    }
+    // -------------------------------------------
+
     setTurn(1);
     setTurnPhaseType(null);
     setGameOver(null);
@@ -401,7 +445,7 @@ const GameSection = ({ onBack }) => {
     setGameLog("Your Turn");
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
-    setManipulatorTarget(null); // Reset
+    setManipulatorTarget(null);
     isAiProcessing.current = false;
     aiTurnCounter.current = 0;
   };
@@ -1033,6 +1077,12 @@ const GameSection = ({ onBack }) => {
     }
   };
 
+  const hasVizierInTeam = (owner, currentBoard) => {
+    return currentBoard.some((row) =>
+      row.some((u) => u && u.owner === owner && u.cardId === "vizier")
+    );
+  };
+
   const handleBoardClick = (r, c) => {
     console.log(
       `%c 🖱️ Tile Clicked: [ Row: ${r}, Col: ${c} ]`,
@@ -1133,8 +1183,25 @@ const GameSection = ({ onBack }) => {
         unit.moved = true;
 
         if (action.type === "move") {
-          newBoard[r][c] = unit;
+          newBoard[r][c] = { ...unit, moved: true };
           newBoard[sr][sc] = null;
+
+          const isLeader = unit.cardId === "leader";
+          const hasVizier = hasVizierInTeam(1, board);
+
+          if (isLeader && hasVizier && !unit.hasBonusMoved) {
+            newBoard[r][c] = {
+              ...unit,
+              moved: false,
+              hasBonusMoved: true,
+            };
+
+            setBoard(newBoard);
+            setGameLog("Vizier Power: Move again!");
+
+            setTimeout(() => handleSelectUnit((r, c), 50));
+            return;
+          }
         } else if (action.type === "ability_swap") {
           const target = newBoard[r][c];
           newBoard[sr][sc] = target;

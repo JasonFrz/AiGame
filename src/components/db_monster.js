@@ -307,44 +307,12 @@ const isProtected = (r, c, board, getNeighbors) => {
 export const calculateBasicMoves = (r, c, unit, board, getNeighbors) => {
   const actions = [];
   const neighbors = getNeighbors(r, c);
+
   neighbors.forEach(([nr, nc]) => {
-    if (!board[nr][nc]) {
+    if (board[nr] && !board[nr][nc]) {
       actions.push({ r: nr, c: nc, type: "move" });
     }
   });
-
-  if (unit.cardId === "leader" || unit.cardId === "leader2") {
-    const hasVizierAlly = neighbors.some((nr, nc) => {
-      const neighborUnit = board[nr][nc];
-      return (
-        neighborUnit &&
-        neighborUnit.owner === unit.owner &&
-        neighborUnit.cardId === "vizier"
-      );
-    });
-
-    if (hasVizierAlly) {
-      neighbors.forEach(([n1r, n1c]) => {
-        if (!board[n1r][n1c]) {
-          const layer2 = getNeighbors(n1r, n1c);
-
-          layer2.forEach(([n2r, n2c]) => {
-            const isAlreadyAdded = actions.some(
-              (a) => a.r === n2r && a.c === n2c
-            );
-
-            if (
-              !board[n2r][n2c] &&
-              (n2r !== r || n2c !== c) &&
-              !isAlreadyAdded
-            ) {
-              actions.push({ r: n2r, c: n2c, type: "move" });
-            }
-          });
-        }
-      });
-    }
-  }
 
   return actions;
 };
