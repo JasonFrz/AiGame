@@ -1,3 +1,5 @@
+// src/components/GameSection.jsx
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -30,6 +32,9 @@ const GameSection = ({ onBack }) => {
     .neon-border { box-shadow: 0 0 15px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
     .action-move { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; animation: pulse-green 1.5s infinite; }
     .action-ability { box-shadow: 0 0 15px #F44336, inset 0 0 10px #F44336; border-color: #F44336; animation: pulse-red 1s infinite; }
+    
+    .action-wanderer { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; opacity: 0.8; }
+
     @keyframes pulse-green { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     @keyframes pulse-red { 0% { opacity: 0.7; } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); } }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -384,29 +389,6 @@ const GameSection = ({ onBack }) => {
     myUnits.sort((a, b) => (a.cardId.includes("leader") ? -1 : 1));
     setPlayerRoster(myUnits);
   }, [board]);
-
-  // const initializeGame = () => {
-  //   const b = Array(9)
-  //     .fill(null)
-  //     .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
-  //   b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
-  //   b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
-  //   setBoard(b);
-  //   const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
-  //   setDeck(shuffled.slice(3));
-  //   setVisibleDeck(shuffled.slice(0, 3));
-  //   setTurn(1);
-  //   setTurnPhaseType(null);
-  //   setGameOver(null);
-  //   setRecruitStep(0);
-  //   setClawMode("pull");
-  //   setGameLog("Your Turn");
-  //   setBruiserTarget(null);
-  //   setBruiserPendingMoves([]);
-  //   setManipulatorTarget(null); // Reset
-  //   isAiProcessing.current = false;
-  //   aiTurnCounter.current = 0;
-  // };
 
   // DEBUG SEMUA KARTU
   const initializeGame = () => {
@@ -1006,6 +988,28 @@ const GameSection = ({ onBack }) => {
           setValidMoves(moves);
           if (unitData.type === "Active") setSelectedUnitAbility(unitData);
         }
+
+        // --- LOGIKA KHUSUS WANDERER (Gabung Move + Ability) ---
+        if (unit.cardId === "wanderer") {
+          const basicMoves = calculateBasicMoves(
+            r,
+            c,
+            unit,
+            board,
+            getNeighbors
+          );
+
+          const abilityMoves = calculateAbilityMoves(
+            r,
+            c,
+            unit,
+            board,
+            getNeighbors
+          );
+
+          setValidMoves([...basicMoves, ...abilityMoves]);
+          setSelectedUnitAbility(null);
+        }
       }
     }
   };
@@ -1089,7 +1093,7 @@ const GameSection = ({ onBack }) => {
       "color: cyan; font-weight: bold;"
     );
     if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c]) {
-      console.log("   Visual Pos:", SLOT_COORDINATES[r][c]);
+      console.log("   Visual Pos:", SLOT_COORDINATES[r][c]);
     }
     if (gameOver) return;
     if (turn === 2 && recruitSelectionIndex !== null) {
@@ -1199,7 +1203,7 @@ const GameSection = ({ onBack }) => {
             setBoard(newBoard);
             setGameLog("Vizier Power: Move again!");
 
-            setTimeout(() => handleSelectUnit((r, c), 50));
+            setTimeout(() => handleSelectUnit(r, c), 50); // FIX: passed correct args (r, c)
             return;
           }
         } else if (action.type === "ability_swap") {
@@ -1229,6 +1233,10 @@ const GameSection = ({ onBack }) => {
             newBoard[action.landAt[0]][action.landAt[1]] = unit;
             newBoard[sr][sc] = null;
           }
+        } else if (action.type === "ability_wanderer_teleport") {
+          newBoard[r][c] = unit;
+          newBoard[sr][sc] = null;
+          setGameLog("Wanderer teleported");
         }
 
         setBoard(newBoard);
@@ -1236,7 +1244,11 @@ const GameSection = ({ onBack }) => {
         // --- SET TURN PHASE LOCK ---
         if (turnPhaseType === null) {
           // Helper to check if it's an ability or move
-          const isAbility = action.type.includes("ability");
+          const isWandererTeleport =
+            action.type === "ability_wanderer_teleport";
+
+          const isAbility =
+            action.type.includes("ability") && !isWandererTeleport;
 
           if (isAbility) {
             setTurnPhaseType("ability");
@@ -1543,7 +1555,10 @@ const GameSection = ({ onBack }) => {
                     {moveAction && (
                       <div
                         className={`absolute w-full h-full rounded-full border-2 ${
-                          moveAction.type.includes("ability")
+                          // --- MODIFIKASI: WARNA & ANIMASI WANDERER ---
+                          moveAction.type === "ability_wanderer_teleport"
+                            ? "bg-green-500/30 action-wanderer" // Hijau, statis
+                            : moveAction.type.includes("ability")
                             ? "bg-red-500/30 action-ability"
                             : "bg-green-500/30 action-move"
                         }`}

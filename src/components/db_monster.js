@@ -495,20 +495,35 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "wanderer":
-      board.forEach((row, wr) =>
-        row.forEach((_, wc) => {
-          if (!board[wr][wc]) {
-            const wNeighbors = getNeighbors(wr, wc);
-            const hasEnemy = wNeighbors.some(([wnr, wnc]) => {
-              const nUnit = board[wnr][wnc];
-              return nUnit && nUnit.owner === enemyOwner;
+      // Loop seluruh papan (karena Wanderer bisa teleport ke mana saja)
+      board.forEach((row, tr) => {
+        row.forEach((cell, tc) => {
+          // Syarat 1: Tile tujuan harus kosong
+          if (!cell) {
+            // Cek apakah tile ini 'Aman' (Tidak ada musuh di sebelahnya)
+            const targetNeighbors = getNeighbors(tr, tc);
+
+            const isSafe = targetNeighbors.every(([nr, nc]) => {
+              const neighborUnit = board[nr] && board[nr][nc];
+              // Safe jika: Kosong ATAU Unit Teman
+              // Unsafe jika: Ada Unit DAN Unit itu Musuh
+              if (neighborUnit && neighborUnit.owner === enemyOwner) {
+                return false; // Ada musuh, tidak aman
+              }
+              return true; // Aman
             });
-            if (!hasEnemy) {
-              actions.push({ r: wr, c: wc, type: "move" });
+
+            // Jika aman, tambahkan ke daftar gerakan ability
+            if (isSafe) {
+              actions.push({
+                r: tr,
+                c: tc,
+                type: "ability_wanderer_teleport", // Tipe khusus agar dibaca GameSection
+              });
             }
           }
-        })
-      );
+        });
+      });
       break;
 
     case "illusionist":
@@ -602,7 +617,6 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
         }
       });
       break;
-
     default:
       break;
   }
