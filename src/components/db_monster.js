@@ -12,7 +12,7 @@ import brewmasterCoin from "../assets/coins/BrewmasterCoin.png";
 import bruiserCoin from "../assets/coins/BruiserCoin.png";
 import clawLauncherCoin from "../assets/coins/ClawLauncherCoin.png";
 import hermitCoin from "../assets/coins/HermitCoin.png";
-import cubCoin from "../assets/coins/CubCoin.png"; 
+import cubCoin from "../assets/coins/CubCoin.png";
 import illusionistCoin from "../assets/coins/IllusionistCoin.png";
 import jailerCoin from "../assets/coins/JailerCoin.png";
 import manipulatorCoin from "../assets/coins/ManipulatorCoin.png";
@@ -46,7 +46,7 @@ import reineCard from "../assets/cards/Reine.png";
 // ==========================================
 
 export const SLOT_COORDINATES = [
-  [{ top: "9%", left: "50%" }], 
+  [{ top: "9%", left: "50%" }],
   [
     { top: "16.3%", left: "36.5%" },
     { top: "16.3%", left: "63.5%" },
@@ -56,7 +56,7 @@ export const SLOT_COORDINATES = [
   [
     { top: "30%", left: "9.8%" },
     { top: "30%", left: "36.5%" },
-    { top: "23%", left: "50%" }, 
+    { top: "23%", left: "50%" },
     { top: "30%", left: "63.5%" },
     { top: "30%", left: "90.3%" },
   ],
@@ -86,7 +86,7 @@ export const SLOT_COORDINATES = [
   [
     { top: "70.2%", left: "9.8%" },
     { top: "70.2%", left: "36.5%" },
-    { top: "77%", left: "50%" }, 
+    { top: "77%", left: "50%" },
     { top: "70.2%", left: "63.5%" },
     { top: "70.2%", left: "90.3%" },
   ],
@@ -96,7 +96,7 @@ export const SLOT_COORDINATES = [
     { top: "83.8%", left: "63.5%" },
     { top: "77%", left: "76.7%" },
   ],
-  [{ top: "90.5%", left: "50%" }], 
+  [{ top: "90.5%", left: "50%" }],
 ];
 
 // ==========================================
@@ -104,24 +104,76 @@ export const SLOT_COORDINATES = [
 // ==========================================
 
 export const ABILITY_DB = {
-  leader: { name: "LEADER", type: "Essential", desc: "Move 1 space. Lose if Captured." },
-  acrobat: { name: "ACROBAT", type: "Active", desc: "Jump over adjacent unit (Friend/Foe)." },
-  claw: { name: "CLAW", type: "Active", desc: "Pull enemy adjacent OR Move to enemy." },
-  rider: { name: "RIDER", type: "Active", desc: "Move 2 spaces in a straight line." },
-  manipulator: { name: "MANIPULATOR", type: "Active", desc: "Move any non-adjacent enemy 1 space." },
-  bruiser: { name: "BRUISER", type: "Active", desc: "Push enemy to one of the 3 opposite spaces and take their spot." },
-  guard: { name: "GUARD", type: "Active", desc: "Teleport adjacent to Leader." },
-  wanderer: { name: "WANDERER", type: "Active", desc: "Teleport to safe space (no enemies)." },
-  illusionist: { name: "ILLUSIONIST", type: "Active", desc: "Swap with non-adjacent visible unit (Ally/Enemy) on same Y-Axis." },
-  brewmaster: { name: "BREWMASTER", type: "Active", desc: "Move adjacent ally 1 space." },
+  leader: {
+    name: "LEADER",
+    type: "Essential",
+    desc: "Move 1 space. Lose if Captured.",
+  },
+  acrobat: {
+    name: "ACROBAT",
+    type: "Active",
+    desc: "Jump over adjacent unit (Friend/Foe).",
+  },
+  claw: {
+    name: "CLAW",
+    type: "Active",
+    desc: "Pull enemy adjacent OR Move to enemy.",
+  },
+  rider: {
+    name: "RIDER",
+    type: "Active",
+    desc: "Move 2 spaces in a straight line.",
+  },
+  manipulator: {
+    name: "MANIPULATOR",
+    type: "Active",
+    desc: "Move any non-adjacent enemy 1 space.",
+  },
+  bruiser: {
+    name: "BRUISER",
+    type: "Active",
+    desc: "Push enemy to one of the 3 opposite spaces and take their spot.",
+  },
+  guard: {
+    name: "GUARD",
+    type: "Active",
+    desc: "Teleport adjacent to Leader.",
+  },
+  wanderer: {
+    name: "WANDERER",
+    type: "Active",
+    desc: "Teleport to safe space (no enemies).",
+  },
+  illusionist: {
+    name: "ILLUSIONIST",
+    type: "Active",
+    desc: "Swap with non-adjacent visible unit (Ally/Enemy) on same Y-Axis.",
+  },
+  brewmaster: {
+    name: "BREWMASTER",
+    type: "Active",
+    desc: "Move adjacent ally 1 space.",
+  },
   archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." }, // Fixed type key
   vizier: { name: "VIZIER", type: "Passive", desc: "Leader moves +1 space." },
   hermit: { name: "HERMIT", type: "Special", desc: "Recruits with Cub." },
   cub: { name: "CUB", type: "Special", desc: "Cannot capture Leader." },
-  jailer: { name: "JAILER", type: "Passive", desc: "Stops adjacent enemy Abilities." },
-  protector: { name: "PROTECTOR", type: "Passive", desc: "Cannot be moved by enemies." },
+  jailer: {
+    name: "JAILER",
+    type: "Passive",
+    desc: "Stops adjacent enemy Abilities.",
+  },
+  protector: {
+    name: "PROTECTOR",
+    type: "Passive",
+    desc: "Cannot be moved by enemies.",
+  },
   assassin: { name: "ASSASSIN", type: "Passive", desc: "Solo capture Leader." },
-  nemesis: { name: "NEMESIS", type: "Special", desc: "Must move when enemy Leader moves." },
+  nemesis: {
+    name: "NEMESIS",
+    type: "Special",
+    desc: "Must move when enemy Leader moves.",
+  },
 };
 
 export const UNIT_VALUES = {
@@ -143,7 +195,7 @@ export const UNIT_VALUES = {
   vizier: 600,
   brewmaster: 600,
   hermit: 500,
-  cub: 100,   
+  cub: 100,
 };
 
 export const TOTAL_CARDS_DATA = [
@@ -166,9 +218,27 @@ export const TOTAL_CARDS_DATA = [
 ];
 
 export const getCardData = (id) => {
-  if (id === "leader") return { id: "leader", unitImg: roiPlayer1Coin, cardImg: roiCard, ...ABILITY_DB.leader };
-  if (id === "leader2") return { id: "leader2", unitImg: roiPlayer2Coin, cardImg: reineCard, ...ABILITY_DB.leader };
-  if (id === "cub") return { id: "cub", unitImg: cubCoin, cardImg: hermitCard, ...ABILITY_DB.cub };
+  if (id === "leader")
+    return {
+      id: "leader",
+      unitImg: roiPlayer1Coin,
+      cardImg: roiCard,
+      ...ABILITY_DB.leader,
+    };
+  if (id === "leader2")
+    return {
+      id: "leader2",
+      unitImg: roiPlayer2Coin,
+      cardImg: reineCard,
+      ...ABILITY_DB.leader,
+    };
+  if (id === "cub")
+    return {
+      id: "cub",
+      unitImg: cubCoin,
+      cardImg: hermitCard,
+      ...ABILITY_DB.cub,
+    };
   const card = TOTAL_CARDS_DATA.find((c) => c.id === id);
   return card ? { ...card, ...ABILITY_DB[id] } : null;
 };
@@ -178,57 +248,59 @@ export const getCardData = (id) => {
 // ==========================================
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
-    const startN = getNeighbors(r1, c1);
-    
-    for (let n of startN) {
-        let [currR, currC] = n;
-        let [prevR, prevC] = [r1, c1];
-        let pathBlocked = false;
-        
-        if (currR === r2 && currC === c2) return { valid: true, blocked: false };
-        if (board[currR][currC]) pathBlocked = true;
+  const startN = getNeighbors(r1, c1);
 
-        // Project ray
-        for (let i = 0; i < 8; i++) {
-            const nextCandidates = getNeighbors(currR, currC);
-            const prevNeighbors = getNeighbors(prevR, prevC);
-            
-            const straightNodes = nextCandidates.filter(([nr, nc]) => {
-                if (nr === prevR && nc === prevC) return false;
-                const isCommon = prevNeighbors.some(pn => pn[0] === nr && pn[1] === nc);
-                return !isCommon;
-            });
-            
-            if (straightNodes.length === 1) {
-                let [nextR, nextC] = straightNodes[0];
-                
-                if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
-                    pathBlocked = true;
-                }
+  for (let n of startN) {
+    let [currR, currC] = n;
+    let [prevR, prevC] = [r1, c1];
+    let pathBlocked = false;
 
-                if (nextR === r2 && nextC === c2) {
-                    return { valid: true, blocked: pathBlocked };
-                }
+    if (currR === r2 && currC === c2) return { valid: true, blocked: false };
+    if (board[currR][currC]) pathBlocked = true;
 
-                prevR = currR;
-                prevC = currC;
-                currR = nextR;
-                currC = nextC;
-            } else {
-                break; 
-            }
+    // Project ray
+    for (let i = 0; i < 8; i++) {
+      const nextCandidates = getNeighbors(currR, currC);
+      const prevNeighbors = getNeighbors(prevR, prevC);
+
+      const straightNodes = nextCandidates.filter(([nr, nc]) => {
+        if (nr === prevR && nc === prevC) return false;
+        const isCommon = prevNeighbors.some(
+          (pn) => pn[0] === nr && pn[1] === nc
+        );
+        return !isCommon;
+      });
+
+      if (straightNodes.length === 1) {
+        let [nextR, nextC] = straightNodes[0];
+
+        if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
+          pathBlocked = true;
         }
+
+        if (nextR === r2 && nextC === c2) {
+          return { valid: true, blocked: pathBlocked };
+        }
+
+        prevR = currR;
+        prevC = currC;
+        currR = nextR;
+        currC = nextC;
+      } else {
+        break;
+      }
     }
-    return { valid: false, blocked: true };
+  }
+  return { valid: false, blocked: true };
 };
 
 const isProtected = (r, c, board, getNeighbors) => {
   const neighbors = getNeighbors(r, c);
   const unit = board[r][c];
-  if (unit && unit.cardId === 'protector') return true; 
+  if (unit && unit.cardId === "protector") return true;
   return neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
-    return nUnit && nUnit.owner === unit.owner && nUnit.cardId === 'protector';
+    return nUnit && nUnit.owner === unit.owner && nUnit.cardId === "protector";
   });
 };
 
@@ -237,33 +309,54 @@ export const calculateBasicMoves = (r, c, unit, board, getNeighbors) => {
   const neighbors = getNeighbors(r, c);
   neighbors.forEach(([nr, nc]) => {
     if (!board[nr][nc]) {
-      actions.push({ r: nr, c: nc, type: 'move' });
+      actions.push({ r: nr, c: nc, type: "move" });
     }
   });
   return actions;
 };
 
-export const calculateBruiserPushTargets = (bruiserR, bruiserC, enemyR, enemyC, board, getNeighbors) => {
+export const calculateBruiserPushTargets = (
+  bruiserR,
+  bruiserC,
+  enemyR,
+  enemyC,
+  board,
+  getNeighbors
+) => {
   const enemyNeighbors = getNeighbors(enemyR, enemyC);
   const bruiserNeighbors = getNeighbors(bruiserR, bruiserC);
-  
+
   const pushOptions = [];
 
   enemyNeighbors.forEach(([nr, nc]) => {
+    // Skip bruiser's position
     if (nr === bruiserR && nc === bruiserC) return;
-    const isShared = bruiserNeighbors.some(([br, bc]) => br === nr && bc === nc);
-    
-    if (!isShared) {
-      if (!board[nr][nc]) {
-        pushOptions.push({ r: nr, c: nc });
-      }
+
+    // Check if this spot is shared (adjacent to both)
+    const isShared = bruiserNeighbors.some(
+      ([br, bc]) => br === nr && bc === nc
+    );
+
+    if (!isShared && board[nr] && board[nr][nc] === null) {
+      pushOptions.push({ r: nr, c: nc });
     }
+  });
+
+  console.log("💪 Bruiser Push Options:", {
+    bruiser: [bruiserR, bruiserC],
+    enemy: [enemyR, enemyC],
+    options: pushOptions,
   });
 
   return pushOptions;
 };
 
-export const calculateManipulatorDestinations = (enemyR, enemyC, board, getNeighbors) => {
+export const calculateManipulatorDestinations = (
+  enemyR,
+  enemyC,
+  board,
+  getNeighbors
+) => {
   const neighbors = getNeighbors(enemyR, enemyC);
   const dests = [];
   neighbors.forEach(([nr, nc]) => {
@@ -283,171 +376,227 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
-    return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === 'jailer';
+    return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
   if (isJailed) return [];
 
   switch (cardId) {
-    case 'acrobat':
+    case "acrobat":
       neighbors.forEach(([nr, nc]) => {
-        if (board[nr][nc]) { 
-          const landingSpots = getNeighbors(nr, nc); 
+        if (board[nr][nc]) {
+          const landingSpots = getNeighbors(nr, nc);
           landingSpots.forEach(([lr, lc]) => {
-             const lineCheck = isHexStraight(r, c, lr, lc, board, getNeighbors);
-             if (lineCheck.valid && !board[lr][lc]) {
-                 actions.push({ r: lr, c: lc, type: 'move' }); 
-             }
+            const lineCheck = isHexStraight(r, c, lr, lc, board, getNeighbors);
+            if (lineCheck.valid && !board[lr][lc]) {
+              actions.push({ r: lr, c: lc, type: "move" });
+            }
           });
         }
       });
       break;
 
-    case 'rider':
-      board.forEach((row, tr) => row.forEach((_, tc) => {
-          if (!board[tr][tc]) { 
-             const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-             const isDist2 = neighbors.some(([n1r, n1c]) => {
-                 const n2s = getNeighbors(n1r, n1c);
-                 return n2s.some(n2 => n2[0] === tr && n2[1] === tc);
-             });
-             if (line.valid && !line.blocked && isDist2) {
-                 actions.push({ r: tr, c: tc, type: 'move' });
-             }
+    case "rider":
+      board.forEach((row, tr) =>
+        row.forEach((_, tc) => {
+          if (!board[tr][tc]) {
+            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
+            const isDist2 = neighbors.some(([n1r, n1c]) => {
+              const n2s = getNeighbors(n1r, n1c);
+              return n2s.some((n2) => n2[0] === tr && n2[1] === tc);
+            });
+            if (line.valid && !line.blocked && isDist2) {
+              actions.push({ r: tr, c: tc, type: "move" });
+            }
           }
-      }));
+        })
+      );
       break;
 
-    case 'bruiser':
+    case "bruiser":
       neighbors.forEach(([nr, nc]) => {
         const target = board[nr][nc];
-        if (target && target.owner === enemyOwner && !isProtected(nr, nc, board, getNeighbors)) {
-          const validDestinations = calculateBruiserPushTargets(r, c, nr, nc, board, getNeighbors);
-          validDestinations.forEach(dest => {
-            actions.push({ 
-              r: nr, 
-              c: nc, 
-              type: 'ability_bruiser_push', 
-              pushTo: [dest.r, dest.c] 
+        if (
+          target &&
+          target.owner === enemyOwner &&
+          !isProtected(nr, nc, board, getNeighbors)
+        ) {
+          const validDestinations = calculateBruiserPushTargets(
+            r,
+            c,
+            nr,
+            nc,
+            board,
+            getNeighbors
+          );
+          validDestinations.forEach((dest) => {
+            actions.push({
+              r: nr,
+              c: nc,
+              type: "ability_bruiser_push",
+              pushTo: [dest.r, dest.c],
             });
           });
         }
       });
       break;
-    
-    case 'manipulator':
-      board.forEach((row, tr) => row.forEach((target, tc) => {
-        if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
-           const isAdj = neighbors.some(n => n[0] === tr && n[1] === tc);
-           if (!isAdj) {
-               const dests = calculateManipulatorDestinations(tr, tc, board, getNeighbors);
-               if (dests.length > 0) {
-                  actions.push({ r: tr, c: tc, type: 'ability_manipulator_target' });
-               }
-           }
-        }
-      }));
+
+    case "manipulator":
+      board.forEach((row, tr) =>
+        row.forEach((target, tc) => {
+          if (
+            target &&
+            target.owner === enemyOwner &&
+            !isProtected(tr, tc, board, getNeighbors)
+          ) {
+            const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+            if (!isAdj) {
+              const dests = calculateManipulatorDestinations(
+                tr,
+                tc,
+                board,
+                getNeighbors
+              );
+              if (dests.length > 0) {
+                actions.push({
+                  r: tr,
+                  c: tc,
+                  type: "ability_manipulator_target",
+                });
+              }
+            }
+          }
+        })
+      );
       break;
 
-    case 'guard':
+    case "guard":
       let leaderPos = null;
-      board.forEach((row, lr) => row.forEach((lUnit, lc) => {
-        if (lUnit && lUnit.owner === owner && (lUnit.cardId === 'leader' || lUnit.cardId === 'leader2')) {
-          leaderPos = [lr, lc];
-        }
-      }));
+      board.forEach((row, lr) =>
+        row.forEach((lUnit, lc) => {
+          if (
+            lUnit &&
+            lUnit.owner === owner &&
+            (lUnit.cardId === "leader" || lUnit.cardId === "leader2")
+          ) {
+            leaderPos = [lr, lc];
+          }
+        })
+      );
       if (leaderPos) {
         const lNeighbors = getNeighbors(leaderPos[0], leaderPos[1]);
         lNeighbors.forEach(([lnr, lnc]) => {
           if (!board[lnr][lnc] && (lnr !== r || lnc !== c)) {
-            actions.push({ r: lnr, c: lnc, type: 'move' }); 
+            actions.push({ r: lnr, c: lnc, type: "move" });
           }
         });
       }
       break;
 
-    case 'wanderer':
-      board.forEach((row, wr) => row.forEach((_, wc) => {
-        if (!board[wr][wc]) { 
-          const wNeighbors = getNeighbors(wr, wc);
-          const hasEnemy = wNeighbors.some(([wnr, wnc]) => {
-            const nUnit = board[wnr][wnc];
-            return nUnit && nUnit.owner === enemyOwner;
-          });
-          if (!hasEnemy) {
-            actions.push({ r: wr, c: wc, type: 'move' });
+    case "wanderer":
+      board.forEach((row, wr) =>
+        row.forEach((_, wc) => {
+          if (!board[wr][wc]) {
+            const wNeighbors = getNeighbors(wr, wc);
+            const hasEnemy = wNeighbors.some(([wnr, wnc]) => {
+              const nUnit = board[wnr][wnc];
+              return nUnit && nUnit.owner === enemyOwner;
+            });
+            if (!hasEnemy) {
+              actions.push({ r: wr, c: wc, type: "move" });
+            }
           }
-        }
-      }));
+        })
+      );
       break;
 
-    case 'illusionist':
+    case "illusionist":
       // Get Illusionist's visual X position
       if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
       const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
 
       // Iterate all potential targets
-      board.forEach((row, tr) => row.forEach((target, tc) => {
-        // Target must exist (Ally or Enemy) and NOT be self
-        if (target && (tr !== r || tc !== c)) {
-          
-          // 1. Check Non-Adjacent
-          const isAdj = neighbors.some(n => n[0] === tr && n[1] === tc);
-          if (isAdj) return;
+      board.forEach((row, tr) =>
+        row.forEach((target, tc) => {
+          // Target must exist (Ally or Enemy) and NOT be self
+          if (target && (tr !== r || tc !== c)) {
+            // 1. Check Non-Adjacent
+            const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+            if (isAdj) return;
 
-          // 2. Check Y-Axis Alignment (Visual Vertical Line)
-          if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
-          const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
-          
-          // Allow small float tolerance for "Same Column"
-          if (Math.abs(myLeft - targetLeft) < 4) {
-            
-            // 3. Check Visibility (No units in between)
-            let pathBlocked = false;
-            const minR = Math.min(r, tr);
-            const maxR = Math.max(r, tr);
+            // 2. Check Y-Axis Alignment (Visual Vertical Line)
+            if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
+            const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
 
-            // Iterate rows between self and target
-            for (let i = minR + 1; i < maxR; i++) {
-              if (SLOT_COORDINATES[i]) {
-                // Find cell in this row that matches the vertical column
-                const colIndex = SLOT_COORDINATES[i].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 4);
-                if (colIndex !== -1 && board[i][colIndex]) {
-                  pathBlocked = true; // Obstacle found
-                  break;
+            // Allow small float tolerance for "Same Column"
+            if (Math.abs(myLeft - targetLeft) < 4) {
+              // 3. Check Visibility (No units in between)
+              let pathBlocked = false;
+              const minR = Math.min(r, tr);
+              const maxR = Math.max(r, tr);
+
+              // Iterate rows between self and target
+              for (let i = minR + 1; i < maxR; i++) {
+                if (SLOT_COORDINATES[i]) {
+                  // Find cell in this row that matches the vertical column
+                  const colIndex = SLOT_COORDINATES[i].findIndex(
+                    (co) => Math.abs(parseFloat(co.left) - myLeft) < 4
+                  );
+                  if (colIndex !== -1 && board[i][colIndex]) {
+                    pathBlocked = true; // Obstacle found
+                    break;
+                  }
                 }
               }
-            }
 
-            if (!pathBlocked) {
-              // 4. Enemy Protection Check
-              if (target.owner === enemyOwner && isProtected(tr, tc, board, getNeighbors)) return;
+              if (!pathBlocked) {
+                // 4. Enemy Protection Check
+                if (
+                  target.owner === enemyOwner &&
+                  isProtected(tr, tc, board, getNeighbors)
+                )
+                  return;
 
-              actions.push({ r: tr, c: tc, type: 'ability_swap' });
+                actions.push({ r: tr, c: tc, type: "ability_swap" });
+              }
             }
           }
-        }
-      }));
-      break;
-      
-    case 'claw':
-      board.forEach((row, tr) => row.forEach((target, tc) => {
-        if (target && target.owner === enemyOwner && !isProtected(tr, tc, board, getNeighbors)) {
-           const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-           if (line.valid && !line.blocked) {
-               const pullSpot = neighbors.find(([nr, nc]) => isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid);
-               if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
-                   actions.push({ r: tr, c: tc, type: 'ability_claw_pull', pullTo: pullSpot });
-               }
-           }
-        }
-      }));
+        })
+      );
       break;
 
-    case 'brewmaster':
+    case "claw":
+      board.forEach((row, tr) =>
+        row.forEach((target, tc) => {
+          if (
+            target &&
+            target.owner === enemyOwner &&
+            !isProtected(tr, tc, board, getNeighbors)
+          ) {
+            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
+            if (line.valid && !line.blocked) {
+              const pullSpot = neighbors.find(
+                ([nr, nc]) =>
+                  isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid
+              );
+              if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
+                actions.push({
+                  r: tr,
+                  c: tc,
+                  type: "ability_claw_pull",
+                  pullTo: pullSpot,
+                });
+              }
+            }
+          }
+        })
+      );
+      break;
+
+    case "brewmaster":
       neighbors.forEach(([nr, nc]) => {
         const ally = board[nr][nc];
         if (ally && ally.owner === owner) {
-           actions.push({ r: nr, c: nc, type: 'ability_brew_select' });
+          actions.push({ r: nr, c: nc, type: "ability_brew_select" });
         }
       });
       break;
@@ -472,43 +621,61 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
   currentBoard.forEach((row, tr) => {
     row.forEach((cell, tc) => {
       if (cell && cell.owner !== unit.owner) {
-         const targetCoords = SLOT_COORDINATES[tr] && SLOT_COORDINATES[tr][tc];
-         if (!targetCoords) return;
-         const targetLeft = parseFloat(targetCoords.left);
-         if (Math.abs(myLeft - targetLeft) < 5) {
-             alignedEnemies.push({ r: tr, c: tc, dist: Math.abs(r - tr) });
-         }
+        const targetCoords = SLOT_COORDINATES[tr] && SLOT_COORDINATES[tr][tc];
+        if (!targetCoords) return;
+        const targetLeft = parseFloat(targetCoords.left);
+        if (Math.abs(myLeft - targetLeft) < 5) {
+          alignedEnemies.push({ r: tr, c: tc, dist: Math.abs(r - tr) });
+        }
       }
     });
   });
 
-  const enemiesAbove = alignedEnemies.filter(e => e.r < r).sort((a, b) => a.dist - b.dist);
-  const enemiesBelow = alignedEnemies.filter(e => e.r > r).sort((a, b) => a.dist - b.dist);
+  const enemiesAbove = alignedEnemies
+    .filter((e) => e.r < r)
+    .sort((a, b) => a.dist - b.dist);
+  const enemiesBelow = alignedEnemies
+    .filter((e) => e.r > r)
+    .sort((a, b) => a.dist - b.dist);
 
   const validTargets = [];
   if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
   if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
 
-  validTargets.forEach(target => {
-      const { r: tr, c: tc } = target;
-      if (mode === "dash") {
-           const landingRow = r < tr ? tr - 1 : tr + 1;
-           if (landingRow === r) return;
-           if (SLOT_COORDINATES[landingRow]) {
-               const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
-               if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
-                    moves.push({ r: tr, c: tc, type: "ability_claw_dash", landAt: [landingRow, landingCol] });
-               }
-           }
-      } else {
-           const landingRow = tr > r ? r + 1 : r - 1;
-           if (SLOT_COORDINATES[landingRow]) {
-               const landingCol = SLOT_COORDINATES[landingRow].findIndex(co => Math.abs(parseFloat(co.left) - myLeft) < 5);
-               if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
-                    moves.push({ r: tr, c: tc, type: "ability_claw_pull", pullTo: [landingRow, landingCol] });
-               }
-           }
+  validTargets.forEach((target) => {
+    const { r: tr, c: tc } = target;
+    if (mode === "dash") {
+      const landingRow = r < tr ? tr - 1 : tr + 1;
+      if (landingRow === r) return;
+      if (SLOT_COORDINATES[landingRow]) {
+        const landingCol = SLOT_COORDINATES[landingRow].findIndex(
+          (co) => Math.abs(parseFloat(co.left) - myLeft) < 5
+        );
+        if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+          moves.push({
+            r: tr,
+            c: tc,
+            type: "ability_claw_dash",
+            landAt: [landingRow, landingCol],
+          });
+        }
       }
+    } else {
+      const landingRow = tr > r ? r + 1 : r - 1;
+      if (SLOT_COORDINATES[landingRow]) {
+        const landingCol = SLOT_COORDINATES[landingRow].findIndex(
+          (co) => Math.abs(parseFloat(co.left) - myLeft) < 5
+        );
+        if (landingCol !== -1 && !currentBoard[landingRow][landingCol]) {
+          moves.push({
+            r: tr,
+            c: tc,
+            type: "ability_claw_pull",
+            pullTo: [landingRow, landingCol],
+          });
+        }
+      }
+    }
   });
   return moves;
 };
