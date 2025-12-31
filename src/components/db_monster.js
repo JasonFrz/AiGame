@@ -563,20 +563,21 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "rider":
-      // board.forEach((row, tr) =>
-      //   row.forEach((_, tc) => {
-      //     if (!board[tr][tc]) {
-      //       const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-      //       const isDist2 = neighbors.some(([n1r, n1c]) => {
-      //         const n2s = getNeighbors(n1r, n1c);
-      //         return n2s.some((n2) => n2[0] === tr && n2[1] === tc);
-      //       });
-      //       if (line.valid && !line.blocked && isDist2) {
-      //         actions.push({ r: tr, c: tc, type: "move" });
-      //       }
-      //     }
-      //   })
-      // );
+      neighbors.forEach(([nr, nc]) => {
+        if (board[nr] && board[nr][nc] === null) {
+          const startPos = `${r},${c}`;
+          const endPos = `${nr},${nc}`;
+
+          const riderPath = STRAIGHT_JUMPS_PATHS[startPos]?.[endPos];
+
+          if (riderPath) {
+            const [targetR, targetC] = riderPath;
+          }
+          if (board[targetR] && board[targetR][targetC] === null) {
+            actions.push({ r: targetR, c: targetC, type: "move" });
+          }
+        }
+      });
       break;
 
     case "bruiser":
