@@ -26,9 +26,9 @@ const GameSection = ({ onBack }) => {
   // --- STYLES ---
   const styles = `
     @keyframes popIn {
-      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-      70% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      0% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
     .animate-spawn { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .neon-border { box-shadow: 0 0 15px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
@@ -40,8 +40,6 @@ const GameSection = ({ onBack }) => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- CONFIG BOARD COORDINATES REMOVED (IMPORTED FROM DB) ---
-
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
@@ -52,44 +50,55 @@ const GameSection = ({ onBack }) => {
       ],
       "1,0": [
         [0, 0],
-        [2, 0],
         [2, 1],
+        [1, 2],
+        [2, 2],
       ],
       "1,1": [
         [0, 0],
         [2, 1],
         [2, 2],
+        [2, 3],
+        [3, 4],
+        [1, 3],
       ],
       "1,2": [
-        [2, 2],
-        [2, 3],
+        [2, 0],
+        [3, 1],
+        [2, 1],
+        [1, 0],
       ],
       "1,3": [
-        [2, 3],
+        [2, 1],
         [2, 4],
       ],
       "2,0": [
-        [1, 0],
+        [1, 2],
         [3, 0],
         [3, 1],
       ],
       "2,1": [
         [1, 0],
-        [1, 1],
-        [3, 1],
+        [1, 2],
+        [2, 2],
         [3, 2],
+        [3, 3],
+        [3, 1],
       ],
       "2,2": [
-        [1, 1],
-        [1, 2],
-        [3, 2],
-        [3, 3],
         [0, 0],
+        [1, 0],
+        [1, 1],
+        [2, 3],
+        [2, 1],
+        [3, 3],
       ],
       "2,3": [
-        [1, 2],
+        [2, 2],
+        [1, 1],
         [1, 3],
         [3, 3],
+        [4, 3],
         [3, 4],
       ],
       "2,4": [
@@ -99,159 +108,196 @@ const GameSection = ({ onBack }) => {
       ],
       "3,0": [
         [2, 0],
+        [3, 1],
+        [4, 1],
         [4, 0],
       ],
       "3,1": [
+        [3, 0],
         [2, 0],
+        [1, 2],
         [2, 1],
-        [4, 0],
+        [3, 2],
         [4, 1],
       ],
       "3,2": [
-        [2, 1],
-        [2, 2],
         [4, 1],
+        [3, 1],
+        [2, 1],
+        [3, 3],
         [4, 2],
+        [5, 1],
       ],
       "3,3": [
+        [2, 1],
         [2, 2],
         [2, 3],
+        [3, 2],
         [4, 2],
         [4, 3],
       ],
       "3,4": [
         [2, 3],
+        [1, 3],
         [2, 4],
         [4, 3],
         [4, 4],
+        [3, 5],
       ],
       "3,5": [
         [2, 4],
+        [3, 4],
         [4, 4],
+        [5, 5],
       ],
       "4,0": [
         [3, 0],
-        [3, 1],
+        [4, 1],
         [5, 0],
-        [5, 1],
+        [6, 0],
       ],
       "4,1": [
+        [3, 0],
         [3, 1],
         [3, 2],
+        [4, 0],
+        [5, 0],
         [5, 1],
-        [5, 2],
       ],
       "4,2": [
         [3, 2],
         [3, 3],
+        [4, 3],
+        [5, 1],
         [5, 2],
         [5, 3],
       ],
       "4,3": [
         [3, 3],
+        [2, 3],
         [3, 4],
+        [4, 2],
         [5, 3],
-        [5, 4],
+        [4, 4],
       ],
       "4,4": [
+        [4, 3],
         [3, 4],
         [3, 5],
+        [5, 3],
         [5, 4],
         [5, 5],
       ],
       "5,0": [
         [4, 0],
+        [4, 1],
+        [5, 1],
         [6, 0],
+        [7, 0],
+        [6, 1],
       ],
       "5,1": [
-        [4, 0],
         [4, 1],
-        [6, 0],
+        [3, 2],
+        [4, 2],
+        [5, 0],
         [6, 1],
+        [5, 2],
       ],
       "5,2": [
-        [4, 1],
+        [5, 1],
         [4, 2],
+        [5, 3],
         [6, 1],
         [6, 2],
+        [6, 3],
       ],
       "5,3": [
         [4, 2],
         [4, 3],
-        [6, 2],
+        [4, 4],
+        [5, 2],
         [6, 3],
+        [5, 4],
       ],
       "5,4": [
-        [4, 3],
+        [5, 3],
         [4, 4],
+        [5, 5],
         [6, 3],
+        [7, 3],
         [6, 4],
       ],
       "5,5": [
+        [3, 5],
         [4, 4],
+        [5, 4],
         [6, 4],
       ],
       "6,0": [
+        [4, 0],
         [5, 0],
         [7, 0],
-        [4, 0],
       ],
       "6,1": [
+        [5, 0],
         [5, 1],
         [5, 2],
         [7, 0],
         [7, 1],
+        [6, 2],
       ],
       "6,2": [
-        [5, 2],
-        [7, 1],
-        [7, 2],
-        [6, 3],
         [6, 1],
+        [5, 2],
+        [6, 3],
+        [7, 1],
         [8, 0],
+        [7, 2],
       ],
       "6,3": [
+        [5, 2],
         [5, 3],
         [5, 4],
+        [6, 2],
         [7, 2],
         [7, 3],
       ],
       "6,4": [
+        [7, 3],
         [5, 4],
         [5, 5],
-        [6, 3],
-        [7, 3],
       ],
       "7,0": [
-        [5, 0],
-        [7, 1],
         [6, 0],
+        [5, 0],
         [6, 1],
+        [7, 1],
       ],
       "7,1": [
+        [7, 0],
         [6, 1],
         [6, 2],
         [8, 0],
-        [7, 0],
       ],
       "7,2": [
+        [8, 0],
         [6, 2],
         [6, 3],
         [5, 4],
-        [8, 0],
         [7, 3],
       ],
       "7,3": [
         [7, 2],
         [6, 3],
-        [6, 4],
         [5, 4],
         [5, 5],
+        [6, 4],
       ],
       "8,0": [
         [7, 1],
-        [7, 2],
         [6, 2],
+        [7, 2],
       ],
     };
     return manualMap[mapKey] || [];
@@ -1391,92 +1437,92 @@ const GameSection = ({ onBack }) => {
               </div>
             </div>
           )}
-          <div className="relative w-full h-full flex items-center justify-center z-10">
-            <div className="relative max-h-full max-w-full aspect-[650/750] transition-all duration-500">
-              <img
-                src={board_img}
-                alt="Board"
-                className="w-full h-full object-contain pointer-events-none drop-shadow-2xl"
-              />
-              {board.map((row, r) =>
-                row.map((cell, c) => {
-                  if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c])
-                    return null;
-                  const coords = SLOT_COORDINATES[r][c];
-                  const moveAction = validMoves.find(
-                    (m) => m.r === r && m.c === c
-                  );
-                  const isRecruitValid =
-                    turn === 2 &&
-                    recruitSelectionIndex !== null &&
-                    !cell &&
-                    isRecruitZone(r, c, 1);
-                  const isSelectedUnit =
-                    selectedPos && selectedPos[0] === r && selectedPos[1] === c;
+          <div className="relative max-h-full max-w-full aspect-[650/750] transition-all duration-500">
+            <img
+              src={board_img}
+              alt="Board"
+              className="w-full h-full object-contain pointer-events-none drop-shadow-2xl"
+            />
+            {board.map((row, r) =>
+              row.map((cell, c) => {
+                // Pastikan koordinat ada sebelum render
+                if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c])
+                  return null;
+                const coords = SLOT_COORDINATES[r][c];
 
-                  return (
-                    <div
-                      key={`${r}-${c}`}
-                      onClick={() => handleBoardClick(r, c)}
-                      style={{
-                        position: "absolute",
-                        top: coords.top,
-                        left: coords.left,
-                        transform: "translate(-50%, -50%)",
-                      }}
-                      className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200 ${
-                        moveAction || isRecruitValid
-                          ? "cursor-pointer z-30 scale-110"
-                          : ""
-                      }`}
-                    >
-                      {moveAction && (
+                const moveAction = validMoves.find(
+                  (m) => m.r === r && m.c === c
+                );
+                const isRecruitValid =
+                  turn === 2 &&
+                  recruitSelectionIndex !== null &&
+                  !cell &&
+                  isRecruitZone(r, c, 1);
+                const isSelectedUnit =
+                  selectedPos && selectedPos[0] === r && selectedPos[1] === c;
+
+                return (
+                  <div
+                    key={`${r}-${c}`}
+                    onClick={() => handleBoardClick(r, c)}
+                    style={{
+                      position: "absolute",
+                      top: coords.top,
+                      left: coords.left,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                    className={`w-[11.5%] aspect-square flex items-center justify-center rounded-full transition-all duration-200 ${
+                      moveAction || isRecruitValid
+                        ? "cursor-pointer z-30 scale-110"
+                        : ""
+                    }`}
+                  >
+                    {moveAction && (
+                      <div
+                        className={`absolute w-full h-full rounded-full border-2 ${
+                          moveAction.type.includes("ability")
+                            ? "bg-red-500/30 action-ability"
+                            : "bg-green-500/30 action-move"
+                        }`}
+                      ></div>
+                    )}
+                    {isRecruitValid && (
+                      <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>
+                    )}
+                    {isSelectedUnit && (
+                      <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>
+                    )}
+                    {cell && (
+                      <div
+                        className={`relative w-[95%] h-[95%] transition-all duration-300 ${
+                          cell.isNew ? "animate-spawn" : ""
+                        } ${
+                          cell.moved
+                            ? "grayscale-[0.8] opacity-80"
+                            : "hover:scale-110 cursor-pointer"
+                        }`}
+                      >
+                        <img
+                          src={getCardData(cell.cardId).unitImg}
+                          className={`w-full h-full object-contain drop-shadow-md ${
+                            cell.owner === 2
+                              ? "filter hue-rotate-[160deg] brightness-90"
+                              : ""
+                          }`}
+                        />
                         <div
-                          className={`absolute w-full h-full rounded-full border-2 ${
-                            moveAction.type.includes("ability")
-                              ? "bg-red-500/30 action-ability"
-                              : "bg-green-500/30 action-move"
+                          className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${
+                            cell.owner === 1
+                              ? "border-blue-500"
+                              : "border-red-600"
                           }`}
                         ></div>
-                      )}
-                      {isRecruitValid && (
-                        <div className="absolute w-full h-full rounded-full bg-amber-400/40 animate-pulse border-2 border-amber-400"></div>
-                      )}
-                      {isSelectedUnit && (
-                        <div className="absolute w-[130%] h-[130%] rounded-full border-4 border-cyan-400/80 animate-spin border-dashed"></div>
-                      )}
-                      {cell && (
-                        <div
-                          className={`relative w-[95%] h-[95%] transition-all duration-300 ${
-                            cell.isNew ? "animate-spawn" : ""
-                          } ${
-                            cell.moved
-                              ? "grayscale-[0.8] opacity-80"
-                              : "hover:scale-110 cursor-pointer"
-                          }`}
-                        >
-                          <img
-                            src={getCardData(cell.cardId).unitImg}
-                            className={`w-full h-full object-contain drop-shadow-md ${
-                              cell.owner === 2
-                                ? "filter hue-rotate-[160deg] brightness-90"
-                                : ""
-                            }`}
-                          />
-                          <div
-                            className={`absolute inset-0 rounded-full border-[3px] shadow-sm ${
-                              cell.owner === 1
-                                ? "border-blue-500"
-                                : "border-red-600"
-                            }`}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
