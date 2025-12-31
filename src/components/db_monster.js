@@ -217,6 +217,218 @@ export const TOTAL_CARDS_DATA = [
   { id: "wanderer", unitImg: wandererCoin, cardImg: wandererCard },
 ];
 
+export const STRAIGHT_JUMPS_PATHS = {
+  "0,0": {
+    "1,0": [1, 2],
+    "2,2": [3, 3],
+    "1,1": [1, 3],
+  },
+  "1,0": {
+    "1,2": [2, 0],
+    "2,1": [3, 2],
+    "2,2": [2, 3],
+  },
+  "2,2": {
+    "2,1": [3, 1],
+    "3,3": [4, 2],
+    "2,3": [3, 4],
+  },
+  "1,1": {
+    "2,2": [2, 1],
+    "2,3": [4, 3],
+    "1,3": [2, 4],
+  },
+  "1,2": {
+    "3,1": [4, 1],
+    "2,1": [3, 3],
+    "1,0": [0, 0],
+  },
+  "2,1": {
+    "3,1": [3, 0],
+    "3,2": [5, 1],
+    "3,3": [4, 3],
+    "2,2": [1, 1],
+  },
+  "3,3": {
+    "2,2": [0, 0],
+    "2,1": [1, 2],
+    "3,2": [4, 1],
+    "4,2": [5, 2],
+    "4,3": [4, 4],
+    "2,3": [1, 3],
+  },
+  "2,3": {
+    "2,2": [1, 0],
+    "3,3": [3, 2],
+    "4,3": [5, 3],
+    "3,4": [3, 5],
+  },
+  "1,3": {
+    "1,1": [0, 0],
+    "2,3": [3, 3],
+    "3,4": [4, 4],
+  },
+  "2,0": {
+    "3,0": [4, 0],
+    "3,1": [3, 2],
+    "1,2": [1, 0],
+  },
+  "3,1": {
+    "4,1": [5, 0],
+    "3,2": [4, 2],
+    "2,1": [2, 2],
+  },
+  "3,2": {
+    "2,1": [1, 0],
+    "4,1": [4, 0],
+    "5,1": [6, 1],
+    "4,2": [5, 3],
+    "3,3": [2, 3],
+  },
+  "4,2": {
+    "3,3": [2, 2],
+    "3,2": [3, 1],
+    "5,1": [5, 0],
+    "5,2": [6, 2],
+    "5,3": [5, 4],
+    "4,3": [3, 4],
+  },
+  "4,3": {
+    "2,3": [1, 1],
+    "3,3": [2, 1],
+    "4,2": [5, 1],
+    "5,3": [6, 3],
+    "4,4": [5, 5],
+    "3,4": [2, 4],
+  },
+  "3,4": {
+    "2,3": [2, 2],
+    "4,3": [4, 2],
+    "4,4": [5, 4],
+  },
+  "2,4": {
+    "1,3": [1, 1],
+    "3,4": [4, 3],
+    "3,5": [5, 5],
+  },
+  "3,0": {
+    "3,1": [2, 1],
+    "4,1": [5, 1],
+    "4,0": [6, 0],
+  },
+  "4,1": {
+    "3,1": [1, 2],
+    "3,2": [3, 3],
+    "5,1": [5, 2],
+    "5,0": [7, 0],
+  },
+  "5,1": {
+    "3,2": [2, 1],
+    "4,1": [3, 0],
+    "5,0": [6, 0],
+    "6,1": [7, 1],
+    "5,2": [6, 3],
+    "4,2": [4, 3],
+  },
+  "5,2": {
+    "4,2": [3, 3],
+    "5,1": [4, 1],
+    "6,1": [7, 0],
+    "6,2": [8, 0],
+    "6,3": [7, 3],
+    "5,3": [4, 4],
+  },
+  "5,3": {
+    "4,3": [2, 3],
+    "4,2": [3, 2],
+    "5,2": [6, 1],
+    "6,3": [7, 2],
+    "5,4": [6, 4],
+    "4,4": [3, 5],
+  },
+  "4,4": {
+    "3,4": [1, 3],
+    "4,3": [3, 3],
+    "5,3": [5, 2],
+    "5,4": [7, 3],
+  },
+  "3,5": {
+    "3,4": [2, 3],
+    "4,4": [5, 3],
+    "5,5": [6, 4],
+  },
+  "4,0": {
+    "3,0": [2, 0],
+    "4,1": [3, 2],
+    "5,0": [6, 1],
+  },
+  "5,0": {
+    "4,1": [3, 1],
+    "5,1": [4, 2],
+    "6,1": [6, 2],
+  },
+  "6,1": {
+    "5,1": [3, 2],
+    "5,0": [4, 0],
+    "6,2": [7, 2],
+    "5,2": [5, 3],
+  },
+  "6,2": {
+    "5,2": [4, 2],
+    "6,1": [5, 0],
+    "6,3": [5, 4],
+  },
+  "6,3": {
+    "5,3": [4, 3],
+    "5,2": [5, 1],
+    "6,2": [7, 1],
+    "5,4": [5, 5],
+  },
+  "5,4": {
+    "4,4": [3, 4],
+    "5,3": [4, 2],
+    "6,3": [6, 2],
+  },
+  "5,5": {
+    "3,5": [2, 4],
+    "4,4": [4, 3],
+    "5,4": [6, 3],
+  },
+  "6,0": {
+    "4,0": [3, 0],
+    "5,0": [5, 1],
+    "7,0": [7, 1],
+  },
+  "7.0": {
+    "5,0": [4, 1],
+    "6,1": [5, 2],
+    "7,1": [8, 0],
+  },
+  "7,1": {
+    "6,1": [5, 1],
+    "7,0": [6, 0],
+    "6,2": [6, 3],
+  },
+  "8,0": {
+    "6,2": [5, 2],
+    "7,1": [7, 0],
+    "7,2": [7, 3],
+  },
+  "7,2": {
+    "6,2": [6, 1],
+    "6,3": [5, 3],
+    "7,3": [6, 4],
+  },
+  "7,3": {
+    "6,3": [5, 2],
+    "5,4": [4, 4],
+  },
+  "6,4": {
+    "5,5": [3, 5],
+    "5,4": [5, 3],
+  },
+};
+
 export const getCardData = (id) => {
   if (id === "leader")
     return {
@@ -241,57 +453,6 @@ export const getCardData = (id) => {
     };
   const card = TOTAL_CARDS_DATA.find((c) => c.id === id);
   return card ? { ...card, ...ABILITY_DB[id] } : null;
-};
-
-// ==========================================
-// 4. HEX GEOMETRY HELPER
-// ==========================================
-
-const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
-  const startN = getNeighbors(r1, c1);
-
-  for (let n of startN) {
-    let [currR, currC] = n;
-    let [prevR, prevC] = [r1, c1];
-    let pathBlocked = false;
-
-    if (currR === r2 && currC === c2) return { valid: true, blocked: false };
-    if (board[currR][currC]) pathBlocked = true;
-
-    // Project ray
-    for (let i = 0; i < 8; i++) {
-      const nextCandidates = getNeighbors(currR, currC);
-      const prevNeighbors = getNeighbors(prevR, prevC);
-
-      const straightNodes = nextCandidates.filter(([nr, nc]) => {
-        if (nr === prevR && nc === prevC) return false;
-        const isCommon = prevNeighbors.some(
-          (pn) => pn[0] === nr && pn[1] === nc
-        );
-        return !isCommon;
-      });
-
-      if (straightNodes.length === 1) {
-        let [nextR, nextC] = straightNodes[0];
-
-        if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
-          pathBlocked = true;
-        }
-
-        if (nextR === r2 && nextC === c2) {
-          return { valid: true, blocked: pathBlocked };
-        }
-
-        prevR = currR;
-        prevC = currC;
-        currR = nextR;
-        currC = nextC;
-      } else {
-        break;
-      }
-    }
-  }
-  return { valid: false, blocked: true };
 };
 
 const isProtected = (r, c, board, getNeighbors) => {
@@ -385,33 +546,37 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   switch (cardId) {
     case "acrobat":
       neighbors.forEach(([nr, nc]) => {
-        if (board[nr][nc]) {
-          const landingSpots = getNeighbors(nr, nc);
-          landingSpots.forEach(([lr, lc]) => {
-            const lineCheck = isHexStraight(r, c, lr, lc, board, getNeighbors);
-            if (lineCheck.valid && !board[lr][lc]) {
-              actions.push({ r: lr, c: lc, type: "move" });
+        if (board[nr] && board[nr][nc]) {
+          const acrobatPos = `${r},${c}`;
+          const neighborPos = `${nr},${nc}`;
+          const jumpInfo = STRAIGHT_JUMPS_PATHS[acrobatPos]?.[neighborPos];
+
+          if (jumpInfo) {
+            const [targetR, targetC] = jumpInfo;
+
+            if (board[targetR] && board[targetR][targetC] === null) {
+              actions.push({ r: targetR, c: targetC, type: "move" });
             }
-          });
+          }
         }
       });
       break;
 
     case "rider":
-      board.forEach((row, tr) =>
-        row.forEach((_, tc) => {
-          if (!board[tr][tc]) {
-            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-            const isDist2 = neighbors.some(([n1r, n1c]) => {
-              const n2s = getNeighbors(n1r, n1c);
-              return n2s.some((n2) => n2[0] === tr && n2[1] === tc);
-            });
-            if (line.valid && !line.blocked && isDist2) {
-              actions.push({ r: tr, c: tc, type: "move" });
-            }
-          }
-        })
-      );
+      // board.forEach((row, tr) =>
+      //   row.forEach((_, tc) => {
+      //     if (!board[tr][tc]) {
+      //       const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
+      //       const isDist2 = neighbors.some(([n1r, n1c]) => {
+      //         const n2s = getNeighbors(n1r, n1c);
+      //         return n2s.some((n2) => n2[0] === tr && n2[1] === tc);
+      //       });
+      //       if (line.valid && !line.blocked && isDist2) {
+      //         actions.push({ r: tr, c: tc, type: "move" });
+      //       }
+      //     }
+      //   })
+      // );
       break;
 
     case "bruiser":
@@ -582,31 +747,31 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "claw":
-      board.forEach((row, tr) =>
-        row.forEach((target, tc) => {
-          if (
-            target &&
-            target.owner === enemyOwner &&
-            !isProtected(tr, tc, board, getNeighbors)
-          ) {
-            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-            if (line.valid && !line.blocked) {
-              const pullSpot = neighbors.find(
-                ([nr, nc]) =>
-                  isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid
-              );
-              if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
-                actions.push({
-                  r: tr,
-                  c: tc,
-                  type: "ability_claw_pull",
-                  pullTo: pullSpot,
-                });
-              }
-            }
-          }
-        })
-      );
+      // board.forEach((row, tr) =>
+      //   row.forEach((target, tc) => {
+      //     if (
+      //       target &&
+      //       target.owner === enemyOwner &&
+      //       !isProtected(tr, tc, board, getNeighbors)
+      //     ) {
+      //       const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
+      //       if (line.valid && !line.blocked) {
+      //         const pullSpot = neighbors.find(
+      //           ([nr, nc]) =>
+      //             isHexStraight(nr, nc, tr, tc, board, getNeighbors).valid
+      //         );
+      //         if (pullSpot && !board[pullSpot[0]][pullSpot[1]]) {
+      //           actions.push({
+      //             r: tr,
+      //             c: tc,
+      //             type: "ability_claw_pull",
+      //             pullTo: pullSpot,
+      //           });
+      //         }
+      //       }
+      //     }
+      //   })
+      // );
       break;
 
     case "brewmaster":

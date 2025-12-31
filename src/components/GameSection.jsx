@@ -1,6 +1,6 @@
 // src/components/GameSection.jsx
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, act } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -13,6 +13,7 @@ import {
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
+  STRAIGHT_JUMPS_PATHS,
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -334,6 +335,7 @@ const GameSection = ({ onBack }) => {
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
+  const [isChainingJump, setIsChainingJump] = useState(false);
 
   // -- SPECIAL UNIT STATES --
   const [bruiserTarget, setBruiserTarget] = useState(null);
@@ -914,6 +916,7 @@ const GameSection = ({ onBack }) => {
     setTurn(1);
     setTurnPhaseType(null);
     setGameLog("Your Turn");
+    setIsChainingJump(false);
   };
 
   useEffect(() => {
@@ -1152,7 +1155,7 @@ const GameSection = ({ onBack }) => {
         // --- BRUISER INTERACTION END ---
 
         // --- MANIPULATOR INTERACTION START ---
-        if (
+        else if (
           action.type === "ability_manipulator_target" &&
           !manipulatorTarget
         ) {
@@ -1179,6 +1182,32 @@ const GameSection = ({ onBack }) => {
           return;
         }
         // --- MANIPULATOR INTERACTION END ---
+        else if (action.type === "ability_acrobat_jump") {
+          newBoard[r][c] = { ...unit, moved: true };
+          newBoard[sr][sc] = null;
+          const nextJumps = calculateAbilityMoves(
+            r,
+            c,
+            unit,
+            newBoard,
+            getNeighbors
+          );
+          const canJumpAgain = nextJumps.some(
+            (m) => m.type === "ability_acrobat_jump"
+          );
+
+          if (canJumpAgain) {
+            setBoard(newBoard);
+            setGameLog("Jump Again? (Click unit / End Turn)");
+            setIsChainingJump(true);
+            newBoard[r][c].moved = false;
+            setTimeout(() => handleSelectUnit(r, c), 50);
+            return;
+          } else {
+            setGameLog("Acrobat Jump Finished");
+            setIsChainingJump(false);
+          }
+        }
 
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
@@ -1240,23 +1269,23 @@ const GameSection = ({ onBack }) => {
 
         setBoard(newBoard);
 
-        // --- SET TURN PHASE LOCK ---
-        if (turnPhaseType === null) {
-          // Helper to check if it's an ability or move
-          const isWandererTeleport =
-            action.type === "ability_wanderer_teleport";
+        // // --- SET TURN PHASE LOCK ---
+        // if (turnPhaseType === null) {
+        //   // Helper to check if it's an ability or move
+        //   const isWandererTeleport =
+        //     action.type === "ability_wanderer_teleport";
 
-          const isAbility =
-            action.type.includes("ability") && !isWandererTeleport;
+        //   const isAbility =
+        //     action.type.includes("ability") && !isWandererTeleport;
 
-          if (isAbility) {
-            setTurnPhaseType("ability");
-            setGameLog("Turn Locked: ABILITIES");
-          } else {
-            setTurnPhaseType("move");
-            setGameLog("Turn Locked: MOVEMENT");
-          }
-        }
+        //   if (isAbility) {
+        //     setTurnPhaseType("ability");
+        //     setGameLog("Turn Locked: ABILITIES");
+        //   } else {
+        //     setTurnPhaseType("move");
+        //     setGameLog("Turn Locked: MOVEMENT");
+        //   }
+        // }
 
         setSelectedPos(null);
         setValidMoves([]);
@@ -1304,6 +1333,13 @@ const GameSection = ({ onBack }) => {
   };
 
   const handleEndAction = () => {
+    setSelectedPos(null);
+    setValidMoves([]);
+    setActionMode("move");
+    setSelectedUnitAbility(null);
+    setBruiserTarget(null);
+    setManipulatorTarget(null);
+    setTurnPhaseType(null);
     const win = checkWinCondition(board);
     if (win) {
       setGameOver(win);
@@ -1384,6 +1420,70 @@ const GameSection = ({ onBack }) => {
     );
   };
 
+  // //debug mode
+  // return (
+  //   <div className="w-full h-[100dvh] flex flex-col bg-black items-center justify-center font-sans">
+  //     {/* HEADER DEBUG */}
+  //     <div className="absolute top-4 left-4 z-50 bg-black/80 p-4 rounded border border-yellow-500 text-white">
+  //       <h1 className="text-xl font-bold text-yellow-400">
+  //         🔧 MODE KALIBRASI DEBUG
+  //       </h1>
+  //       <p className="text-sm text-gray-300 mt-1">
+  //         1. Klik kanan lingkaran merah yang melenceng -> <b>Inspect</b>.<br />
+  //         2. Ubah <code>top</code> / <code>left</code> di panel Styles browser.
+  //         <br />
+  //         3. Salin angka persen yang pas ke <code>db_monster.js</code>.
+  //       </p>
+  //     </div>
+
+  //     {/* BOARD CONTAINER */}
+  //     <div className="relative max-h-full max-w-full aspect-[650/750] border-2 border-yellow-500 shadow-2xl">
+  //       {/* GAMBAR PAPAN (Dibuat agak transparan biar grid terlihat jelas) */}
+  //       <img
+  //         src={board_img}
+  //         alt="Board"
+  //         className="w-full h-full object-contain pointer-events-none opacity-70"
+  //       />
+
+  //       {/* RENDER SEMUA SLOT (DEBUG OVERLAY) */}
+  //       {SLOT_COORDINATES.map((row, r) =>
+  //         row.map((coords, c) => (
+  //           <div
+  //             key={`${r}-${c}`}
+  //             id={`debug-slot-${r}-${c}`} // ID untuk memudahkan pencarian di Elements panel
+  //             onClick={() => {
+  //               console.log(`📍 Koordinat Slot [${r},${c}]`);
+  //               console.log(
+  //                 `   Current: top: ${coords.top}, left: ${coords.left}`
+  //               );
+  //             }}
+  //             style={{
+  //               position: "absolute",
+  //               top: coords.top,
+  //               left: coords.left,
+  //               transform: "translate(-50%, -50%)", // Center anchor point
+  //               width: "11.5%", // Ukuran visual slot (samakan dengan game asli)
+  //               aspectRatio: "1/1",
+  //             }}
+  //             className="rounded-full bg-red-600/40 border-2 border-red-500 flex flex-col items-center justify-center cursor-pointer hover:bg-green-500/60 hover:scale-110 transition-transform z-50"
+  //           >
+  //             {/* Label Koordinat */}
+  //             <span className="text-white font-bold text-[10px] md:text-xs bg-black/80 px-1.5 py-0.5 rounded shadow-sm pointer-events-none">
+  //               {r},{c}
+  //             </span>
+
+  //             {/* Titik Tengah Presisi (Crosshair) */}
+  //             <div className="absolute w-1 h-1 bg-yellow-400 rounded-full pointer-events-none"></div>
+  //             <div className="absolute w-full h-[1px] bg-red-500/50 pointer-events-none"></div>
+  //             <div className="absolute h-full w-[1px] bg-red-500/50 pointer-events-none"></div>
+  //           </div>
+  //         ))
+  //       )}
+  //     </div>
+  //   </div>
+  // );
+
+  //mode ril
   return (
     <div
       className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center"
