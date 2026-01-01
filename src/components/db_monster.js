@@ -172,7 +172,7 @@ export const ABILITY_DB = {
   nemesis: {
     name: "NEMESIS",
     type: "Special",
-    desc: "Must move when enemy Leader moves.",
+    desc: "MUST move 2 spaces when enemy Leader moves.",
   },
 };
 
@@ -249,20 +249,15 @@ export const getCardData = (id) => {
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
   const startN = getNeighbors(r1, c1);
-
   for (let n of startN) {
     let [currR, currC] = n;
     let [prevR, prevC] = [r1, c1];
     let pathBlocked = false;
-
     if (currR === r2 && currC === c2) return { valid: true, blocked: false };
     if (board[currR][currC]) pathBlocked = true;
-
-    // Project ray
     for (let i = 0; i < 8; i++) {
       const nextCandidates = getNeighbors(currR, currC);
       const prevNeighbors = getNeighbors(prevR, prevC);
-
       const straightNodes = nextCandidates.filter(([nr, nc]) => {
         if (nr === prevR && nc === prevC) return false;
         const isCommon = prevNeighbors.some(
@@ -270,18 +265,14 @@ const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
         );
         return !isCommon;
       });
-
       if (straightNodes.length === 1) {
         let [nextR, nextC] = straightNodes[0];
-
         if (board[nextR][nextC] && (nextR !== r2 || nextC !== c2)) {
           pathBlocked = true;
         }
-
         if (nextR === r2 && nextC === c2) {
           return { valid: true, blocked: pathBlocked };
         }
-
         prevR = currR;
         prevC = currC;
         currR = nextR;
@@ -325,23 +316,16 @@ export const calculateBruiserPushTargets = (
 ) => {
   const enemyNeighbors = getNeighbors(enemyR, enemyC);
   const bruiserNeighbors = getNeighbors(bruiserR, bruiserC);
-
   const pushOptions = [];
-
   enemyNeighbors.forEach(([nr, nc]) => {
-    // Skip bruiser's position
     if (nr === bruiserR && nc === bruiserC) return;
-
-    // Check if this spot is shared (adjacent to both)
     const isShared = bruiserNeighbors.some(
       ([br, bc]) => br === nr && bc === nc
     );
-
     if (!isShared && board[nr] && board[nr][nc] === null) {
       pushOptions.push({ r: nr, c: nc });
     }
   });
-
   return pushOptions;
 };
 
@@ -368,18 +352,21 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const enemyOwner = owner === 1 ? 2 : 1;
   const cardId = unit.cardId;
 
-  // --- JAILER LOGIC START ---
-  // If adjacent to an enemy Jailer, NO abilities can be generated.
-  // This effectively silences the unit for the Active Ability phase.
+  // --- RULE: NEMESIS CANNOT ACT DURING ACTION PHASE ---
+  if (cardId === "nemesis") {
+    // Nemesis only reacts via calculateNemesisReaction
+    return [];
+  }
+
+  // --- JAILER LOGIC ---
+  // If adjacent to an enemy Jailer, ALL active ability generation is blocked.
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
-
   if (isJailed) {
     return []; // SILENCED
   }
-  // --- JAILER LOGIC END ---
 
   switch (cardId) {
     case "acrobat":
@@ -511,52 +498,36 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "illusionist":
-      // Get Illusionist's visual X position
       if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
       const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
-
-      // Iterate all potential targets
       board.forEach((row, tr) =>
         row.forEach((target, tc) => {
-          // Target must exist (Ally or Enemy) and NOT be self
           if (target && (tr !== r || tc !== c)) {
-            // 1. Check Non-Adjacent
             const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
             if (isAdj) return;
-
-            // 2. Check Y-Axis Alignment (Visual Vertical Line)
             if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
             const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
-
-            // Allow small float tolerance for "Same Column"
             if (Math.abs(myLeft - targetLeft) < 4) {
-              // 3. Check Visibility (No units in between)
               let pathBlocked = false;
               const minR = Math.min(r, tr);
               const maxR = Math.max(r, tr);
-
-              // Iterate rows between self and target
               for (let i = minR + 1; i < maxR; i++) {
                 if (SLOT_COORDINATES[i]) {
-                  // Find cell in this row that matches the vertical column
                   const colIndex = SLOT_COORDINATES[i].findIndex(
                     (co) => Math.abs(parseFloat(co.left) - myLeft) < 4
                   );
                   if (colIndex !== -1 && board[i][colIndex]) {
-                    pathBlocked = true; // Obstacle found
+                    pathBlocked = true;
                     break;
                   }
                 }
               }
-
               if (!pathBlocked) {
-                // 4. Enemy Protection Check
                 if (
                   target.owner === enemyOwner &&
                   isProtected(tr, tc, board, getNeighbors)
                 )
                   return;
-
                 actions.push({ r: tr, c: tc, type: "ability_swap" });
               }
             }
@@ -609,17 +580,16 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 };
 
 // ==========================================
-// 5. VISUAL ABILITY LOGIC
+// 5. VISUAL ABILITY LOGIC (CLAW)
 // ==========================================
 
 export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
-  // Check for Jailer adjacency manually using visual proximity.
   const myCoords = SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c];
   if (!myCoords) return [];
   const myTop = parseFloat(myCoords.top);
   const myLeft = parseFloat(myCoords.left);
 
-  // 1. Jailer Check for Claw (Active Ability)
+  // Jailer Check for Visual Claw Logic
   const isJailed = currentBoard.some((row, jr) =>
     row.some((cell, jc) => {
       if (
@@ -629,21 +599,17 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
         SLOT_COORDINATES[jr] &&
         SLOT_COORDINATES[jr][jc]
       ) {
-        // Calculate visual distance
         const jCoords = SLOT_COORDINATES[jr][jc];
         const dy = parseFloat(jCoords.top) - myTop;
         const dx = parseFloat(jCoords.left) - myLeft;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        // 16.0 is a safe threshold for immediate hex neighbors in this % based layout
         return dist < 16.0;
       }
       return false;
     })
   );
+  if (isJailed) return [];
 
-  if (isJailed) return []; // SILENCED
-
-  // 2. Standard Claw Logic
   const moves = [];
   let alignedEnemies = [];
   currentBoard.forEach((row, tr) => {
@@ -658,18 +624,15 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
       }
     });
   });
-
   const enemiesAbove = alignedEnemies
     .filter((e) => e.r < r)
     .sort((a, b) => a.dist - b.dist);
   const enemiesBelow = alignedEnemies
     .filter((e) => e.r > r)
     .sort((a, b) => a.dist - b.dist);
-
   const validTargets = [];
   if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
   if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
-
   validTargets.forEach((target) => {
     const { r: tr, c: tc } = target;
     if (mode === "dash") {
@@ -706,4 +669,41 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
     }
   });
   return moves;
+};
+
+// ==========================================
+// 6. NEMESIS SPECIFIC LOGIC
+// ==========================================
+
+export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
+  const neighbors = getNeighbors(r, c);
+  let dist2Moves = [];
+  let dist1Moves = [];
+
+  // Find Moves
+  neighbors.forEach(([n1r, n1c]) => {
+    // 1. Check Dist 1 (must be empty)
+    if (!board[n1r][n1c]) {
+      dist1Moves.push({ r: n1r, c: n1c, type: "reaction_move" });
+
+      // 2. Check Dist 2 (neighbor of neighbor)
+      const neighbors2 = getNeighbors(n1r, n1c);
+      neighbors2.forEach(([n2r, n2c]) => {
+        // Cannot be start position (no backtracking)
+        if (n2r === r && n2c === c) return;
+        // Must be empty
+        if (!board[n2r][n2c]) {
+          // Avoid duplicates
+          if (!dist2Moves.some((m) => m.r === n2r && m.c === n2c)) {
+            dist2Moves.push({ r: n2r, c: n2c, type: "reaction_move" });
+          }
+        }
+      });
+    }
+  });
+
+  // Priority Rule: Must move 2 spaces. If not possible, move 1. If not possible, 0.
+  if (dist2Moves.length > 0) return dist2Moves;
+  if (dist1Moves.length > 0) return dist1Moves;
+  return [];
 };

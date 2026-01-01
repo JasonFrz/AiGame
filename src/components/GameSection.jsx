@@ -7,13 +7,14 @@ import { useNavigate } from "react-router-dom";
 import {
   TOTAL_CARDS_DATA,
   UNIT_VALUES,
-  SLOT_COORDINATES, // <--- IMPORTED HERE
+  SLOT_COORDINATES,
   getCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
+  calculateNemesisReaction, // <--- IMPORTED
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -43,262 +44,43 @@ const GameSection = ({ onBack }) => {
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      "0,0": [
-        [1, 0],
-        [1, 1],
-        [2, 2],
-      ],
-      "1,0": [
-        [0, 0],
-        [2, 1],
-        [1, 2],
-        [2, 2],
-      ],
-      "1,1": [
-        [0, 0],
-        [2, 1],
-        [2, 2],
-        [2, 3],
-        [3, 4],
-        [1, 3],
-      ],
-      "1,2": [
-        [2, 0],
-        [3, 1],
-        [2, 1],
-        [1, 0],
-      ],
-      "1,3": [
-        [2, 1],
-        [2, 4],
-      ],
-      "2,0": [
-        [1, 2],
-        [3, 0],
-        [3, 1],
-      ],
-      "2,1": [
-        [1, 0],
-        [1, 2],
-        [2, 2],
-        [3, 2],
-        [3, 3],
-        [3, 1],
-      ],
-      "2,2": [
-        [0, 0],
-        [1, 0],
-        [1, 1],
-        [2, 3],
-        [2, 1],
-        [3, 3],
-      ],
-      "2,3": [
-        [2, 2],
-        [1, 1],
-        [1, 3],
-        [3, 3],
-        [4, 3],
-        [3, 4],
-      ],
-      "2,4": [
-        [1, 3],
-        [3, 4],
-        [3, 5],
-      ],
-      "3,0": [
-        [2, 0],
-        [3, 1],
-        [4, 1],
-        [4, 0],
-      ],
-      "3,1": [
-        [3, 0],
-        [2, 0],
-        [1, 2],
-        [2, 1],
-        [3, 2],
-        [4, 1],
-      ],
-      "3,2": [
-        [4, 1],
-        [3, 1],
-        [2, 1],
-        [3, 3],
-        [4, 2],
-        [5, 1],
-      ],
-      "3,3": [
-        [2, 1],
-        [2, 2],
-        [2, 3],
-        [3, 2],
-        [4, 2],
-        [4, 3],
-      ],
-      "3,4": [
-        [2, 3],
-        [1, 3],
-        [2, 4],
-        [4, 3],
-        [4, 4],
-        [3, 5],
-      ],
-      "3,5": [
-        [2, 4],
-        [3, 4],
-        [4, 4],
-        [5, 5],
-      ],
-      "4,0": [
-        [3, 0],
-        [4, 1],
-        [5, 0],
-        [6, 0],
-      ],
-      "4,1": [
-        [3, 0],
-        [3, 1],
-        [3, 2],
-        [4, 0],
-        [5, 0],
-        [5, 1],
-      ],
-      "4,2": [
-        [3, 2],
-        [3, 3],
-        [4, 3],
-        [5, 1],
-        [5, 2],
-        [5, 3],
-      ],
-      "4,3": [
-        [3, 3],
-        [2, 3],
-        [3, 4],
-        [4, 2],
-        [5, 3],
-        [4, 4],
-      ],
-      "4,4": [
-        [4, 3],
-        [3, 4],
-        [3, 5],
-        [5, 3],
-        [5, 4],
-        [5, 5],
-      ],
-      "5,0": [
-        [4, 0],
-        [4, 1],
-        [5, 1],
-        [6, 0],
-        [7, 0],
-        [6, 1],
-      ],
-      "5,1": [
-        [4, 1],
-        [3, 2],
-        [4, 2],
-        [5, 0],
-        [6, 1],
-        [5, 2],
-      ],
-      "5,2": [
-        [5, 1],
-        [4, 2],
-        [5, 3],
-        [6, 1],
-        [6, 2],
-        [6, 3],
-      ],
-      "5,3": [
-        [4, 2],
-        [4, 3],
-        [4, 4],
-        [5, 2],
-        [6, 3],
-        [5, 4],
-      ],
-      "5,4": [
-        [5, 3],
-        [4, 4],
-        [5, 5],
-        [6, 3],
-        [7, 3],
-        [6, 4],
-      ],
-      "5,5": [
-        [3, 5],
-        [4, 4],
-        [5, 4],
-        [6, 4],
-      ],
-      "6,0": [
-        [4, 0],
-        [5, 0],
-        [7, 0],
-      ],
-      "6,1": [
-        [5, 0],
-        [5, 1],
-        [5, 2],
-        [7, 0],
-        [7, 1],
-        [6, 2],
-      ],
-      "6,2": [
-        [6, 1],
-        [5, 2],
-        [6, 3],
-        [7, 1],
-        [8, 0],
-        [7, 2],
-      ],
-      "6,3": [
-        [5, 2],
-        [5, 3],
-        [5, 4],
-        [6, 2],
-        [7, 2],
-        [7, 3],
-      ],
-      "6,4": [
-        [7, 3],
-        [5, 4],
-        [5, 5],
-      ],
-      "7,0": [
-        [6, 0],
-        [5, 0],
-        [6, 1],
-        [7, 1],
-      ],
-      "7,1": [
-        [7, 0],
-        [6, 1],
-        [6, 2],
-        [8, 0],
-      ],
-      "7,2": [
-        [8, 0],
-        [6, 2],
-        [6, 3],
-        [5, 4],
-        [7, 3],
-      ],
-      "7,3": [
-        [7, 2],
-        [6, 3],
-        [5, 4],
-        [5, 5],
-        [6, 4],
-      ],
-      "8,0": [
-        [7, 1],
-        [6, 2],
-        [7, 2],
-      ],
+      "0,0": [[1, 0],[1, 1],[2, 2]],
+      "1,0": [[0, 0],[2, 1],[1, 2],[2, 2]],
+      "1,1": [[0, 0],[2, 1],[2, 2],[2, 3],[3, 4],[1, 3]],
+      "1,2": [[2, 0],[3, 1],[2, 1],[1, 0]],
+      "1,3": [[2, 1],[2, 4]],
+      "2,0": [[1, 2],[3, 0],[3, 1]],
+      "2,1": [[1, 0],[1, 2],[2, 2],[3, 2],[3, 3],[3, 1]],
+      "2,2": [[0, 0],[1, 0],[1, 1],[2, 3],[2, 1],[3, 3]],
+      "2,3": [[2, 2],[1, 1],[1, 3],[3, 3],[4, 3],[3, 4]],
+      "2,4": [[1, 3],[3, 4],[3, 5]],
+      "3,0": [[2, 0],[3, 1],[4, 1],[4, 0]],
+      "3,1": [[3, 0],[2, 0],[1, 2],[2, 1],[3, 2],[4, 1]],
+      "3,2": [[4, 1],[3, 1],[2, 1],[3, 3],[4, 2],[5, 1]],
+      "3,3": [[2, 1],[2, 2],[2, 3],[3, 2],[4, 2],[4, 3]],
+      "3,4": [[2, 3],[1, 3],[2, 4],[4, 3],[4, 4],[3, 5]],
+      "3,5": [[2, 4],[3, 4],[4, 4],[5, 5]],
+      "4,0": [[3, 0],[4, 1],[5, 0],[6, 0]],
+      "4,1": [[3, 0],[3, 1],[3, 2],[4, 0],[5, 0],[5, 1]],
+      "4,2": [[3, 2],[3, 3],[4, 3],[5, 1],[5, 2],[5, 3]],
+      "4,3": [[3, 3],[2, 3],[3, 4],[4, 2],[5, 3],[4, 4]],
+      "4,4": [[4, 3],[3, 4],[3, 5],[5, 3],[5, 4],[5, 5]],
+      "5,0": [[4, 0],[4, 1],[5, 1],[6, 0],[7, 0],[6, 1]],
+      "5,1": [[4, 1],[3, 2],[4, 2],[5, 0],[6, 1],[5, 2]],
+      "5,2": [[5, 1],[4, 2],[5, 3],[6, 1],[6, 2],[6, 3]],
+      "5,3": [[4, 2],[4, 3],[4, 4],[5, 2],[6, 3],[5, 4]],
+      "5,4": [[5, 3],[4, 4],[5, 5],[6, 3],[7, 3],[6, 4]],
+      "5,5": [[3, 5],[4, 4],[5, 4],[6, 4]],
+      "6,0": [[4, 0],[5, 0],[7, 0]],
+      "6,1": [[5, 0],[5, 1],[5, 2],[7, 0],[7, 1],[6, 2]],
+      "6,2": [[6, 1],[5, 2],[6, 3],[7, 1],[8, 0],[7, 2]],
+      "6,3": [[5, 2],[5, 3],[5, 4],[6, 2],[7, 2],[7, 3]],
+      "6,4": [[7, 3],[5, 4],[5, 5]],
+      "7,0": [[6, 0],[5, 0],[6, 1],[7, 1]],
+      "7,1": [[7, 0],[6, 1],[6, 2],[8, 0]],
+      "7,2": [[8, 0],[6, 2],[6, 3],[5, 4],[7, 3]],
+      "7,3": [[7, 2],[6, 3],[5, 4],[5, 5],[6, 4]],
+      "8,0": [[7, 1],[6, 2],[7, 2]],
     };
     return manualMap[mapKey] || [];
   };
@@ -338,42 +120,15 @@ const GameSection = ({ onBack }) => {
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
   const [manipulatorTarget, setManipulatorTarget] = useState(null);
 
+  // -- NEMESIS STATE --
+  const [nemesisPending, setNemesisPending] = useState(null); // { r, c, owner }
+
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
 
   useEffect(() => {
     initializeGame();
   }, []);
-
-  // --- DEBUGGING: MONITOR LEADER POSITION ---
-  useEffect(() => {
-    if (!board || board.length === 0) return;
-
-    // Cari posisi Leader Player 1
-    board.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        if (cell && cell.cardId === "leader" && cell.owner === 1) {
-          console.log(
-            `%c 👑 LEADER MOVED! Now at: [ Row: ${r}, Col: ${c} ]`,
-            "color: gold; font-weight: bold; background: #333; padding: 4px;"
-          );
-
-          // Cek Koordinat Visualnya (untuk memastikan tidak salah mapping)
-          if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c]) {
-            console.log("   Visual Coordinates:", SLOT_COORDINATES[r][c]);
-          } else {
-            console.error(
-              "   ⚠️ WARNING: No visual coordinate found for this grid!"
-            );
-          }
-
-          // Cek Tetangga dari posisi ini (untuk debug kenapa dia bisa loncat)
-          const neighbors = getNeighbors(r, c);
-          console.log("   Logic Neighbors (Bisa gerak ke):", neighbors);
-        }
-      });
-    });
-  }, [board]); // <--- Akan jalan setiap kali state 'board' berubah
 
   useEffect(() => {
     if (board.length === 0) return;
@@ -405,12 +160,12 @@ const GameSection = ({ onBack }) => {
     setGameLog("Your Turn");
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
-    setManipulatorTarget(null); // Reset
+    setManipulatorTarget(null);
+    setNemesisPending(null); // Reset
     isAiProcessing.current = false;
     aiTurnCounter.current = 0;
   };
 
-  // --- WIN CONDITION LOGIC ---
   const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
     currentBoard.forEach((row, r) =>
@@ -457,10 +212,6 @@ const GameSection = ({ onBack }) => {
     if (isLeaderDefeated(p2Pos, 2)) return "Player";
     return null;
   };
-
-  // ==========================================
-  // AI STRATEGY
-  // ==========================================
 
   const cloneBoard = (b) => {
     const len = b.length;
@@ -684,12 +435,94 @@ const GameSection = ({ onBack }) => {
     return { move: bestMove, score: bestScore };
   };
 
+  // --- NEMESIS HELPER ---
+  const checkForNemesisTrigger = async (oldBoard, newBoard) => {
+    // 1. Did Player 1 Leader Move?
+    const p1Old = findUnit(oldBoard, "leader", 1);
+    const p1New = findUnit(newBoard, "leader", 1);
+    const p1Moved = p1Old && p1New && (p1Old.r !== p1New.r || p1Old.c !== p1New.c);
+
+    // 2. Did Player 2 Leader Move?
+    const p2Old = findUnit(oldBoard, "leader2", 2);
+    const p2New = findUnit(newBoard, "leader2", 2);
+    const p2Moved = p2Old && p2New && (p2Old.r !== p2New.r || p2Old.c !== p2New.c);
+
+    // 3. Logic: If Opponent Leader Moved, Trigger My Nemesis
+    // If Player Leader Moved -> AI Nemesis Reacts
+    if (p1Moved) {
+      const aiNemesis = findUnit(newBoard, "nemesis", 2);
+      if (aiNemesis) {
+        setGameLog("AI Nemesis Reacting!");
+        await executeAiNemesisReaction(aiNemesis.r, aiNemesis.c, newBoard);
+        return true; // Action taken
+      }
+    }
+
+    // If AI Leader Moved -> Player Nemesis Reacts
+    if (p2Moved) {
+      const playerNemesis = findUnit(newBoard, "nemesis", 1);
+      if (playerNemesis) {
+        setNemesisPending({ r: playerNemesis.r, c: playerNemesis.c, owner: 1 });
+        setGameLog("NEMESIS MUST MOVE!");
+        
+        // Force selection
+        setTimeout(() => {
+          handleSelectUnit(playerNemesis.r, playerNemesis.c, true); 
+        }, 300);
+        return true; // Wait for player input
+      }
+    }
+    return false;
+  };
+
+  const findUnit = (b, cardId, owner) => {
+    for (let r = 0; r < b.length; r++) {
+      for (let c = 0; c < b[r].length; c++) {
+        if (b[r][c] && b[r][c].cardId === cardId && b[r][c].owner === owner) {
+          return { ...b[r][c], r, c };
+        }
+      }
+    }
+    return null;
+  };
+
+  const executeAiNemesisReaction = async (r, c, currentBoard) => {
+    const moves = calculateNemesisReaction(r, c, currentBoard, getNeighbors);
+    if (moves.length > 0) {
+      // AI Logic: Pick Random valid move (simplest compliance with rule)
+      const move = moves[Math.floor(Math.random() * moves.length)];
+      
+      const nextBoard = cloneBoard(currentBoard);
+      nextBoard[move.r][move.c] = nextBoard[r][c];
+      nextBoard[r][c] = null;
+      
+      await new Promise(r => setTimeout(r, 600)); // Visual pause
+      setBoard(nextBoard);
+    } else {
+       // Cannot move
+       setGameLog("AI Nemesis Stuck");
+    }
+  };
+
   // --- AI EXECUTION ---
   const runAITurn = useCallback(async () => {
     if (gameOver || isAiProcessing.current) return;
     isAiProcessing.current = true;
-
-    aiTurnCounter.current += 1;
+    
+    // Check if player Nemesis is pending
+    if (nemesisPending) {
+      setGameLog("Waiting for Nemesis...");
+      isAiProcessing.current = false;
+      return;
+    }
+    
+    // Only increment turn counter if we haven't already moved (resuming logic)
+    // Check if any AI unit has moved this turn
+    const aiHasMoved = board.some(row => row.some(c => c && c.owner === 2 && c.moved));
+    if (!aiHasMoved) {
+        aiTurnCounter.current += 1;
+    }
+    
     const recruitLimit = aiTurnCounter.current === 1 ? 2 : 1;
 
     const winStart = checkWinCondition(board);
@@ -719,6 +552,7 @@ const GameSection = ({ onBack }) => {
       })
     );
 
+    // Sort AI Units
     const isLeaderThreatened = () => {
       if (!aiLeaderPos) return false;
       const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
@@ -731,25 +565,27 @@ const GameSection = ({ onBack }) => {
     };
 
     aiUnits.sort((a, b) => {
-      if (a.cardId === "leader2" && isLeaderThreatened()) return -1;
-      if (b.cardId === "leader2" && isLeaderThreatened()) return 1;
-      const d1 = pLeaderPos
-        ? getDist(a.r, a.c, pLeaderPos[0], pLeaderPos[1])
-        : 10;
-      const d2 = pLeaderPos
-        ? getDist(b.r, b.c, pLeaderPos[0], pLeaderPos[1])
-        : 10;
-      return d1 - d2;
+        if (a.cardId === "leader2" && isLeaderThreatened()) return -1;
+        if (b.cardId === "leader2" && isLeaderThreatened()) return 1;
+        const d1 = pLeaderPos
+          ? getDist(a.r, a.c, pLeaderPos[0], pLeaderPos[1])
+          : 10;
+        const d2 = pLeaderPos
+          ? getDist(b.r, b.c, pLeaderPos[0], pLeaderPos[1])
+          : 10;
+        return d1 - d2;
     });
 
     let currentBoard = cloneBoard(board);
     let somethingMoved = false;
 
+    // AI MOVE LOOP
     for (let unit of aiUnits) {
       const freshUnit = currentBoard[unit.r][unit.c];
 
       if (!freshUnit || freshUnit.owner !== 2 || freshUnit.moved) continue;
       if (freshUnit.cardId !== unit.cardId) continue;
+      if (freshUnit.cardId === "nemesis") continue; 
 
       const result = getBestMoveForUnit(
         { ...freshUnit, r: unit.r, c: unit.c },
@@ -757,11 +593,26 @@ const GameSection = ({ onBack }) => {
       );
 
       if (result && result.move) {
+        const boardBeforeMove = cloneBoard(currentBoard);
+        
+        // --- CRITICAL FIX: MARK UNIT AS MOVED ---
+        freshUnit.moved = true; 
+        
         currentBoard = applySimMove(currentBoard, result.move);
         setBoard(cloneBoard(currentBoard));
         setGameLog(`AI moves ${getCardData(unit.cardId).name}`);
         somethingMoved = true;
         await new Promise((r) => setTimeout(r, 450));
+
+        // CHECK NEMESIS TRIGGER
+        const nemesisTriggered = await checkForNemesisTrigger(boardBeforeMove, currentBoard);
+        if (nemesisTriggered) {
+             const playerNemesis = findUnit(currentBoard, "nemesis", 1);
+             if (playerNemesis) {
+                isAiProcessing.current = false;
+                return; // PAUSE AI TURN
+             }
+        }
 
         const midWin = checkWinCondition(currentBoard);
         if (midWin) {
@@ -781,7 +632,7 @@ const GameSection = ({ onBack }) => {
     await smartRecruit(currentBoard, aiLeaderPos, recruitLimit);
 
     isAiProcessing.current = false;
-  }, [board, gameOver]);
+  }, [board, gameOver, nemesisPending]);
 
   const smartRecruit = async (currentBoard, aiLeaderPos, limit) => {
     let localBoard = cloneBoard(currentBoard);
@@ -896,30 +747,65 @@ const GameSection = ({ onBack }) => {
   };
 
   useEffect(() => {
+    // If nemesis is pending, pause flow
+    if (nemesisPending) return; 
     if (turn === 3) runAITurn();
-  }, [turn, runAITurn]);
+  }, [turn, runAITurn, nemesisPending]);
 
-  const handleSelectUnit = (r, c) => {
-    if (gameOver || turn !== 1) return;
+  const handleSelectUnit = (r, c, isForced = false) => {
+    if (gameOver) return;
+
+    // --- NEMESIS BLOCKING LOGIC ---
+    if (nemesisPending) {
+        if (r !== nemesisPending.r || c !== nemesisPending.c) {
+            setGameLog("Must Select Nemesis!");
+            return;
+        }
+    } else {
+        if (turn !== 1) return;
+        
+        // RULE: Nemesis cannot act in main phase
+        if (board[r][c] && board[r][c].cardId === "nemesis") {
+            setGameLog("Nemesis only reacts!");
+            return;
+        }
+    }
+
     const unit = board[r][c];
     setSelectedPos(null);
     setValidMoves([]);
     setActionMode("move");
     setSelectedUnitAbility(null);
     setClawMode("pull");
-    setBruiserTarget(null); // Reset bruiser state
+    setBruiserTarget(null);
     setBruiserPendingMoves([]);
-    setManipulatorTarget(null); // Reset manipulator state
+    setManipulatorTarget(null);
 
     if (unit && unit.owner === 1) {
-      if (unit.moved) {
+      if (unit.moved && !nemesisPending) {
         setGameLog("Unit already moved.");
         return;
       }
       const unitData = getCardData(unit.cardId);
       setSelectedPos([r, c]);
 
-      // --- PHASE LOCKING LOGIC ---
+      // --- NEMESIS REACTION MODE ---
+      if (nemesisPending && unit.cardId === "nemesis") {
+          const moves = calculateNemesisReaction(r, c, board, getNeighbors);
+          setValidMoves(moves);
+          setGameLog(moves.length > 0 ? "Select Nemesis Destination" : "No Moves Available (Skip)");
+          
+          if (moves.length === 0) {
+              // Auto skip if stuck
+              setTimeout(() => {
+                  setNemesisPending(null);
+                  if (turn === 3) runAITurn(); // Resume AI if it was AI turn
+              }, 1000);
+          }
+          return;
+      }
+
+      // --- NORMAL PHASE LOCKING ---
       if (turnPhaseType === "ability") {
         if (unitData.type !== "Active") {
           setGameLog("Turn Locked: Abilities Only!");
@@ -929,7 +815,7 @@ const GameSection = ({ onBack }) => {
 
         setActionMode("ability");
         if (unit.cardId === "claw") {
-          const moves = calculateVisualClawMoves(r, c, unit, board, clawMode); // Removed SLOT_COORDINATES
+          const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
           setValidMoves(moves);
           if (moves.length === 0) setGameLog("No ability targets");
         } else {
@@ -989,7 +875,7 @@ const GameSection = ({ onBack }) => {
     if (actionMode === "move") {
       setActionMode("ability");
       if (unit.cardId === "claw") {
-        const moves = calculateVisualClawMoves(r, c, unit, board, clawMode); // Removed SLOT_COORDINATES
+        const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
         setValidMoves(moves);
         if (moves.length === 0)
           setGameLog(
@@ -1031,21 +917,15 @@ const GameSection = ({ onBack }) => {
     if (selectedPos) {
       const [r, c] = selectedPos;
       const unit = board[r][c];
-      const moves = calculateVisualClawMoves(r, c, unit, board, newMode); // Removed SLOT_COORDINATES
+      const moves = calculateVisualClawMoves(r, c, unit, board, newMode);
       setValidMoves(moves);
       setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
     }
   };
 
-  const handleBoardClick = (r, c) => {
-    console.log(
-      `%c 🖱️ Tile Clicked: [ Row: ${r}, Col: ${c} ]`,
-      "color: cyan; font-weight: bold;"
-    );
-    if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c]) {
-      console.log("   Visual Pos:", SLOT_COORDINATES[r][c]);
-    }
+  const handleBoardClick = async (r, c) => {
     if (gameOver) return;
+
     if (turn === 2 && recruitSelectionIndex !== null) {
       if (!board[r][c] && isRecruitZone(r, c, 1)) {
         const card = visibleDeck[recruitSelectionIndex];
@@ -1074,15 +954,16 @@ const GameSection = ({ onBack }) => {
       return;
     }
 
-    if (turn === 1) {
+    if (turn === 1 || nemesisPending) {
       if (board[r][c] && board[r][c].owner === 1) {
-        handleSelectUnit(r, c);
+        if (!nemesisPending || (nemesisPending.r === r && nemesisPending.c === c)) {
+            handleSelectUnit(r, c);
+        }
         return;
       }
       const action = validMoves.find((m) => m.r === r && m.c === c);
 
       if (selectedPos && action) {
-        // --- BRUISER INTERACTION START ---
         if (action.type === "ability_bruiser_push" && !bruiserTarget) {
           const possiblePushes = validMoves.filter(
             (m) => m.type === "ability_bruiser_push" && m.r === r && m.c === c
@@ -1100,43 +981,30 @@ const GameSection = ({ onBack }) => {
           setGameLog("Select Push Direction");
           return;
         }
-        // --- BRUISER INTERACTION END ---
 
-        // --- MANIPULATOR INTERACTION START ---
-        if (
-          action.type === "ability_manipulator_target" &&
-          !manipulatorTarget
-        ) {
-          // Step 1: Clicked Enemy
+        if (action.type === "ability_manipulator_target" && !manipulatorTarget) {
           setManipulatorTarget({ r, c });
-
-          // Calculate valid empty neighbors for this enemy
-          const dests = calculateManipulatorDestinations(
-            r,
-            c,
-            board,
-            getNeighbors
-          );
-
-          // Show destination dots
+          const dests = calculateManipulatorDestinations(r, c, board, getNeighbors);
           const moveOptions = dests.map((d) => ({
             r: d.r,
             c: d.c,
             type: "ability_manipulator_execute",
           }));
-
           setValidMoves(moveOptions);
           setGameLog("Select Enemy's Move");
           return;
         }
-        // --- MANIPULATOR INTERACTION END ---
 
+        const boardBeforeMove = cloneBoard(board);
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
         const unit = newBoard[sr][sc];
-        unit.moved = true;
+        
+        if (!nemesisPending) {
+            unit.moved = true;
+        }
 
-        if (action.type === "move") {
+        if (action.type === "move" || action.type === "reaction_move") {
           newBoard[r][c] = unit;
           newBoard[sr][sc] = null;
         } else if (action.type === "ability_swap") {
@@ -1150,13 +1018,10 @@ const GameSection = ({ onBack }) => {
           newBoard[enemyPos.r][enemyPos.c] = unit;
           newBoard[sr][sc] = null;
         } else if (action.type === "ability_manipulator_execute") {
-          // MANIPULATOR STEP 2: Move the enemy unit to target location
           const enemyPos = manipulatorTarget;
           const enemyUnit = newBoard[enemyPos.r][enemyPos.c];
-
-          newBoard[r][c] = enemyUnit; // Move enemy to clicked spot
-          newBoard[enemyPos.r][enemyPos.c] = null; // Clear enemy old spot
-          // Manipulator unit (at sr, sc) stays where it is.
+          newBoard[r][c] = enemyUnit;
+          newBoard[enemyPos.r][enemyPos.c] = null;
         } else if (action.type === "ability_claw_pull") {
           const target = newBoard[r][c];
           newBoard[action.pullTo[0]][action.pullTo[1]] = target;
@@ -1169,28 +1034,38 @@ const GameSection = ({ onBack }) => {
         }
 
         setBoard(newBoard);
-
-        // --- SET TURN PHASE LOCK ---
-        if (turnPhaseType === null) {
-          // Helper to check if it's an ability or move
-          const isAbility = action.type.includes("ability");
-
-          if (isAbility) {
-            setTurnPhaseType("ability");
-            setGameLog("Turn Locked: ABILITIES");
-          } else {
-            setTurnPhaseType("move");
-            setGameLog("Turn Locked: MOVEMENT");
-          }
-        }
-
+        
         setSelectedPos(null);
         setValidMoves([]);
         setActionMode("move");
         setSelectedUnitAbility(null);
         setBruiserTarget(null);
         setBruiserPendingMoves([]);
-        setManipulatorTarget(null); // Reset
+        setManipulatorTarget(null);
+
+        if (nemesisPending) {
+            setNemesisPending(null);
+            setGameLog("Nemesis Moved.");
+            if (turn === 3) {
+                runAITurn();
+            }
+            return;
+        }
+
+        if (!nemesisPending) {
+            if (turnPhaseType === null) {
+              const isAbility = action.type.includes("ability");
+              if (isAbility) {
+                setTurnPhaseType("ability");
+                setGameLog("Turn Locked: ABILITIES");
+              } else {
+                setTurnPhaseType("move");
+                setGameLog("Turn Locked: MOVEMENT");
+              }
+            }
+        }
+
+        await checkForNemesisTrigger(boardBeforeMove, newBoard);
 
         const w = checkWinCondition(newBoard);
         if (w) {
@@ -1230,6 +1105,11 @@ const GameSection = ({ onBack }) => {
   };
 
   const handleEndAction = () => {
+    if (nemesisPending) {
+        setGameLog("Resolve Nemesis First!");
+        return;
+    }
+
     const win = checkWinCondition(board);
     if (win) {
       setGameOver(win);
@@ -1343,7 +1223,7 @@ const GameSection = ({ onBack }) => {
           {turn === 1 && (
             <button
               onClick={handleEndAction}
-              className="bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase"
+              className={`bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 text-white px-4 py-2 rounded-lg shadow-lg border border-red-500 text-sm font-bold uppercase ${nemesisPending ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               End Turn
             </button>
@@ -1358,6 +1238,7 @@ const GameSection = ({ onBack }) => {
       </div>
 
       <div className="flex-grow flex flex-col md:flex-row w-full h-full overflow-hidden relative">
+        {/* RECRUIT SIDEBAR */}
         <div
           className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-r-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
             mobileTab === "recruit"
@@ -1401,6 +1282,7 @@ const GameSection = ({ onBack }) => {
           </div>
         </div>
 
+        {/* GAME BOARD */}
         <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 overflow-hidden">
           {selectedPos && selectedUnitAbility && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn flex flex-col items-center gap-2">
@@ -1482,6 +1364,8 @@ const GameSection = ({ onBack }) => {
                         className={`absolute w-full h-full rounded-full border-2 ${
                           moveAction.type.includes("ability")
                             ? "bg-red-500/30 action-ability"
+                            : moveAction.type === "reaction_move" 
+                            ? "bg-purple-500/50 shadow-[0_0_15px_#A855F7] border-purple-500 animate-pulse" 
                             : "bg-green-500/30 action-move"
                         }`}
                       ></div>
@@ -1497,7 +1381,7 @@ const GameSection = ({ onBack }) => {
                         className={`relative w-[95%] h-[95%] transition-all duration-300 ${
                           cell.isNew ? "animate-spawn" : ""
                         } ${
-                          cell.moved
+                          cell.moved && !nemesisPending // Allow Nemesis to look active during reaction
                             ? "grayscale-[0.8] opacity-80"
                             : "hover:scale-110 cursor-pointer"
                         }`}
@@ -1515,6 +1399,10 @@ const GameSection = ({ onBack }) => {
                             cell.owner === 1
                               ? "border-blue-500"
                               : "border-red-600"
+                          } ${
+                            nemesisPending && cell.cardId === 'nemesis' && cell.owner === nemesisPending.owner 
+                            ? "border-purple-400 animate-bounce shadow-[0_0_20px_#A855F7]" 
+                            : ""
                           }`}
                         ></div>
                       </div>
@@ -1526,6 +1414,7 @@ const GameSection = ({ onBack }) => {
           </div>
         </div>
 
+        {/* ROSTER SIDEBAR */}
         <div
           className={`absolute md:static inset-0 bg-[#1a1210]/95 backdrop-blur-sm z-40 flex flex-col shadow border-l-4 border-[#5D4037] transition-transform duration-300 md:transform-none md:w-72 lg:w-80 shrink-0 ${
             mobileTab === "roster"
@@ -1570,6 +1459,8 @@ const GameSection = ({ onBack }) => {
             </div>
           </div>
         </div>
+        
+        {/* MOBILE TABS */}
         <div className="md:hidden h-16 bg-[#2a1e1a] flex items-center justify-around shrink-0 z-50 text-[#D7CCC8] border-t-4 border-[#5D4037]">
           <button
             onClick={() =>
