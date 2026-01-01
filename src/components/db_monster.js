@@ -154,7 +154,7 @@ export const ABILITY_DB = {
     type: "Active",
     desc: "Move adjacent ally 1 space.",
   },
-  archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." }, // Fixed type key
+  archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." },
   vizier: { name: "VIZIER", type: "Passive", desc: "Leader moves +1 space." },
   hermit: { name: "HERMIT", type: "Special", desc: "Recruits with Cub." },
   cub: { name: "CUB", type: "Special", desc: "Cannot capture Leader." },
@@ -342,12 +342,6 @@ export const calculateBruiserPushTargets = (
     }
   });
 
-  console.log("💪 Bruiser Push Options:", {
-    bruiser: [bruiserR, bruiserC],
-    enemy: [enemyR, enemyC],
-    options: pushOptions,
-  });
-
   return pushOptions;
 };
 
@@ -374,11 +368,18 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const enemyOwner = owner === 1 ? 2 : 1;
   const cardId = unit.cardId;
 
+  // --- JAILER LOGIC START ---
+  // If adjacent to an enemy Jailer, NO abilities can be generated.
+  // This effectively silences the unit for the Active Ability phase.
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
-  if (isJailed) return [];
+
+  if (isJailed) {
+    return []; // SILENCED
+  }
+  // --- JAILER LOGIC END ---
 
   switch (cardId) {
     case "acrobat":
@@ -612,11 +613,38 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
 // ==========================================
 
 export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
-  const moves = [];
-  const myCoords = SLOT_COORDINATES[r][c];
+  // Check for Jailer adjacency manually using visual proximity.
+  const myCoords = SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c];
   if (!myCoords) return [];
+  const myTop = parseFloat(myCoords.top);
   const myLeft = parseFloat(myCoords.left);
 
+  // 1. Jailer Check for Claw (Active Ability)
+  const isJailed = currentBoard.some((row, jr) =>
+    row.some((cell, jc) => {
+      if (
+        cell &&
+        cell.cardId === "jailer" &&
+        cell.owner !== unit.owner &&
+        SLOT_COORDINATES[jr] &&
+        SLOT_COORDINATES[jr][jc]
+      ) {
+        // Calculate visual distance
+        const jCoords = SLOT_COORDINATES[jr][jc];
+        const dy = parseFloat(jCoords.top) - myTop;
+        const dx = parseFloat(jCoords.left) - myLeft;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        // 16.0 is a safe threshold for immediate hex neighbors in this % based layout
+        return dist < 16.0;
+      }
+      return false;
+    })
+  );
+
+  if (isJailed) return []; // SILENCED
+
+  // 2. Standard Claw Logic
+  const moves = [];
   let alignedEnemies = [];
   currentBoard.forEach((row, tr) => {
     row.forEach((cell, tc) => {
