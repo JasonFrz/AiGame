@@ -168,6 +168,9 @@ const Versus = () => {
   // --- STATE ---
   const [board, setBoard] = useState([]);
   const [turn, setTurn] = useState(1); // 1=P1 Move, 2=P1 Recruit, 3=P2 Move, 4=P2 Recruit
+  const [round, setRound] = useState(1); // Track ronde untuk recruit logic P2
+  const [p2RecruitCount, setP2RecruitCount] = useState(0); // Counter untuk recruit P2
+
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
   const [currentRoster, setCurrentRoster] = useState([]);
@@ -178,7 +181,7 @@ const Versus = () => {
   const [actionMode, setActionMode] = useState("move"); // "move" | "ability"
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
   const [clawMode, setClawMode] = useState("pull");
-  const [turnPhaseType, setTurnPhaseType] = useState(null); // 'move' or 'ability' (Locking)
+  const [turnPhaseType, setTurnPhaseType] = useState(null); 
   
   // Special Unit States
   const [bruiserTarget, setBruiserTarget] = useState(null);
@@ -186,7 +189,7 @@ const Versus = () => {
   const [manipulatorTarget, setManipulatorTarget] = useState(null);
 
   // Nemesis State
-  const [nemesisPending, setNemesisPending] = useState(null); // { r, c, owner }
+  const [nemesisPending, setNemesisPending] = useState(null);
 
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Player 1 Turn");
@@ -198,7 +201,6 @@ const Versus = () => {
     initializeGame();
   }, []);
 
-  // Update roster based on current turn
   useEffect(() => {
     if (board.length === 0) return;
     const targetOwner = (turn === 1 || turn === 2) ? 1 : 2;
@@ -222,7 +224,11 @@ const Versus = () => {
     const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
     setDeck(shuffled.slice(3));
     setVisibleDeck(shuffled.slice(0, 3));
+    
     setTurn(1);
+    setRound(1); // Reset round
+    setP2RecruitCount(0); // Reset counter P2
+    
     setGameOver(null);
     setRecruitStep(0);
     setGameLog("Player 1 Turn");
@@ -256,7 +262,6 @@ const Versus = () => {
     } else {
         if (turn !== 1 && turn !== 3) return; // Only select in Action phases
         
-        // RULE: Nemesis cannot act in main phase
         if (board[r][c] && board[r][c].cardId === "nemesis") {
             setGameLog("Nemesis only reacts!");
             return;
@@ -264,10 +269,8 @@ const Versus = () => {
     }
 
     const unit = board[r][c];
-    // Determined owner based on Nemesis Pending or Current Turn
     const authorizedOwner = nemesisPending ? nemesisPending.owner : (turn === 1 ? 1 : 2);
 
-    // Reset previous selection
     setSelectedPos(null);
     setValidMoves([]);
     setActionMode("move");
@@ -287,13 +290,11 @@ const Versus = () => {
       setMobileTab(null);
       setGameLog(`Selected ${unitData.name}`);
 
-      // --- NEMESIS REACTION MODE ---
       if (nemesisPending && unit.cardId === "nemesis") {
           const moves = calculateNemesisReaction(r, c, board, getNeighbors);
           setValidMoves(moves);
           setGameLog(moves.length > 0 ? "Select Nemesis Destination" : "No Moves Available (Skip)");
           
-          // Auto skip if stuck (Edge Case)
           if (moves.length === 0) {
               setTimeout(() => {
                   setNemesisPending(null);
@@ -303,14 +304,12 @@ const Versus = () => {
           return;
       }
 
-      // --- PHASE LOCKING ---
       if (turnPhaseType === "ability") {
          if (unitData.type !== "Active") {
              setGameLog("Turn Locked: Abilities Only");
              return;
          }
          setActionMode("ability");
-         // Claw Special
          if (unit.cardId === "claw") {
              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
              setValidMoves(moves);
@@ -321,12 +320,10 @@ const Versus = () => {
          setSelectedUnitAbility(unitData);
       } else if (turnPhaseType === "move") {
          setActionMode("move");
-         // RIDER now uses basic moves standard
          const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
          setValidMoves(moves);
          setSelectedUnitAbility(null);
       } else {
-         // Default Open Phase
          const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
          setValidMoves(moves);
          if (unitData.type === "Active") {
@@ -341,7 +338,7 @@ const Versus = () => {
     const [r, c] = selectedPos;
     const unit = board[r][c];
 
-    if (turnPhaseType) return; // Locked
+    if (turnPhaseType) return; 
 
     if (actionMode === "move") {
       setActionMode("ability");
@@ -350,7 +347,6 @@ const Versus = () => {
           setValidMoves(moves);
           if (moves.length === 0) setGameLog(clawMode === 'pull' ? "No targets to Pull" : "No targets to Dash");
       } else {
-          // RIDER ABILITY (2 Tiles) comes from here
           const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
           setValidMoves(abilities);
           if (abilities.length === 0) setGameLog("No ability targets available!");
@@ -358,7 +354,6 @@ const Versus = () => {
       }
     } else {
       setActionMode("move");
-      // RIDER BASIC (1 Tile) comes from here
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
       setGameLog("Move Mode: Select Tile (Green)");
@@ -381,7 +376,7 @@ const Versus = () => {
   const handleBoardClick = (r, c) => {
       if (gameOver) return;
 
-      // Recruitment (Unchanged logic)
+      // Recruitment Phase (Turn 2 or 4)
       if (turn === 2 || turn === 4) {
           if (isRecruitZone(r, c, turn === 2 ? 1 : 2) && !board[r][c] && recruitSelectionIndex !== null) {
               const card = visibleDeck[recruitSelectionIndex];
@@ -399,12 +394,10 @@ const Versus = () => {
           return;
       }
 
-      // Selection or Action
       if (board[r][c] && !nemesisPending && board[r][c].owner === (turn === 1 ? 1 : 2)) {
           handleSelectUnit(r, c);
           return;
       }
-      // Specific Nemesis Selection
       if (nemesisPending && board[r][c] && board[r][c].owner === nemesisPending.owner && board[r][c].cardId === "nemesis") {
           handleSelectUnit(r, c);
           return;
@@ -413,7 +406,6 @@ const Versus = () => {
       const action = validMoves.find(m => m.r === r && m.c === c);
 
       if (selectedPos && action) {
-          // --- BRUISER INTERACTION ---
           if (action.type === "ability_bruiser_push" && !bruiserTarget) {
               const possiblePushes = validMoves.filter(m => m.type === "ability_bruiser_push" && m.r === r && m.c === c);
               setBruiserTarget({ r, c });
@@ -428,7 +420,6 @@ const Versus = () => {
               return;
           }
 
-          // --- MANIPULATOR INTERACTION ---
           if (action.type === "ability_manipulator_target" && !manipulatorTarget) {
               setManipulatorTarget({ r, c });
               const dests = calculateManipulatorDestinations(r, c, board, getNeighbors);
@@ -442,27 +433,23 @@ const Versus = () => {
               return;
           }
 
-          // --- EXECUTE MOVE ---
           executeAction(r, c, action);
       }
   };
 
   const executeAction = (targetR, targetC, action) => {
     const [sr, sc] = selectedPos;
-    const boardBeforeMove = board.map(row => row.map(c => c ? {...c} : null)); // Clone for check
+    const boardBeforeMove = board.map(row => row.map(c => c ? {...c} : null));
     const newBoard = board.map((row) =>
       row.map((c) => (c ? { ...c, isNew: false } : null))
     );
     const unit = newBoard[sr][sc];
     const type = action.type;
 
-    // Nemesis reaction doesn't mark "moved" to avoid locking it for future turns
     if (!nemesisPending) {
         unit.moved = true;
     }
 
-    // --- EXECUTE TYPES ---
-    // Handle standard move, Nemesis reaction, and RIDER Ability Move
     if (type === "move" || type === "reaction_move" || type === "ability_move") {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
@@ -490,13 +477,10 @@ const Versus = () => {
        const landAt = action.landAt;
        newBoard[landAt[0]][landAt[1]] = unit;
        newBoard[sr][sc] = null;
-    } else if (type === "ability_brew_select") {
-       // Logic brewmaster
     }
 
     setBoard(newBoard);
     
-    // Reset States
     setSelectedPos(null);
     setValidMoves([]);
     setSelectedUnitAbility(null);
@@ -505,23 +489,19 @@ const Versus = () => {
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
 
-    // --- CHECK NEMESIS COMPLETION ---
     if (nemesisPending) {
         setNemesisPending(null);
         setGameLog(`Resume Player ${turn === 1 ? 1 : 2} Turn`);
         return;
     }
 
-    // --- LOCK PHASES (Only if normal turn) ---
     if (turnPhaseType === null && !nemesisPending) {
          const isAbility = type.includes("ability");
          setTurnPhaseType(isAbility ? "ability" : "move");
     }
 
-    // --- TRIGGER CHECK ---
     checkForNemesisTrigger(boardBeforeMove, newBoard);
 
-    // Check Win
     const winners = checkVersusWin(newBoard);
     if (winners) {
       setGameOver(winners);
@@ -530,23 +510,19 @@ const Versus = () => {
   };
 
   const checkForNemesisTrigger = (oldBoard, newBoard) => {
-      // 1. Did Player 1 Leader Move?
       const p1Old = findUnit(oldBoard, "leader", 1);
       const p1New = findUnit(newBoard, "leader", 1);
       const p1Moved = p1Old && p1New && (p1Old.r !== p1New.r || p1Old.c !== p1New.c);
 
-      // 2. Did Player 2 Leader Move?
       const p2Old = findUnit(oldBoard, "leader2", 2);
       const p2New = findUnit(newBoard, "leader2", 2);
       const p2Moved = p2Old && p2New && (p2Old.r !== p2New.r || p2Old.c !== p2New.c);
 
-      // Trigger Logic
       if (p1Moved) {
           const p2Nemesis = findUnit(newBoard, "nemesis", 2);
           if (p2Nemesis) {
               setNemesisPending({ r: p2Nemesis.r, c: p2Nemesis.c, owner: 2 });
               setGameLog("PLAYER 2 MUST MOVE NEMESIS!");
-              // Force select visually
               setTimeout(() => handleSelectUnit(p2Nemesis.r, p2Nemesis.c, true), 300);
           }
       }
@@ -581,17 +557,24 @@ const Versus = () => {
       const enemyOwner = owner === 1 ? 2 : 1;
       let adjacentEnemies = 0;
       let occupiedNeighbors = 0;
+      let assassinThreat = false;
 
       neighbors.forEach(([nr, nc]) => {
         const cell = currentBoard[nr][nc];
         if (cell) {
           occupiedNeighbors++;
-          if (cell.owner === enemyOwner && cell.cardId !== "cub" && cell.cardId !== "archer") {
-            adjacentEnemies++;
+          if (cell.owner === enemyOwner) {
+            if (cell.cardId === 'assassin') {
+                assassinThreat = true;
+            }
+            if (cell.cardId !== "cub" && cell.cardId !== "archer") {
+              adjacentEnemies++;
+            }
           }
         }
       });
 
+      if (assassinThreat) return true;
       if (adjacentEnemies >= 2) return true;
       if (neighbors.length > 0 && occupiedNeighbors === neighbors.length)
         return true;
@@ -615,6 +598,7 @@ const Versus = () => {
 
     if (cardId === "hermit") return;
 
+    // Update Deck
     const newV = [...visibleDeck];
     const newD = [...deck];
     if (newD.length > 0) {
@@ -623,13 +607,31 @@ const Versus = () => {
     } else {
       newV.splice(recruitSelectionIndex, 1);
     }
-
     setDeck(newD);
     setVisibleDeck(newV);
     setRecruitSelectionIndex(null);
     setMobileTab(null);
 
-    endTurnLogic(turn, newBoard);
+    // --- RECRUITMENT LOGIC UPDATE ---
+    if (turn === 2) {
+      // P1 Recruit -> Done -> P2 Move
+      endTurnLogic(2, newBoard);
+    } else if (turn === 4) {
+      // P2 Recruit -> Check if they need to recruit more
+      const currentRecruitCount = p2RecruitCount + 1;
+      setP2RecruitCount(currentRecruitCount);
+
+      // Rule: Round 1 = 2 recruits, Round N = 1 recruit
+      const limit = round === 1 ? 2 : 1; 
+
+      if (currentRecruitCount < limit) {
+        // Still needs to recruit
+        setGameLog(`P2 Recruit (${currentRecruitCount + 1}/${limit})`);
+      } else {
+        // Limit reached -> Done -> P1 Move
+        endTurnLogic(4, newBoard);
+      }
+    }
   };
 
   const endTurnLogic = (phase, currentBoard = board) => {
@@ -643,30 +645,40 @@ const Versus = () => {
         .flat()
         .filter((u) => u && u.owner === o && u.cardId !== "cub").length;
 
-    // Logic siklus turn
-    if (phase === 1) { // P1 Move -> Check Recruit
+    // --- TURN CYCLE ---
+    if (phase === 1) { 
+      // P1 Move Done -> P1 Recruit
       if (count(1) < 5 && visibleDeck.length > 0) {
         setTurn(2);
         setGameLog("P1 Recruit Phase");
         setMobileTab("recruit");
       } else {
+        // Skip Recruit -> P2 Move
         setTurn(3);
         setGameLog("Player 2 Turn");
         setTurnPhaseType(null);
       }
-    } else if (phase === 2) { // P1 Recruit -> P2 Move
+    } else if (phase === 2) { 
+      // P1 Recruit Done -> P2 Move
       setTurn(3);
       setGameLog("Player 2 Turn");
       setTurnPhaseType(null);
-    } else if (phase === 3) { // P2 Move -> Check Recruit
+    } else if (phase === 3) { 
+      // P2 Move Done -> P2 Recruit
+      // Reset P2 recruit count sebelum fase recruit dimulai
+      setP2RecruitCount(0); 
+      
       if (count(2) < 5 && visibleDeck.length > 0) {
         setTurn(4);
-        setGameLog("P2 Recruit Phase");
+        const limit = round === 1 ? 2 : 1;
+        setGameLog(`P2 Recruit Phase (1/${limit})`);
         setMobileTab("recruit");
       } else {
+        // Skip Recruit -> P1 Move
         resetForP1(currentBoard);
       }
-    } else if (phase === 4) { // P2 Recruit -> P1 Move
+    } else if (phase === 4) { 
+      // P2 Recruit Done -> P1 Move
       resetForP1(currentBoard);
     }
   };
@@ -677,6 +689,7 @@ const Versus = () => {
     );
     setBoard(resetBoard);
     setTurn(1);
+    setRound(prev => prev + 1); // Increment Ronde
     setGameLog("Player 1 Turn");
     setTurnPhaseType(null);
   };
