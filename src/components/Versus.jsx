@@ -1,6 +1,6 @@
 // src/components/Versus.jsx
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // --- IMPORT DARI DB MONSTER ---
@@ -51,7 +51,7 @@ const Versus = () => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- HELPER ---
+  // --- HELPER DATA ---
   const getSafeUnitData = (id) => {
     if (id === "leader")
       return {
@@ -79,55 +79,35 @@ const Versus = () => {
     }
   };
 
+  // --- GRID MAP ---
   const SLOT_COORDINATES = [
     [{ top: "9%", left: "50%" }],
     [
-      { top: "16.3%", left: "36.5%" },
-      { top: "16.3%", left: "63.5%" },
-      { top: "23%", left: "23%" },
-      { top: "23%", left: "76.5%" },
+      { top: "16.3%", left: "36.5%" }, { top: "16.3%", left: "63.5%" },
+      { top: "23%", left: "23%" }, { top: "23%", left: "76.5%" },
     ],
     [
-      { top: "30%", left: "9.8%" },
-      { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" },
-      { top: "30%", left: "63.5%" },
-      { top: "30%", left: "90.3%" },
+      { top: "30%", left: "9.8%" }, { top: "30%", left: "36.5%" }, { top: "23%", left: "50%" },
+      { top: "30%", left: "63.5%" }, { top: "30%", left: "90.3%" },
     ],
     [
-      { top: "43%", left: "9.8%" },
-      { top: "36.6%", left: "23%" },
-      { top: "43%", left: "36.8%" },
-      { top: "36.6%", left: "50%" },
-      { top: "36.6%", left: "76.5%" },
-      { top: "43%", left: "90.3%" },
+      { top: "43%", left: "9.8%" }, { top: "36.6%", left: "23%" }, { top: "43%", left: "36.8%" },
+      { top: "36.6%", left: "50%" }, { top: "36.6%", left: "76.5%" }, { top: "43%", left: "90.3%" },
     ],
     [
-      { top: "56.8%", left: "9.8%" },
-      { top: "49.8%", left: "23%" },
-      { top: "49.8%", left: "50%" },
-      { top: "43%", left: "63.5%" },
-      { top: "49.8%", left: "76.8%" },
+      { top: "56.8%", left: "9.8%" }, { top: "49.8%", left: "23%" }, { top: "49.8%", left: "50%" },
+      { top: "43%", left: "63.5%" }, { top: "49.8%", left: "76.8%" },
     ],
     [
-      { top: "63.5%", left: "23%" },
-      { top: "56.8%", left: "36.5%" },
-      { top: "63.5%", left: "50%" },
-      { top: "56.8%", left: "63.5%" },
-      { top: "56.8%", left: "76.8%" },
-      { top: "56.8%", left: "90.3%" },
+      { top: "63.5%", left: "23%" }, { top: "56.8%", left: "36.5%" }, { top: "63.5%", left: "50%" },
+      { top: "56.8%", left: "63.5%" }, { top: "56.8%", left: "76.8%" }, { top: "56.8%", left: "90.3%" },
     ],
     [
-      { top: "70.2%", left: "9.8%" },
-      { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" },
-      { top: "70.2%", left: "63.5%" },
-      { top: "70.2%", left: "90.3%" },
+      { top: "70.2%", left: "9.8%" }, { top: "70.2%", left: "36.5%" }, { top: "77%", left: "50%" },
+      { top: "70.2%", left: "63.5%" }, { top: "70.2%", left: "90.3%" },
     ],
     [
-      { top: "77%", left: "23%" },
-      { top: "83.8%", left: "36.5%" },
-      { top: "83.8%", left: "63.5%" },
+      { top: "77%", left: "23%" }, { top: "83.8%", left: "36.5%" }, { top: "83.8%", left: "63.5%" },
       { top: "77%", left: "76.7%" },
     ],
     [{ top: "90.5%", left: "50%" }],
@@ -187,7 +167,7 @@ const Versus = () => {
 
   // --- STATE ---
   const [board, setBoard] = useState([]);
-  const [turn, setTurn] = useState(1);
+  const [turn, setTurn] = useState(1); // 1=P1 Move, 2=P1 Recruit, 3=P2 Move, 4=P2 Recruit
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
   const [currentRoster, setCurrentRoster] = useState([]);
@@ -195,10 +175,10 @@ const Versus = () => {
 
   // Action Logic
   const [validMoves, setValidMoves] = useState([]);
-  const [actionMode, setActionMode] = useState("move");
+  const [actionMode, setActionMode] = useState("move"); // "move" | "ability"
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
   const [clawMode, setClawMode] = useState("pull");
-  const [turnPhaseType, setTurnPhaseType] = useState(null); // 'move' or 'ability' (Locking phase)
+  const [turnPhaseType, setTurnPhaseType] = useState(null); // 'move' or 'ability' (Locking)
   
   // Special Unit States
   const [bruiserTarget, setBruiserTarget] = useState(null);
@@ -218,9 +198,10 @@ const Versus = () => {
     initializeGame();
   }, []);
 
+  // Update roster based on current turn
   useEffect(() => {
     if (board.length === 0) return;
-    const targetOwner = turn === 1 || turn === 2 ? 1 : 2;
+    const targetOwner = (turn === 1 || turn === 2) ? 1 : 2;
     const units = [];
     board.forEach((row, r) =>
       row.forEach((cell, c) => {
@@ -273,7 +254,7 @@ const Versus = () => {
             return;
         }
     } else {
-        if (turn !== 1 && turn !== 3) return;
+        if (turn !== 1 && turn !== 3) return; // Only select in Action phases
         
         // RULE: Nemesis cannot act in main phase
         if (board[r][c] && board[r][c].cardId === "nemesis") {
@@ -340,6 +321,7 @@ const Versus = () => {
          setSelectedUnitAbility(unitData);
       } else if (turnPhaseType === "move") {
          setActionMode("move");
+         // RIDER now uses basic moves standard
          const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
          setValidMoves(moves);
          setSelectedUnitAbility(null);
@@ -368,6 +350,7 @@ const Versus = () => {
           setValidMoves(moves);
           if (moves.length === 0) setGameLog(clawMode === 'pull' ? "No targets to Pull" : "No targets to Dash");
       } else {
+          // RIDER ABILITY (2 Tiles) comes from here
           const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
           setValidMoves(abilities);
           if (abilities.length === 0) setGameLog("No ability targets available!");
@@ -375,6 +358,7 @@ const Versus = () => {
       }
     } else {
       setActionMode("move");
+      // RIDER BASIC (1 Tile) comes from here
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
       setGameLog("Move Mode: Select Tile (Green)");
@@ -472,15 +456,14 @@ const Versus = () => {
     const unit = newBoard[sr][sc];
     const type = action.type;
 
-    // Nemesis reaction doesn't mark "moved" to avoid locking it for future turns if logic changed,
-    // but here it just resets the pending state.
-    // For normal units, mark moved.
+    // Nemesis reaction doesn't mark "moved" to avoid locking it for future turns
     if (!nemesisPending) {
         unit.moved = true;
     }
 
     // --- EXECUTE TYPES ---
-    if (type === "move" || type === "reaction_move") {
+    // Handle standard move, Nemesis reaction, and RIDER Ability Move
+    if (type === "move" || type === "reaction_move" || type === "ability_move") {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
     } else if (type === "ability_swap") {
@@ -508,9 +491,7 @@ const Versus = () => {
        newBoard[landAt[0]][landAt[1]] = unit;
        newBoard[sr][sc] = null;
     } else if (type === "ability_brew_select") {
-       // Logic for Brewmaster (simplified move ally)
-       // Assuming brewmaster logic in db_monster just returns select types
-       // We'll leave basic implementation for brevity or if `db_monster` handles specifics
+       // Logic brewmaster
     }
 
     setBoard(newBoard);
@@ -662,7 +643,8 @@ const Versus = () => {
         .flat()
         .filter((u) => u && u.owner === o && u.cardId !== "cub").length;
 
-    if (phase === 1) {
+    // Logic siklus turn
+    if (phase === 1) { // P1 Move -> Check Recruit
       if (count(1) < 5 && visibleDeck.length > 0) {
         setTurn(2);
         setGameLog("P1 Recruit Phase");
@@ -672,11 +654,11 @@ const Versus = () => {
         setGameLog("Player 2 Turn");
         setTurnPhaseType(null);
       }
-    } else if (phase === 2) {
+    } else if (phase === 2) { // P1 Recruit -> P2 Move
       setTurn(3);
       setGameLog("Player 2 Turn");
       setTurnPhaseType(null);
-    } else if (phase === 3) {
+    } else if (phase === 3) { // P2 Move -> Check Recruit
       if (count(2) < 5 && visibleDeck.length > 0) {
         setTurn(4);
         setGameLog("P2 Recruit Phase");
@@ -684,7 +666,7 @@ const Versus = () => {
       } else {
         resetForP1(currentBoard);
       }
-    } else if (phase === 4) {
+    } else if (phase === 4) { // P2 Recruit -> P1 Move
       resetForP1(currentBoard);
     }
   };
@@ -778,7 +760,7 @@ const Versus = () => {
           className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${
             gameOver
               ? "bg-[#3E2723] text-[#FFECB3]"
-              : turn === 1 || turn === 2
+              : (turn === 1 || turn === 2)
               ? "bg-blue-900 text-blue-100 border-blue-500"
               : "bg-red-900 text-red-100 border-red-500"
           }`}

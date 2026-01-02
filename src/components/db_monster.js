@@ -383,21 +383,51 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       });
       break;
 
-    case "rider":
-      board.forEach((row, tr) =>
-        row.forEach((_, tc) => {
-          if (!board[tr][tc]) {
-            const line = isHexStraight(r, c, tr, tc, board, getNeighbors);
-            const isDist2 = neighbors.some(([n1r, n1c]) => {
-              const n2s = getNeighbors(n1r, n1c);
-              return n2s.some((n2) => n2[0] === tr && n2[1] === tc);
-            });
-            if (line.valid && !line.blocked && isDist2) {
-              actions.push({ r: tr, c: tc, type: "move" });
+     case "rider":
+      // LOGIKA BARU: ABILITY RIDER
+      // Bergerak lurus melewati 1 tile (jarak total 2 tile).
+      // Tile di tengah boleh kosong atau ada unit (lompat), tapi tujuan harus kosong.
+      
+      // Ambil koordinat awal
+      if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
+      const startCoords = SLOT_COORDINATES[r][c];
+      const x0 = parseFloat(startCoords.left);
+      const y0 = parseFloat(startCoords.top);
+
+      // Loop tetangga pertama (Dist 1)
+      neighbors.forEach(([r1, c1]) => {
+        // Ambil tetangga dari tetangga ini (Dist 2)
+        const neighbors2 = getNeighbors(r1, c1);
+        neighbors2.forEach(([r2, c2]) => {
+            // Jangan kembali ke posisi awal
+            if (r2 === r && c2 === c) return;
+            
+            // Tujuan harus kosong
+            if (board[r2][c2]) return;
+
+            // Cek kelurusan (Straight Line Check)
+            const coords1 = SLOT_COORDINATES[r1][c1];
+            const coords2 = SLOT_COORDINATES[r2][c2];
+
+            const x1 = parseFloat(coords1.left);
+            const y1 = parseFloat(coords1.top);
+            const x2 = parseFloat(coords2.left);
+            const y2 = parseFloat(coords2.top);
+
+            const dx1 = x1 - x0;
+            const dy1 = y1 - y0;
+            const dx2 = x2 - x1;
+            const dy2 = y2 - y1;
+
+            const angle1 = Math.atan2(dy1, dx1);
+            const angle2 = Math.atan2(dy2, dx2);
+
+            // Toleransi sudut kecil untuk menganggapnya lurus
+            if (Math.abs(angle1 - angle2) < 0.2) {
+                actions.push({ r: r2, c: c2, type: "move" }); // Type move tapi dipanggil via ability
             }
-          }
-        })
-      );
+        });
+      });
       break;
 
     case "bruiser":
