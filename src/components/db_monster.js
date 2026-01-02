@@ -1,8 +1,3 @@
-// src/components/db_monster.js
-
-// ==========================================
-// 1. ASSETS IMPORT
-// ==========================================
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png";
 import acrobateCoin from "../assets/coins/AcrobateCoin.png";
@@ -40,10 +35,6 @@ import vizierCard from "../assets/cards/Vizier.png";
 import wandererCard from "../assets/cards/Wanderer.png";
 import roiCard from "../assets/cards/Roi.png";
 import reineCard from "../assets/cards/Reine.png";
-
-// ==========================================
-// 2. CONFIG & COORDINATES
-// ==========================================
 
 export const SLOT_COORDINATES = [
   [{ top: "9%", left: "50%" }], //0,0
@@ -98,11 +89,6 @@ export const SLOT_COORDINATES = [
   ],
   [{ top: "90.5%", left: "50%" }], //8,0
 ];
-
-// ==========================================
-// 3. DATABASE CONFIGURATION
-// ==========================================
-
 export const ABILITY_DB = {
   leader: {
     name: "LEADER",
@@ -154,7 +140,7 @@ export const ABILITY_DB = {
     type: "Active",
     desc: "Move adjacent ally 1 space.",
   },
-  archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." },
+  archer: { name: "ARCHER", desc: "Ranged Support (Capture from 2 tiles)." },
   vizier: { name: "VIZIER", type: "Passive", desc: "Leader moves +1 space." },
   hermit: { name: "HERMIT", type: "Special", desc: "Recruits with Cub." },
   cub: { name: "CUB", type: "Special", desc: "Cannot capture Leader." },
@@ -242,10 +228,6 @@ export const getCardData = (id) => {
   const card = TOTAL_CARDS_DATA.find((c) => c.id === id);
   return card ? { ...card, ...ABILITY_DB[id] } : null;
 };
-
-// ==========================================
-// 4. HEX GEOMETRY HELPER
-// ==========================================
 
 const isHexStraight = (r1, c1, r2, c2, board, getNeighbors) => {
   const startN = getNeighbors(r1, c1);
@@ -352,20 +334,16 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const enemyOwner = owner === 1 ? 2 : 1;
   const cardId = unit.cardId;
 
-  // --- RULE: NEMESIS CANNOT ACT DURING ACTION PHASE ---
   if (cardId === "nemesis") {
-    // Nemesis only reacts via calculateNemesisReaction
     return [];
   }
 
-  // --- JAILER LOGIC ---
-  // If adjacent to an enemy Jailer, ALL active ability generation is blocked.
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
   if (isJailed) {
-    return []; // SILENCED
+    return []; 
   }
 
   switch (cardId) {
@@ -384,28 +362,18 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
      case "rider":
-      // LOGIKA BARU: ABILITY RIDER
-      // Bergerak lurus melewati 1 tile (jarak total 2 tile).
-      // Tile di tengah boleh kosong atau ada unit (lompat), tapi tujuan harus kosong.
-      
-      // Ambil koordinat awal
       if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
       const startCoords = SLOT_COORDINATES[r][c];
       const x0 = parseFloat(startCoords.left);
       const y0 = parseFloat(startCoords.top);
 
-      // Loop tetangga pertama (Dist 1)
       neighbors.forEach(([r1, c1]) => {
-        // Ambil tetangga dari tetangga ini (Dist 2)
         const neighbors2 = getNeighbors(r1, c1);
         neighbors2.forEach(([r2, c2]) => {
-            // Jangan kembali ke posisi awal
             if (r2 === r && c2 === c) return;
             
-            // Tujuan harus kosong
             if (board[r2][c2]) return;
 
-            // Cek kelurusan (Straight Line Check)
             const coords1 = SLOT_COORDINATES[r1][c1];
             const coords2 = SLOT_COORDINATES[r2][c2];
 
@@ -422,9 +390,8 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
             const angle1 = Math.atan2(dy1, dx1);
             const angle2 = Math.atan2(dy2, dx2);
 
-            // Toleransi sudut kecil untuk menganggapnya lurus
             if (Math.abs(angle1 - angle2) < 0.2) {
-                actions.push({ r: r2, c: c2, type: "move" }); // Type move tapi dipanggil via ability
+                actions.push({ r: r2, c: c2, type: "move" }); 
             }
         });
       });
@@ -609,17 +576,12 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   return actions;
 };
 
-// ==========================================
-// 5. VISUAL ABILITY LOGIC (CLAW)
-// ==========================================
-
 export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
   const myCoords = SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c];
   if (!myCoords) return [];
   const myTop = parseFloat(myCoords.top);
   const myLeft = parseFloat(myCoords.left);
 
-  // Jailer Check for Visual Claw Logic
   const isJailed = currentBoard.some((row, jr) =>
     row.some((cell, jc) => {
       if (
@@ -701,29 +663,20 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
   return moves;
 };
 
-// ==========================================
-// 6. NEMESIS SPECIFIC LOGIC
-// ==========================================
-
 export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
   const neighbors = getNeighbors(r, c);
   let dist2Moves = [];
   let dist1Moves = [];
 
-  // Find Moves
   neighbors.forEach(([n1r, n1c]) => {
-    // 1. Check Dist 1 (must be empty)
     if (!board[n1r][n1c]) {
       dist1Moves.push({ r: n1r, c: n1c, type: "reaction_move" });
 
-      // 2. Check Dist 2 (neighbor of neighbor)
       const neighbors2 = getNeighbors(n1r, n1c);
       neighbors2.forEach(([n2r, n2c]) => {
-        // Cannot be start position (no backtracking)
         if (n2r === r && n2c === c) return;
-        // Must be empty
+     
         if (!board[n2r][n2c]) {
-          // Avoid duplicates
           if (!dist2Moves.some((m) => m.r === n2r && m.c === n2c)) {
             dist2Moves.push({ r: n2r, c: n2c, type: "reaction_move" });
           }
@@ -732,7 +685,6 @@ export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
     }
   });
 
-  // Priority Rule: Must move 2 spaces. If not possible, move 1. If not possible, 0.
   if (dist2Moves.length > 0) return dist2Moves;
   if (dist1Moves.length > 0) return dist1Moves;
   return [];

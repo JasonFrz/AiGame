@@ -1,9 +1,6 @@
-// src/components/GameSection.jsx
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- IMPORT DARI DB MONSTER ---
 import {
   TOTAL_CARDS_DATA,
   UNIT_VALUES,
@@ -24,7 +21,6 @@ import board_img from "../assets/Leaders_Board.png";
 const GameSection = ({ onBack }) => {
   const navigate = useNavigate();
 
-  // --- STYLES ---
   const styles = `
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -97,7 +93,6 @@ const GameSection = ({ onBack }) => {
     return false;
   };
 
-  // --- STATE ---
   const [board, setBoard] = useState([]);
   const [turn, setTurn] = useState(1);
   const [deck, setDeck] = useState([]);
@@ -115,13 +110,11 @@ const GameSection = ({ onBack }) => {
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
 
-  // -- SPECIAL UNIT STATES --
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
   const [manipulatorTarget, setManipulatorTarget] = useState(null);
 
-  // -- NEMESIS STATE --
-  const [nemesisPending, setNemesisPending] = useState(null); 
+  const [nemesisPending, setNemesisPending] = useState(null);
 
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
@@ -166,6 +159,42 @@ const GameSection = ({ onBack }) => {
     aiTurnCounter.current = 0;
   };
 
+  const getArcherThreatCount = (targetPos, enemyOwner, currentBoard) => {
+    let threatCount = 0;
+    const neighbors = getNeighbors(targetPos[0], targetPos[1]);
+    
+    neighbors.forEach(([midR, midC]) => {
+        const farNeighbors = getNeighbors(midR, midC);
+        farNeighbors.forEach(([farR, farC]) => {
+            if (farR === targetPos[0] && farC === targetPos[1]) return;
+
+            const farUnit = currentBoard[farR][farC];
+            if (farUnit && farUnit.owner === enemyOwner && farUnit.cardId === 'archer') {
+                if (SLOT_COORDINATES[targetPos[0]] && SLOT_COORDINATES[targetPos[0]][targetPos[1]] &&
+                    SLOT_COORDINATES[midR] && SLOT_COORDINATES[midR][midC] &&
+                    SLOT_COORDINATES[farR] && SLOT_COORDINATES[farR][farC]) {
+                    
+                    const p1 = SLOT_COORDINATES[targetPos[0]][targetPos[1]]; 
+                    const p2 = SLOT_COORDINATES[midR][midC];     
+                    const p3 = SLOT_COORDINATES[farR][farC];     
+
+                    const x1 = parseFloat(p1.left), y1 = parseFloat(p1.top);
+                    const x2 = parseFloat(p2.left), y2 = parseFloat(p2.top);
+                    const x3 = parseFloat(p3.left), y3 = parseFloat(p3.top);
+
+                    const angle1 = Math.atan2(y2 - y1, x2 - x1);
+                    const angle2 = Math.atan2(y3 - y2, x3 - x2);
+
+                    if (Math.abs(angle1 - angle2) < 0.2) {
+                        threatCount++;
+                    }
+                }
+            }
+        });
+    });
+    return threatCount;
+  };
+
   const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
     currentBoard.forEach((row, r) =>
@@ -183,21 +212,16 @@ const GameSection = ({ onBack }) => {
       const enemyOwner = owner === 1 ? 2 : 1;
       let adjacentEnemies = 0;
       let occupiedNeighbors = 0;
-      let enemyOccupied = 0;
-      let assassinThreat = false; // NEW: Check for Assassin
+      let assassinThreat = false;
 
       neighbors.forEach(([nr, nc]) => {
         const cell = currentBoard[nr][nc];
         if (cell) {
           occupiedNeighbors++;
           if (cell.owner === enemyOwner) {
-            enemyOccupied++;
-            
-            // CHECK FOR ASSASSIN (Instant Kill Logic)
             if (cell.cardId === 'assassin') {
                 assassinThreat = true;
             }
-
             if (cell.cardId !== "cub" && cell.cardId !== "archer") {
               adjacentEnemies++;
             }
@@ -205,14 +229,16 @@ const GameSection = ({ onBack }) => {
         }
       });
 
-      // IF ASSASSIN IS ADJACENT, LEADER DIES
       if (assassinThreat) return true;
 
-      if (adjacentEnemies >= 2) return true;
+      const archerThreats = getArcherThreatCount(pos, enemyOwner, currentBoard);
+      const totalThreats = adjacentEnemies + archerThreats;
+
+      if (totalThreats >= 2) return true;
       if (
         neighbors.length > 0 &&
         occupiedNeighbors === neighbors.length &&
-        enemyOccupied >= 2
+        totalThreats >= 2
       )
         return true;
       return false;
@@ -293,18 +319,22 @@ const GameSection = ({ onBack }) => {
     const aiStatus = analyzeLeader(aiLeader, 2);
     const pStatus = analyzeLeader(pLeader, 1);
 
-    if (aiStatus.directThreats >= 2) return -500000;
-    if (pStatus.directThreats >= 2) return 500000;
-    if (
-      aiStatus.blockedSpaces === aiStatus.total &&
-      aiStatus.directThreats >= 1
-    )
+    const aiArcherThreats = getArcherThreatCount(aiLeader, 1, simBoard);
+    const pArcherThreats = getArcherThreatCount(pLeader, 2, simBoard);
+
+    const totalAiThreats = aiStatus.directThreats + aiArcherThreats;
+    const totalPThreats = pStatus.directThreats + pArcherThreats;
+
+    if (totalAiThreats >= 2) return -500000;
+    if (totalPThreats >= 2) return 500000;
+    
+    if (aiStatus.blockedSpaces === aiStatus.total && totalAiThreats >= 1)
       return -400000;
-    if (pStatus.blockedSpaces === pStatus.total && pStatus.directThreats >= 1)
+    if (pStatus.blockedSpaces === pStatus.total && totalPThreats >= 1)
       return 400000;
 
-    if (aiStatus.directThreats === 1) score -= 25000;
-    if (pStatus.directThreats === 1) score += 25000;
+    if (totalAiThreats === 1) score -= 25000;
+    if (totalPThreats === 1) score += 25000;
 
     pUnits.forEach((u) => {
       const d = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
@@ -315,6 +345,7 @@ const GameSection = ({ onBack }) => {
       const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
       if (d <= 2) score += 500;
       if (u.id === "assassin" && d <= 3) score += 2000;
+      if (u.id === "archer" && d <= 4) score += 1500; 
       if (
         u.id === "protector" &&
         getDist(u.r, u.c, aiLeader[0], aiLeader[1]) <= 1
@@ -353,10 +384,13 @@ const GameSection = ({ onBack }) => {
     return simBoard;
   };
 
+  const calculateRiderMoves = (startR, startC, unit, currentBoard) => {
+    return [];
+  };
+
   const getBestMoveForUnit = (unit, currentBoard) => {
     const { r, c } = unit;
 
-    // AI Rider now uses basic moves standard + ability moves
     let basics = calculateBasicMoves(r, c, unit, currentBoard, getNeighbors);
     
     const abilities = calculateAbilityMoves(
@@ -399,7 +433,6 @@ const GameSection = ({ onBack }) => {
     return { move: bestMove, score: bestScore };
   };
 
-  // --- NEMESIS HELPER ---
   const checkForNemesisTrigger = async (oldBoard, newBoard) => {
     const p1Old = findUnit(oldBoard, "leader", 1);
     const p1New = findUnit(newBoard, "leader", 1);
@@ -777,13 +810,11 @@ const GameSection = ({ onBack }) => {
       } else if (turnPhaseType === "move") {
         setGameLog("Turn Locked: Movement");
         
-        // RIDER sekarang menggunakan standar basic move
         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
         setValidMoves(moves);
         setSelectedUnitAbility(null);
       } else {
         setGameLog(`Selected ${unitData?.name || "Unit"}`);
-        // RIDER diperlakukan normal (Active unit)
         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
         setValidMoves(moves);
         if (unitData.type === "Active") setSelectedUnitAbility(unitData);
@@ -822,7 +853,6 @@ const GameSection = ({ onBack }) => {
             clawMode === "pull" ? "Select Target to Pull" : "Select Dash Target"
           );
       } else {
-        // RIDER masuk ke sini, menghitung ability move (lurus 2 tile)
         const abilities = calculateAbilityMoves(
           r,
           c,
@@ -836,7 +866,6 @@ const GameSection = ({ onBack }) => {
       }
     } else {
       setActionMode("move");
-      // RIDER masuk ke sini, menghitung basic move (1 tile)
       setValidMoves(calculateBasicMoves(r, c, unit, board, getNeighbors));
       setGameLog("Select Move Destination");
     }
@@ -936,7 +965,6 @@ const GameSection = ({ onBack }) => {
             unit.moved = true;
         }
 
-        // Tipe gerak standar, reaction nemesis, dan ability move (Rider) ditangani di sini
         if (action.type === "move" || action.type === "reaction_move" || action.type === "ability_move") {
           newBoard[r][c] = unit;
           newBoard[sr][sc] = null;
@@ -1393,7 +1421,6 @@ const GameSection = ({ onBack }) => {
           </div>
         </div>
         
-        {/* MOBILE TABS */}
         <div className="md:hidden h-16 bg-[#2a1e1a] flex items-center justify-around shrink-0 z-50 text-[#D7CCC8] border-t-4 border-[#5D4037]">
           <button
             onClick={() =>

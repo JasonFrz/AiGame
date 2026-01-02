@@ -1,9 +1,6 @@
-// src/components/Versus.jsx
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- IMPORT DARI DB MONSTER ---
 import {
   TOTAL_CARDS_DATA,
   getCardData as getDbCardData,
@@ -13,14 +10,13 @@ import {
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
   calculateNemesisReaction,
+  SLOT_COORDINATES, 
 } from "./db_monster";
 
-// --- ASSETS UI UTAMA ---
 import gameLogo from "../assets/logo.png";
 import gameBackground from "../assets/background.jpg";
 import board_img from "../assets/Leaders_Board.png";
 
-// --- MANUAL IMPORT ASSETS LEADER ---
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png";
 import roiCard from "../assets/cards/Roi.png";
@@ -29,7 +25,6 @@ import reineCard from "../assets/cards/Reine.png";
 const Versus = () => {
   const navigate = useNavigate();
 
-  // --- STYLES ---
   const styles = `
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -51,7 +46,6 @@ const Versus = () => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- HELPER DATA ---
   const getSafeUnitData = (id) => {
     if (id === "leader")
       return {
@@ -80,39 +74,7 @@ const Versus = () => {
   };
 
   // --- GRID MAP ---
-  const SLOT_COORDINATES = [
-    [{ top: "9%", left: "50%" }],
-    [
-      { top: "16.3%", left: "36.5%" }, { top: "16.3%", left: "63.5%" },
-      { top: "23%", left: "23%" }, { top: "23%", left: "76.5%" },
-    ],
-    [
-      { top: "30%", left: "9.8%" }, { top: "30%", left: "36.5%" }, { top: "23%", left: "50%" },
-      { top: "30%", left: "63.5%" }, { top: "30%", left: "90.3%" },
-    ],
-    [
-      { top: "43%", left: "9.8%" }, { top: "36.6%", left: "23%" }, { top: "43%", left: "36.8%" },
-      { top: "36.6%", left: "50%" }, { top: "36.6%", left: "76.5%" }, { top: "43%", left: "90.3%" },
-    ],
-    [
-      { top: "56.8%", left: "9.8%" }, { top: "49.8%", left: "23%" }, { top: "49.8%", left: "50%" },
-      { top: "43%", left: "63.5%" }, { top: "49.8%", left: "76.8%" },
-    ],
-    [
-      { top: "63.5%", left: "23%" }, { top: "56.8%", left: "36.5%" }, { top: "63.5%", left: "50%" },
-      { top: "56.8%", left: "63.5%" }, { top: "56.8%", left: "76.8%" }, { top: "56.8%", left: "90.3%" },
-    ],
-    [
-      { top: "70.2%", left: "9.8%" }, { top: "70.2%", left: "36.5%" }, { top: "77%", left: "50%" },
-      { top: "70.2%", left: "63.5%" }, { top: "70.2%", left: "90.3%" },
-    ],
-    [
-      { top: "77%", left: "23%" }, { top: "83.8%", left: "36.5%" }, { top: "83.8%", left: "63.5%" },
-      { top: "77%", left: "76.7%" },
-    ],
-    [{ top: "90.5%", left: "50%" }],
-  ];
-
+  // (Menggunakan koordinat manual untuk tetangga)
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
@@ -167,9 +129,9 @@ const Versus = () => {
 
   // --- STATE ---
   const [board, setBoard] = useState([]);
-  const [turn, setTurn] = useState(1); // 1=P1 Move, 2=P1 Recruit, 3=P2 Move, 4=P2 Recruit
-  const [round, setRound] = useState(1); // Track ronde untuk recruit logic P2
-  const [p2RecruitCount, setP2RecruitCount] = useState(0); // Counter untuk recruit P2
+  const [turn, setTurn] = useState(1); 
+  const [round, setRound] = useState(1); 
+  const [p2RecruitCount, setP2RecruitCount] = useState(0); 
 
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
@@ -178,7 +140,7 @@ const Versus = () => {
 
   // Action Logic
   const [validMoves, setValidMoves] = useState([]);
-  const [actionMode, setActionMode] = useState("move"); // "move" | "ability"
+  const [actionMode, setActionMode] = useState("move"); 
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
   const [clawMode, setClawMode] = useState("pull");
   const [turnPhaseType, setTurnPhaseType] = useState(null); 
@@ -226,8 +188,8 @@ const Versus = () => {
     setVisibleDeck(shuffled.slice(0, 3));
     
     setTurn(1);
-    setRound(1); // Reset round
-    setP2RecruitCount(0); // Reset counter P2
+    setRound(1); 
+    setP2RecruitCount(0); 
     
     setGameOver(null);
     setRecruitStep(0);
@@ -253,14 +215,13 @@ const Versus = () => {
   const handleSelectUnit = (r, c, isForced = false) => {
     if (gameOver) return;
 
-    // --- NEMESIS BLOCKING LOGIC ---
     if (nemesisPending) {
         if (r !== nemesisPending.r || c !== nemesisPending.c) {
             setGameLog(`Player ${nemesisPending.owner}: Move Nemesis!`);
             return;
         }
     } else {
-        if (turn !== 1 && turn !== 3) return; // Only select in Action phases
+        if (turn !== 1 && turn !== 3) return; 
         
         if (board[r][c] && board[r][c].cardId === "nemesis") {
             setGameLog("Nemesis only reacts!");
@@ -376,7 +337,6 @@ const Versus = () => {
   const handleBoardClick = (r, c) => {
       if (gameOver) return;
 
-      // Recruitment Phase (Turn 2 or 4)
       if (turn === 2 || turn === 4) {
           if (isRecruitZone(r, c, turn === 2 ? 1 : 2) && !board[r][c] && recruitSelectionIndex !== null) {
               const card = visibleDeck[recruitSelectionIndex];
@@ -552,6 +512,46 @@ const Versus = () => {
     if (!p1Pos) return "Player 2";
     if (!p2Pos) return "Player 1";
 
+    // --- ARCHER LOGIC HELPER ---
+    const checkArcherThreats = (pos, enemyOwner) => {
+        let threatCount = 0;
+        const neighbors = getNeighbors(pos[0], pos[1]);
+        
+        // Loop through neighbors to find lines extending 2 spaces out
+        neighbors.forEach(([midR, midC]) => {
+            const midNeighbors = getNeighbors(midR, midC);
+            // Check neighbors of the neighbor (distance 2)
+            midNeighbors.forEach(([farR, farC]) => {
+                const farUnit = currentBoard[farR][farC];
+                // Is there an enemy Archer here?
+                if (farUnit && farUnit.owner === enemyOwner && farUnit.cardId === 'archer') {
+                    // Check linearity using SLOT_COORDINATES
+                    if (SLOT_COORDINATES[pos[0]] && SLOT_COORDINATES[pos[0]][pos[1]] &&
+                        SLOT_COORDINATES[midR] && SLOT_COORDINATES[midR][midC] &&
+                        SLOT_COORDINATES[farR] && SLOT_COORDINATES[farR][farC]) {
+                        
+                        const p1 = SLOT_COORDINATES[pos[0]][pos[1]]; // Leader
+                        const p2 = SLOT_COORDINATES[midR][midC];     // Mid
+                        const p3 = SLOT_COORDINATES[farR][farC];     // Archer
+
+                        const x1 = parseFloat(p1.left), y1 = parseFloat(p1.top);
+                        const x2 = parseFloat(p2.left), y2 = parseFloat(p2.top);
+                        const x3 = parseFloat(p3.left), y3 = parseFloat(p3.top);
+
+                        const angle1 = Math.atan2(y2 - y1, x2 - x1);
+                        const angle2 = Math.atan2(y3 - y2, x3 - x2);
+
+                        // Strict straight line check
+                        if (Math.abs(angle1 - angle2) < 0.15) {
+                            threatCount++;
+                        }
+                    }
+                }
+            });
+        });
+        return threatCount;
+    };
+
     const isLeaderDefeated = (pos, owner) => {
       const neighbors = getNeighbors(pos[0], pos[1]);
       const enemyOwner = owner === 1 ? 2 : 1;
@@ -567,6 +567,7 @@ const Versus = () => {
             if (cell.cardId === 'assassin') {
                 assassinThreat = true;
             }
+            // Archer and Cub do not count if adjacent
             if (cell.cardId !== "cub" && cell.cardId !== "archer") {
               adjacentEnemies++;
             }
@@ -575,9 +576,13 @@ const Versus = () => {
       });
 
       if (assassinThreat) return true;
-      if (adjacentEnemies >= 2) return true;
-      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length)
-        return true;
+
+      // Add Archer threats from distance
+      const archerThreats = checkArcherThreats(pos, enemyOwner);
+      const totalThreats = adjacentEnemies + archerThreats;
+
+      if (totalThreats >= 2) return true;
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length && totalThreats >= 2) return true; // Surrounded case
       return false;
     };
 
