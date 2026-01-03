@@ -1,6 +1,4 @@
-// src/components/GameSection.jsx
-
-import { useEffect, useState, useCallback, useRef, act } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -13,7 +11,6 @@ import {
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
-  STRAIGHT_JUMPS_PATHS,
   calculateNemesisReaction,
 } from "./db_monster";
 
@@ -34,9 +31,6 @@ const GameSection = ({ onBack }) => {
     .neon-border { box-shadow: 0 0 15px #FFD700, inset 0 0 5px #FFD700; border-color: #FFD700; }
     .action-move { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; animation: pulse-green 1.5s infinite; }
     .action-ability { box-shadow: 0 0 15px #F44336, inset 0 0 10px #F44336; border-color: #F44336; animation: pulse-red 1s infinite; }
-    
-    .action-wanderer { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; opacity: 0.8; }
-
     @keyframes pulse-green { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     @keyframes pulse-red { 0% { opacity: 0.7; } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); } }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -72,9 +66,7 @@ const GameSection = ({ onBack }) => {
         [1, 0],
       ],
       "1,3": [
-        [1, 1],
-        [2, 3],
-        [3, 4],
+        [2, 1],
         [2, 4],
       ],
       "2,0": [
@@ -335,7 +327,6 @@ const GameSection = ({ onBack }) => {
   const [recruitSelectionIndex, setRecruitSelectionIndex] = useState(null);
   const [recruitStep, setRecruitStep] = useState(0);
   const [mobileTab, setMobileTab] = useState(null);
-  const [isChainingJump, setIsChainingJump] = useState(false);
 
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
@@ -350,36 +341,6 @@ const GameSection = ({ onBack }) => {
     initializeGame();
   }, []);
 
-  // --- DEBUGGING: MONITOR LEADER POSITION ---
-  useEffect(() => {
-    if (!board || board.length === 0) return;
-
-    // Cari posisi Leader Player 1
-    board.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        if (cell && cell.cardId === "leader" && cell.owner === 1) {
-          console.log(
-            `%c 👑 LEADER MOVED! Now at: [ Row: ${r}, Col: ${c} ]`,
-            "color: gold; font-weight: bold; background: #333; padding: 4px;"
-          );
-
-          // Cek Koordinat Visualnya (untuk memastikan tidak salah mapping)
-          if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c]) {
-            console.log("   Visual Coordinates:", SLOT_COORDINATES[r][c]);
-          } else {
-            console.error(
-              "   ⚠️ WARNING: No visual coordinate found for this grid!"
-            );
-          }
-
-          // Cek Tetangga dari posisi ini (untuk debug kenapa dia bisa loncat)
-          const neighbors = getNeighbors(r, c);
-          console.log("   Logic Neighbors (Bisa gerak ke):", neighbors);
-        }
-      });
-    });
-  }, [board]);
-
   useEffect(() => {
     if (board.length === 0) return;
     const myUnits = [];
@@ -392,35 +353,16 @@ const GameSection = ({ onBack }) => {
     setPlayerRoster(myUnits);
   }, [board]);
 
-  // DEBUG SEMUA KARTU
   const initializeGame = () => {
-    // 1. Setup Board (Sama seperti sebelumnya)
     const b = Array(9)
       .fill(null)
       .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
-
-    // Set Leaders
     b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
     b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
     setBoard(b);
-
-    // --- 🔧 DEBUG MODE: AKTIFKAN SEMUA KARTU ---
-    const DEBUG_ALL_CARDS = true; // Set ke 'false' jika ingin main normal
-
-    if (DEBUG_ALL_CARDS) {
-      console.warn("🔧 DEBUG MODE ACTIVE: All cards available!");
-      // Kosongkan tumpukan kartu
-      setDeck([]);
-      // Masukkan SEMUA data kartu ke tangan (visibleDeck)
-      setVisibleDeck([...TOTAL_CARDS_DATA]);
-    } else {
-      // --- MODE NORMAL (SHUFFLE) ---
-      const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
-      setDeck(shuffled.slice(3));
-      setVisibleDeck(shuffled.slice(0, 3));
-    }
-    // -------------------------------------------
-
+    const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
+    setDeck(shuffled.slice(3));
+    setVisibleDeck(shuffled.slice(0, 3));
     setTurn(1);
     setTurnPhaseType(null);
     setGameOver(null);
@@ -1021,7 +963,6 @@ const GameSection = ({ onBack }) => {
     setTurn(1);
     setTurnPhaseType(null);
     setGameLog("Your Turn");
-    setIsChainingJump(false);
   };
 
   useEffect(() => {
@@ -1114,37 +1055,6 @@ const GameSection = ({ onBack }) => {
         setSelectedUnitAbility(null);
       } else {
         setGameLog(`Selected ${unitData?.name || "Unit"}`);
-        if (unit.cardId === "rider") {
-          const moves = calculateRiderMoves(r, c, unit, board);
-          setValidMoves(moves);
-          setSelectedUnitAbility(null);
-        } else {
-          const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-          setValidMoves(moves);
-          if (unitData.type === "Active") setSelectedUnitAbility(unitData);
-        }
-
-        // --- LOGIKA KHUSUS WANDERER (Gabung Move + Ability) ---
-        if (unit.cardId === "wanderer") {
-          const basicMoves = calculateBasicMoves(
-            r,
-            c,
-            unit,
-            board,
-            getNeighbors
-          );
-
-          const abilityMoves = calculateAbilityMoves(
-            r,
-            c,
-            unit,
-            board,
-            getNeighbors
-          );
-
-          setValidMoves([...basicMoves, ...abilityMoves]);
-          setSelectedUnitAbility(null);
-        }
         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
         setValidMoves(moves);
         if (unitData.type === "Active") setSelectedUnitAbility(unitData);
@@ -1213,20 +1123,6 @@ const GameSection = ({ onBack }) => {
     }
   };
 
-  const hasVizierInTeam = (owner, currentBoard) => {
-    return currentBoard.some((row) =>
-      row.some((u) => u && u.owner === owner && u.cardId === "vizier")
-    );
-  };
-
-  const handleBoardClick = (r, c) => {
-    console.log(
-      `%c 🖱️ Tile Clicked: [ Row: ${r}, Col: ${c} ]`,
-      "color: cyan; font-weight: bold;"
-    );
-    if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c]) {
-      console.log("   Visual Pos:", SLOT_COORDINATES[r][c]);
-    }
   const handleBoardClick = async (r, c) => {
     if (gameOver) return;
 
@@ -1289,8 +1185,6 @@ const GameSection = ({ onBack }) => {
           return;
         }
 
-        // --- MANIPULATOR INTERACTION START ---
-        else if (
         if (
           action.type === "ability_manipulator_target" &&
           !manipulatorTarget
@@ -1311,41 +1205,12 @@ const GameSection = ({ onBack }) => {
           setGameLog("Select Enemy's Move");
           return;
         }
-        // --- MANIPULATOR INTERACTION END ---
-        else if (action.type === "ability_acrobat_jump") {
-          newBoard[r][c] = { ...unit, moved: true };
-          newBoard[sr][sc] = null;
-          const nextJumps = calculateAbilityMoves(
-            r,
-            c,
-            unit,
-            newBoard,
-            getNeighbors
-          );
-          const canJumpAgain = nextJumps.some(
-            (m) => m.type === "ability_acrobat_jump"
-          );
-
-          if (canJumpAgain) {
-            setBoard(newBoard);
-            setGameLog("Jump Again? (Click unit / End Turn)");
-            setIsChainingJump(true);
-            newBoard[r][c].moved = false;
-            setTimeout(() => handleSelectUnit(r, c), 50);
-            return;
-          } else {
-            setGameLog("Acrobat Jump Finished");
-            setIsChainingJump(false);
-          }
-        }
 
         const boardBeforeMove = cloneBoard(board);
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
         const unit = newBoard[sr][sc];
 
-        if (action.type === "move") {
-          newBoard[r][c] = { ...unit, moved: true };
         if (!nemesisPending) {
           unit.moved = true;
         }
@@ -1357,23 +1222,6 @@ const GameSection = ({ onBack }) => {
         ) {
           newBoard[r][c] = unit;
           newBoard[sr][sc] = null;
-
-          const isLeader = unit.cardId === "leader";
-          const hasVizier = hasVizierInTeam(1, board);
-
-          if (isLeader && hasVizier && !unit.hasBonusMoved) {
-            newBoard[r][c] = {
-              ...unit,
-              moved: false,
-              hasBonusMoved: true,
-            };
-
-            setBoard(newBoard);
-            setGameLog("Vizier Power: Move again!");
-
-            setTimeout(() => handleSelectUnit(r, c), 50); // FIX: passed correct args (r, c)
-            return;
-          }
         } else if (action.type === "ability_swap") {
           const target = newBoard[r][c];
           newBoard[sr][sc] = target;
@@ -1398,31 +1246,9 @@ const GameSection = ({ onBack }) => {
             newBoard[action.landAt[0]][action.landAt[1]] = unit;
             newBoard[sr][sc] = null;
           }
-        } else if (action.type === "ability_wanderer_teleport") {
-          newBoard[r][c] = unit;
-          newBoard[sr][sc] = null;
-          setGameLog("Wanderer teleported");
         }
 
         setBoard(newBoard);
-
-        // // --- SET TURN PHASE LOCK ---
-        // if (turnPhaseType === null) {
-        //   // Helper to check if it's an ability or move
-        //   const isWandererTeleport =
-        //     action.type === "ability_wanderer_teleport";
-
-        //   const isAbility =
-        //     action.type.includes("ability") && !isWandererTeleport;
-
-        //   if (isAbility) {
-        //     setTurnPhaseType("ability");
-        //     setGameLog("Turn Locked: ABILITIES");
-        //   } else {
-        //     setTurnPhaseType("move");
-        //     setGameLog("Turn Locked: MOVEMENT");
-        //   }
-        // }
 
         setSelectedPos(null);
         setValidMoves([]);
@@ -1494,13 +1320,6 @@ const GameSection = ({ onBack }) => {
   };
 
   const handleEndAction = () => {
-    setSelectedPos(null);
-    setValidMoves([]);
-    setActionMode("move");
-    setSelectedUnitAbility(null);
-    setBruiserTarget(null);
-    setManipulatorTarget(null);
-    setTurnPhaseType(null);
     if (nemesisPending) {
       setGameLog("Resolve Nemesis First!");
       return;
@@ -1586,7 +1405,6 @@ const GameSection = ({ onBack }) => {
     );
   };
 
-  // //debug mode
   // // --- GANTI SELURUH RETURN DI GameSection.jsx DENGAN INI ---
   // return (
   //   <div className="w-full h-[100dvh] flex flex-col bg-black items-center justify-center font-sans">
@@ -1650,7 +1468,6 @@ const GameSection = ({ onBack }) => {
   //   </div>
   // );
 
-  //mode ril
   return (
     <div
       className="w-full h-[100dvh] overflow-hidden flex flex-col font-serif select-none relative bg-cover bg-center"
@@ -1825,10 +1642,7 @@ const GameSection = ({ onBack }) => {
                     {moveAction && (
                       <div
                         className={`absolute w-full h-full rounded-full border-2 ${
-                          // --- MODIFIKASI: WARNA & ANIMASI WANDERER ---
-                          moveAction.type === "ability_wanderer_teleport"
-                            ? "bg-green-500/30 action-wanderer" // Hijau, statis
-                            : moveAction.type.includes("ability")
+                          moveAction.type.includes("ability")
                             ? "bg-red-500/30 action-ability"
                             : moveAction.type === "reaction_move"
                             ? "bg-purple-500/50 shadow-[0_0_15px_#A855F7] border-purple-500 animate-pulse"
