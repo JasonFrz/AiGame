@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- IMPORT DARI DB MONSTER ---
 import {
   TOTAL_CARDS_DATA,
   getCardData as getDbCardData,
   calculateBasicMoves,
   calculateAbilityMoves,
+  calculateVisualClawMoves,
+  calculateBruiserPushTargets,
+  calculateManipulatorDestinations,
+  calculateNemesisReaction,
+  SLOT_COORDINATES, 
 } from "./db_monster";
 
-// --- ASSETS UI UTAMA ---
 import gameLogo from "../assets/logo.png";
 import gameBackground from "../assets/background.jpg";
 import board_img from "../assets/Leaders_Board.png";
 
-// --- MANUAL IMPORT ASSETS LEADER ---
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png";
 import roiCard from "../assets/cards/Roi.png";
@@ -23,7 +25,6 @@ import reineCard from "../assets/cards/Reine.png";
 const Versus = () => {
   const navigate = useNavigate();
 
-  // --- STYLES ---
   const styles = `
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -35,15 +36,16 @@ const Versus = () => {
     
     .action-move { box-shadow: 0 0 10px #4ADE80; border-color: #4ADE80; animation: pulse-green 1.5s infinite; }
     .action-ability { box-shadow: 0 0 15px #F44336, inset 0 0 10px #F44336; border-color: #F44336; animation: pulse-red 1s infinite; }
-    
+    .action-reaction { box-shadow: 0 0 15px #A855F7, inset 0 0 5px #A855F7; border-color: #A855F7; animation: pulse-purple 1s infinite; }
+
     @keyframes pulse-green { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     @keyframes pulse-red { 0% { opacity: 0.7; } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); } }
+    @keyframes pulse-purple { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
-  // --- HELPER ---
   const getSafeUnitData = (id) => {
     if (id === "leader")
       return {
@@ -71,60 +73,8 @@ const Versus = () => {
     }
   };
 
-  const SLOT_COORDINATES = [
-    [{ top: "9%", left: "50%" }],
-    [
-      { top: "16.3%", left: "36.5%" },
-      { top: "16.3%", left: "63.5%" },
-      { top: "23%", left: "23%" },
-      { top: "23%", left: "76.5%" },
-    ],
-    [
-      { top: "30%", left: "9.8%" },
-      { top: "30%", left: "36.5%" },
-      { top: "23%", left: "50%" },
-      { top: "30%", left: "63.5%" },
-      { top: "30%", left: "90.3%" },
-    ],
-    [
-      { top: "43%", left: "9.8%" },
-      { top: "36.6%", left: "23%" },
-      { top: "43%", left: "36.8%" },
-      { top: "36.6%", left: "50%" },
-      { top: "36.6%", left: "76.5%" },
-      { top: "43%", left: "90.3%" },
-    ],
-    [
-      { top: "56.8%", left: "9.8%" },
-      { top: "49.8%", left: "23%" },
-      { top: "49.8%", left: "50%" },
-      { top: "43%", left: "63.5%" },
-      { top: "49.8%", left: "76.8%" },
-    ],
-    [
-      { top: "63.5%", left: "23%" },
-      { top: "56.8%", left: "36.5%" },
-      { top: "63.5%", left: "50%" },
-      { top: "56.8%", left: "63.5%" },
-      { top: "56.8%", left: "76.8%" },
-      { top: "56.8%", left: "90.3%" },
-    ],
-    [
-      { top: "70.2%", left: "9.8%" },
-      { top: "70.2%", left: "36.5%" },
-      { top: "77%", left: "50%" },
-      { top: "70.2%", left: "63.5%" },
-      { top: "70.2%", left: "90.3%" },
-    ],
-    [
-      { top: "77%", left: "23%" },
-      { top: "83.8%", left: "36.5%" },
-      { top: "83.8%", left: "63.5%" },
-      { top: "77%", left: "76.7%" },
-    ],
-    [{ top: "90.5%", left: "50%" }],
-  ];
-
+  // --- GRID MAP ---
+  // (Menggunakan koordinat manual untuk tetangga)
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
@@ -390,24 +340,37 @@ const Versus = () => {
 
   const isRecruitZone = (r, c, player) => {
     if (player === 1)
-      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3"].includes(`${r},${c}`);
+      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3", "8,0"].includes(`${r},${c}`);
     if (player === 2)
-      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1"].includes(`${r},${c}`);
+      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1", "0,0"].includes(`${r},${c}`);
     return false;
   };
 
   // --- STATE ---
   const [board, setBoard] = useState([]);
-  const [turn, setTurn] = useState(1);
+  const [turn, setTurn] = useState(1); 
+  const [round, setRound] = useState(1); 
+  const [p2RecruitCount, setP2RecruitCount] = useState(0); 
+
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
   const [currentRoster, setCurrentRoster] = useState([]);
   const [selectedPos, setSelectedPos] = useState(null);
 
-  // State baru untuk Action Logic
+  // Action Logic
   const [validMoves, setValidMoves] = useState([]);
-  const [actionMode, setActionMode] = useState("move"); // 'move' or 'ability'
-  const [selectedUnitAbility, setSelectedUnitAbility] = useState(null); // Menyimpan tipe ability unit yg dipilih
+  const [actionMode, setActionMode] = useState("move"); 
+  const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
+  const [clawMode, setClawMode] = useState("pull");
+  const [turnPhaseType, setTurnPhaseType] = useState(null); 
+  
+  // Special Unit States
+  const [bruiserTarget, setBruiserTarget] = useState(null);
+  const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
+  const [manipulatorTarget, setManipulatorTarget] = useState(null);
+
+  // Nemesis State
+  const [nemesisPending, setNemesisPending] = useState(null);
 
   const [gameOver, setGameOver] = useState(null);
   const [gameLog, setGameLog] = useState("Player 1 Turn");
@@ -421,7 +384,7 @@ const Versus = () => {
 
   useEffect(() => {
     if (board.length === 0) return;
-    const targetOwner = turn === 1 || turn === 2 ? 1 : 2;
+    const targetOwner = (turn === 1 || turn === 2) ? 1 : 2;
     const units = [];
     board.forEach((row, r) =>
       row.forEach((cell, c) => {
@@ -442,27 +405,62 @@ const Versus = () => {
     const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
     setDeck(shuffled.slice(3));
     setVisibleDeck(shuffled.slice(0, 3));
+    
     setTurn(1);
+    setRound(1); 
+    setP2RecruitCount(0); 
+    
     setGameOver(null);
     setRecruitStep(0);
     setGameLog("Player 1 Turn");
+    setNemesisPending(null);
+    setClawMode("pull");
+    setTurnPhaseType(null);
+  };
+
+  const findUnit = (b, cardId, owner) => {
+    for (let r = 0; r < b.length; r++) {
+      for (let c = 0; c < b[r].length; c++) {
+        if (b[r][c] && b[r][c].cardId === cardId && b[r][c].owner === owner) {
+          return { ...b[r][c], r, c };
+        }
+      }
+    }
+    return null;
   };
 
   // --- LOGIC INTERACTION ---
 
-  const handleSelectUnit = (r, c) => {
-    if (gameOver || (turn !== 1 && turn !== 3)) return;
-    const unit = board[r][c];
-    const currentPlayer = turn === 1 ? 1 : 2;
+  const handleSelectUnit = (r, c, isForced = false) => {
+    if (gameOver) return;
 
-    // Reset previous selection
+    if (nemesisPending) {
+        if (r !== nemesisPending.r || c !== nemesisPending.c) {
+            setGameLog(`Player ${nemesisPending.owner}: Move Nemesis!`);
+            return;
+        }
+    } else {
+        if (turn !== 1 && turn !== 3) return; 
+        
+        if (board[r][c] && board[r][c].cardId === "nemesis") {
+            setGameLog("Nemesis only reacts!");
+            return;
+        }
+    }
+
+    const unit = board[r][c];
+    const authorizedOwner = nemesisPending ? nemesisPending.owner : (turn === 1 ? 1 : 2);
+
     setSelectedPos(null);
     setValidMoves([]);
-    setActionMode("move"); // Default mode langsung move agar 1x klik bisa jalan
+    setActionMode("move");
     setSelectedUnitAbility(null);
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
 
-    if (unit && unit.owner === currentPlayer) {
-      if (unit.moved) {
+    if (unit && unit.owner === authorizedOwner) {
+      if (unit.moved && !nemesisPending) {
         setGameLog("Unit already moved");
         return;
       }
@@ -472,32 +470,69 @@ const Versus = () => {
       setMobileTab(null);
       setGameLog(`Selected ${unitData.name}`);
 
-      // LANGSUNG HITUNG MOVE (Default Action)
-      const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-      setValidMoves(moves);
+      if (nemesisPending && unit.cardId === "nemesis") {
+          const moves = calculateNemesisReaction(r, c, board, getNeighbors);
+          setValidMoves(moves);
+          setGameLog(moves.length > 0 ? "Select Nemesis Destination" : "No Moves Available (Skip)");
+          
+          if (moves.length === 0) {
+              setTimeout(() => {
+                  setNemesisPending(null);
+                  setGameLog(`Resume Player ${turn === 1 ? 1 : 2} Turn`);
+              }, 1000);
+          }
+          return;
+      }
 
-      // Cek apakah punya Active Ability (untuk menampilkan tombol toggle nanti)
-      if (unitData.type === "Active") {
-        setSelectedUnitAbility(unitData);
+      if (turnPhaseType === "ability") {
+         if (unitData.type !== "Active") {
+             setGameLog("Turn Locked: Abilities Only");
+             return;
+         }
+         setActionMode("ability");
+         if (unit.cardId === "claw") {
+             const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
+             setValidMoves(moves);
+         } else {
+             const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+             setValidMoves(abilities);
+         }
+         setSelectedUnitAbility(unitData);
+      } else if (turnPhaseType === "move") {
+         setActionMode("move");
+         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+         setValidMoves(moves);
+         setSelectedUnitAbility(null);
+      } else {
+         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+         setValidMoves(moves);
+         if (unitData.type === "Active") {
+             setSelectedUnitAbility(unitData);
+         }
       }
     }
   };
 
-  // Fungsi toggle antara Mode Jalan (Move) dan Mode Ability
   const toggleActionMode = () => {
     if (!selectedPos) return;
     const [r, c] = selectedPos;
     const unit = board[r][c];
 
+    if (turnPhaseType) return; 
+
     if (actionMode === "move") {
-      // Switch to Ability
       setActionMode("ability");
-      const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
-      setValidMoves(abilities);
-      if (abilities.length === 0) setGameLog("No ability targets available!");
-      else setGameLog("Ability Mode: Select Target (Red)");
+      if (unit.cardId === "claw") {
+          const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
+          setValidMoves(moves);
+          if (moves.length === 0) setGameLog(clawMode === 'pull' ? "No targets to Pull" : "No targets to Dash");
+      } else {
+          const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+          setValidMoves(abilities);
+          if (abilities.length === 0) setGameLog("No ability targets available!");
+          else setGameLog("Ability Mode: Select Target (Red)");
+      }
     } else {
-      // Switch back to Move
       setActionMode("move");
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
@@ -505,70 +540,179 @@ const Versus = () => {
     }
   };
 
+  const toggleClawMode = (e) => {
+      e.stopPropagation();
+      const newMode = clawMode === "pull" ? "dash" : "pull";
+      setClawMode(newMode);
+      if (selectedPos) {
+          const [r, c] = selectedPos;
+          const unit = board[r][c];
+          const moves = calculateVisualClawMoves(r, c, unit, board, newMode);
+          setValidMoves(moves);
+          setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
+      }
+  };
+
+  const handleBoardClick = (r, c) => {
+      if (gameOver) return;
+
+      if (turn === 2 || turn === 4) {
+          if (isRecruitZone(r, c, turn === 2 ? 1 : 2) && !board[r][c] && recruitSelectionIndex !== null) {
+              const card = visibleDeck[recruitSelectionIndex];
+              if (card.id === "hermit" && recruitStep === 0) {
+                  const nb = board.map(rw => rw.map(cl => cl));
+                  nb[r][c] = { owner: turn === 2 ? 1 : 2, cardId: "hermit", moved: true, isNew: true };
+                  setBoard(nb);
+                  setRecruitStep(1);
+                  setGameLog("Place the Cub");
+              } else {
+                  finalizeRecruit(r, c, recruitStep === 1 ? "cub" : card.id, turn === 2 ? 1 : 2);
+                  setRecruitStep(0);
+              }
+          }
+          return;
+      }
+
+      if (board[r][c] && !nemesisPending && board[r][c].owner === (turn === 1 ? 1 : 2)) {
+          handleSelectUnit(r, c);
+          return;
+      }
+      if (nemesisPending && board[r][c] && board[r][c].owner === nemesisPending.owner && board[r][c].cardId === "nemesis") {
+          handleSelectUnit(r, c);
+          return;
+      }
+
+      const action = validMoves.find(m => m.r === r && m.c === c);
+
+      if (selectedPos && action) {
+          if (action.type === "ability_bruiser_push" && !bruiserTarget) {
+              const possiblePushes = validMoves.filter(m => m.type === "ability_bruiser_push" && m.r === r && m.c === c);
+              setBruiserTarget({ r, c });
+              setBruiserPendingMoves(possiblePushes);
+              const destMoves = possiblePushes.map(p => ({
+                  r: p.pushTo[0],
+                  c: p.pushTo[1],
+                  type: "ability_bruiser_execute"
+              }));
+              setValidMoves(destMoves);
+              setGameLog("Select Push Direction");
+              return;
+          }
+
+          if (action.type === "ability_manipulator_target" && !manipulatorTarget) {
+              setManipulatorTarget({ r, c });
+              const dests = calculateManipulatorDestinations(r, c, board, getNeighbors);
+              const moveOptions = dests.map(d => ({
+                  r: d.r,
+                  c: d.c,
+                  type: "ability_manipulator_execute"
+              }));
+              setValidMoves(moveOptions);
+              setGameLog("Select Enemy's Move");
+              return;
+          }
+
+          executeAction(r, c, action);
+      }
+  };
+
   const executeAction = (targetR, targetC, action) => {
     const [sr, sc] = selectedPos;
+    const boardBeforeMove = board.map(row => row.map(c => c ? {...c} : null));
     const newBoard = board.map((row) =>
       row.map((c) => (c ? { ...c, isNew: false } : null))
     );
     const unit = newBoard[sr][sc];
     const type = action.type;
 
-    unit.moved = true;
+    if (!nemesisPending) {
+        unit.moved = true;
+    }
 
-    // --- EXECUTE TYPES ---
-    if (type === "move") {
+    if (type === "move" || type === "reaction_move" || type === "ability_move") {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
     } else if (type === "ability_swap") {
       const targetUnit = newBoard[targetR][targetC];
       newBoard[sr][sc] = targetUnit;
       newBoard[targetR][targetC] = unit;
-    } else if (type === "ability_push") {
-      const targetUnit = newBoard[targetR][targetC];
-      const pushDest = action.pushTo;
-      newBoard[pushDest[0]][pushDest[1]] = targetUnit;
-      newBoard[targetR][targetC] = unit;
-      newBoard[sr][sc] = null;
+    } else if (type === "ability_bruiser_execute") {
+       const enemyPos = bruiserTarget;
+       const targetEnemy = newBoard[enemyPos.r][enemyPos.c];
+       newBoard[targetR][targetC] = targetEnemy;
+       newBoard[enemyPos.r][enemyPos.c] = unit;
+       newBoard[sr][sc] = null;
+    } else if (type === "ability_manipulator_execute") {
+       const enemyPos = manipulatorTarget;
+       const enemyUnit = newBoard[enemyPos.r][enemyPos.c];
+       newBoard[targetR][targetC] = enemyUnit;
+       newBoard[enemyPos.r][enemyPos.c] = null;
     } else if (type === "ability_claw_pull") {
-      const targetUnit = newBoard[targetR][targetC];
-      const pullDest = action.pullTo;
-      newBoard[pullDest[0]][pullDest[1]] = targetUnit;
-      newBoard[targetR][targetC] = null;
-    } else if (type === "ability_manipulate_select") {
-      setGameLog("Manipulator moved enemy!");
-      const tNeighbors = getNeighbors(targetR, targetC).filter(
-        (n) => !newBoard[n[0]][n[1]]
-      );
-      if (tNeighbors.length > 0) {
-        const dest = tNeighbors[0];
-        const targetUnit = newBoard[targetR][targetC];
-        newBoard[dest[0]][dest[1]] = targetUnit;
-        newBoard[targetR][targetC] = null;
-      }
-    } else if (type === "ability_brew_select") {
-      const tNeighbors = getNeighbors(targetR, targetC).filter(
-        (n) => !newBoard[n[0]][n[1]]
-      );
-      if (tNeighbors.length > 0) {
-        const dest = tNeighbors[0];
-        const targetUnit = newBoard[targetR][targetC];
-        newBoard[dest[0]][dest[1]] = targetUnit;
-        newBoard[targetR][targetC] = null;
-      }
+       const targetUnit = newBoard[targetR][targetC];
+       const pullDest = action.pullTo;
+       newBoard[pullDest[0]][pullDest[1]] = targetUnit;
+       newBoard[targetR][targetC] = null;
+    } else if (type === "ability_claw_dash") {
+       const landAt = action.landAt;
+       newBoard[landAt[0]][landAt[1]] = unit;
+       newBoard[sr][sc] = null;
     }
 
     setBoard(newBoard);
+    
     setSelectedPos(null);
     setValidMoves([]);
     setSelectedUnitAbility(null);
     setActionMode("move");
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
 
-    // Check Win
+    if (nemesisPending) {
+        setNemesisPending(null);
+        setGameLog(`Resume Player ${turn === 1 ? 1 : 2} Turn`);
+        return;
+    }
+
+    if (turnPhaseType === null && !nemesisPending) {
+         const isAbility = type.includes("ability");
+         setTurnPhaseType(isAbility ? "ability" : "move");
+    }
+
+    checkForNemesisTrigger(boardBeforeMove, newBoard);
+
     const winners = checkVersusWin(newBoard);
     if (winners) {
       setGameOver(winners);
       setGameLog(`${winners} Wins!`);
     }
+  };
+
+  const checkForNemesisTrigger = (oldBoard, newBoard) => {
+      const p1Old = findUnit(oldBoard, "leader", 1);
+      const p1New = findUnit(newBoard, "leader", 1);
+      const p1Moved = p1Old && p1New && (p1Old.r !== p1New.r || p1Old.c !== p1New.c);
+
+      const p2Old = findUnit(oldBoard, "leader2", 2);
+      const p2New = findUnit(newBoard, "leader2", 2);
+      const p2Moved = p2Old && p2New && (p2Old.r !== p2New.r || p2Old.c !== p2New.c);
+
+      if (p1Moved) {
+          const p2Nemesis = findUnit(newBoard, "nemesis", 2);
+          if (p2Nemesis) {
+              setNemesisPending({ r: p2Nemesis.r, c: p2Nemesis.c, owner: 2 });
+              setGameLog("PLAYER 2 MUST MOVE NEMESIS!");
+              setTimeout(() => handleSelectUnit(p2Nemesis.r, p2Nemesis.c, true), 300);
+          }
+      }
+      if (p2Moved) {
+          const p1Nemesis = findUnit(newBoard, "nemesis", 1);
+          if (p1Nemesis) {
+              setNemesisPending({ r: p1Nemesis.r, c: p1Nemesis.c, owner: 1 });
+              setGameLog("PLAYER 1 MUST MOVE NEMESIS!");
+              setTimeout(() => handleSelectUnit(p1Nemesis.r, p1Nemesis.c, true), 300);
+          }
+      }
   };
 
   const checkVersusWin = (currentBoard) => {
@@ -587,25 +731,77 @@ const Versus = () => {
     if (!p1Pos) return "Player 2";
     if (!p2Pos) return "Player 1";
 
+    // --- ARCHER LOGIC HELPER ---
+    const checkArcherThreats = (pos, enemyOwner) => {
+        let threatCount = 0;
+        const neighbors = getNeighbors(pos[0], pos[1]);
+        
+        // Loop through neighbors to find lines extending 2 spaces out
+        neighbors.forEach(([midR, midC]) => {
+            const midNeighbors = getNeighbors(midR, midC);
+            // Check neighbors of the neighbor (distance 2)
+            midNeighbors.forEach(([farR, farC]) => {
+                const farUnit = currentBoard[farR][farC];
+                // Is there an enemy Archer here?
+                if (farUnit && farUnit.owner === enemyOwner && farUnit.cardId === 'archer') {
+                    // Check linearity using SLOT_COORDINATES
+                    if (SLOT_COORDINATES[pos[0]] && SLOT_COORDINATES[pos[0]][pos[1]] &&
+                        SLOT_COORDINATES[midR] && SLOT_COORDINATES[midR][midC] &&
+                        SLOT_COORDINATES[farR] && SLOT_COORDINATES[farR][farC]) {
+                        
+                        const p1 = SLOT_COORDINATES[pos[0]][pos[1]]; // Leader
+                        const p2 = SLOT_COORDINATES[midR][midC];     // Mid
+                        const p3 = SLOT_COORDINATES[farR][farC];     // Archer
+
+                        const x1 = parseFloat(p1.left), y1 = parseFloat(p1.top);
+                        const x2 = parseFloat(p2.left), y2 = parseFloat(p2.top);
+                        const x3 = parseFloat(p3.left), y3 = parseFloat(p3.top);
+
+                        const angle1 = Math.atan2(y2 - y1, x2 - x1);
+                        const angle2 = Math.atan2(y3 - y2, x3 - x2);
+
+                        // Strict straight line check
+                        if (Math.abs(angle1 - angle2) < 0.15) {
+                            threatCount++;
+                        }
+                    }
+                }
+            });
+        });
+        return threatCount;
+    };
+
     const isLeaderDefeated = (pos, owner) => {
       const neighbors = getNeighbors(pos[0], pos[1]);
       const enemyOwner = owner === 1 ? 2 : 1;
       let adjacentEnemies = 0;
       let occupiedNeighbors = 0;
+      let assassinThreat = false;
 
       neighbors.forEach(([nr, nc]) => {
         const cell = currentBoard[nr][nc];
         if (cell) {
           occupiedNeighbors++;
-          if (cell.owner === enemyOwner && cell.cardId !== "cub") {
-            adjacentEnemies++;
+          if (cell.owner === enemyOwner) {
+            if (cell.cardId === 'assassin') {
+                assassinThreat = true;
+            }
+            // Archer and Cub do not count if adjacent
+            if (cell.cardId !== "cub" && cell.cardId !== "archer") {
+              adjacentEnemies++;
+            }
           }
         }
       });
 
-      if (adjacentEnemies >= 2) return true;
-      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length)
-        return true;
+      if (assassinThreat) return true;
+
+      // Add Archer threats from distance
+      const archerThreats = checkArcherThreats(pos, enemyOwner);
+      const totalThreats = adjacentEnemies + archerThreats;
+
+      if (totalThreats >= 2) return true;
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length && totalThreats >= 2) return true; // Surrounded case
       return false;
     };
 
@@ -626,6 +822,7 @@ const Versus = () => {
 
     if (cardId === "hermit") return;
 
+    // Update Deck
     const newV = [...visibleDeck];
     const newD = [...deck];
     if (newD.length > 0) {
@@ -634,42 +831,78 @@ const Versus = () => {
     } else {
       newV.splice(recruitSelectionIndex, 1);
     }
-
     setDeck(newD);
     setVisibleDeck(newV);
     setRecruitSelectionIndex(null);
     setMobileTab(null);
 
-    endTurnLogic(turn, newBoard);
+    // --- RECRUITMENT LOGIC UPDATE ---
+    if (turn === 2) {
+      // P1 Recruit -> Done -> P2 Move
+      endTurnLogic(2, newBoard);
+    } else if (turn === 4) {
+      // P2 Recruit -> Check if they need to recruit more
+      const currentRecruitCount = p2RecruitCount + 1;
+      setP2RecruitCount(currentRecruitCount);
+
+      // Rule: Round 1 = 2 recruits, Round N = 1 recruit
+      const limit = round === 1 ? 2 : 1; 
+
+      if (currentRecruitCount < limit) {
+        // Still needs to recruit
+        setGameLog(`P2 Recruit (${currentRecruitCount + 1}/${limit})`);
+      } else {
+        // Limit reached -> Done -> P1 Move
+        endTurnLogic(4, newBoard);
+      }
+    }
   };
 
   const endTurnLogic = (phase, currentBoard = board) => {
+    if (nemesisPending) {
+        setGameLog("Must Resolve Nemesis Move!");
+        return;
+    }
+
     const count = (o) =>
       currentBoard
         .flat()
         .filter((u) => u && u.owner === o && u.cardId !== "cub").length;
 
-    if (phase === 1) {
+    // --- TURN CYCLE ---
+    if (phase === 1) { 
+      // P1 Move Done -> P1 Recruit
       if (count(1) < 5 && visibleDeck.length > 0) {
         setTurn(2);
         setGameLog("P1 Recruit Phase");
         setMobileTab("recruit");
       } else {
+        // Skip Recruit -> P2 Move
         setTurn(3);
         setGameLog("Player 2 Turn");
+        setTurnPhaseType(null);
       }
-    } else if (phase === 2) {
+    } else if (phase === 2) { 
+      // P1 Recruit Done -> P2 Move
       setTurn(3);
       setGameLog("Player 2 Turn");
-    } else if (phase === 3) {
+      setTurnPhaseType(null);
+    } else if (phase === 3) { 
+      // P2 Move Done -> P2 Recruit
+      // Reset P2 recruit count sebelum fase recruit dimulai
+      setP2RecruitCount(0); 
+      
       if (count(2) < 5 && visibleDeck.length > 0) {
         setTurn(4);
-        setGameLog("P2 Recruit Phase");
+        const limit = round === 1 ? 2 : 1;
+        setGameLog(`P2 Recruit Phase (1/${limit})`);
         setMobileTab("recruit");
       } else {
+        // Skip Recruit -> P1 Move
         resetForP1(currentBoard);
       }
-    } else if (phase === 4) {
+    } else if (phase === 4) { 
+      // P2 Recruit Done -> P1 Move
       resetForP1(currentBoard);
     }
   };
@@ -680,7 +913,9 @@ const Versus = () => {
     );
     setBoard(resetBoard);
     setTurn(1);
+    setRound(prev => prev + 1); // Increment Ronde
     setGameLog("Player 1 Turn");
+    setTurnPhaseType(null);
   };
 
   // --- UI COMPONENTS ---
@@ -762,7 +997,7 @@ const Versus = () => {
           className={`px-6 py-1.5 rounded-full font-bold text-sm md:text-base shadow-inner border transition-all duration-300 ${
             gameOver
               ? "bg-[#3E2723] text-[#FFECB3]"
-              : turn === 1 || turn === 2
+              : (turn === 1 || turn === 2)
               ? "bg-blue-900 text-blue-100 border-blue-500"
               : "bg-red-900 text-red-100 border-red-500"
           }`}
@@ -782,7 +1017,8 @@ const Versus = () => {
               turn === 1 || turn === 3
                 ? "bg-amber-600 hover:bg-amber-500 border-amber-400"
                 : "bg-gray-600 hover:bg-gray-500 border-gray-400"
-            }`}
+            } ${nemesisPending ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={!!nemesisPending}
           >
             {turn === 1 || turn === 3 ? "End Action" : "Skip Recruit"}
           </button>
@@ -839,29 +1075,40 @@ const Versus = () => {
 
         {/* BOARD AREA */}
         <div className="flex-grow relative flex items-center justify-center p-2 md:p-6 lg:p-10 overflow-hidden">
-          {/* ABILITY TOGGLE BUTTON (NON-BLOCKING) */}
-          {selectedPos && selectedUnitAbility && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn">
-              <button
-                onClick={toggleActionMode}
-                className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2
-                            ${
-                              actionMode === "move"
-                                ? "bg-red-700 hover:bg-red-600 border-red-900 text-white"
-                                : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"
-                            }
-                        `}
-              >
-                {actionMode === "move" ? (
-                  <>
-                    <span>⚡</span> USE ABILITY
-                  </>
-                ) : (
-                  <>
-                    <span>✖</span> CANCEL ABILITY
-                  </>
-                )}
-              </button>
+          {/* ABILITY TOGGLE BUTTON */}
+          {selectedPos && selectedUnitAbility && !nemesisPending && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-spawn flex flex-col items-center gap-2">
+              <div className="flex gap-2">
+                  <button
+                    onClick={toggleActionMode}
+                    className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider border-4 transition-all shadow-xl text-lg flex items-center gap-2
+                                ${
+                                  actionMode === "move"
+                                    ? "bg-red-700 hover:bg-red-600 border-red-900 text-white"
+                                    : "bg-gray-700 hover:bg-gray-600 border-gray-900 text-gray-200"
+                                }
+                            `}
+                  >
+                    {actionMode === "move" ? (
+                      <>
+                        <span>⚡</span> USE ABILITY
+                      </>
+                    ) : (
+                      <>
+                        <span>✖</span> CANCEL ABILITY
+                      </>
+                    )}
+                  </button>
+                  
+                  {actionMode === "ability" && selectedUnitAbility.id === "claw" && (
+                    <button
+                      onClick={toggleClawMode}
+                      className="px-4 py-3 rounded-full font-bold uppercase tracking-wider border-4 border-amber-600 bg-amber-800 text-amber-100 hover:bg-amber-700 transition-all shadow-xl"
+                    >
+                      Mode: {clawMode}
+                    </button>
+                  )}
+              </div>
             </div>
           )}
 
@@ -887,39 +1134,13 @@ const Versus = () => {
                   const isSelectedUnit =
                     selectedPos && selectedPos[0] === r && selectedPos[1] === c;
                   const unitInfo = cell ? getSafeUnitData(cell.cardId) : null;
+                  
+                  const isNemesisTarget = nemesisPending && cell && cell.cardId === 'nemesis' && cell.owner === nemesisPending.owner;
 
                   return (
                     <div
                       key={`${r}-${c}`}
-                      onClick={() => {
-                        if (actionMove) executeAction(r, c, actionMove);
-                        else if (
-                          isRecruitValid &&
-                          recruitSelectionIndex !== null
-                        ) {
-                          const card = visibleDeck[recruitSelectionIndex];
-                          if (card.id === "hermit" && recruitStep === 0) {
-                            const nb = board.map((rw) => rw.map((cl) => cl));
-                            nb[r][c] = {
-                              owner: turn === 2 ? 1 : 2,
-                              cardId: "hermit",
-                              moved: true,
-                              isNew: true,
-                            };
-                            setBoard(nb);
-                            setRecruitStep(1);
-                            setGameLog("Place the Cub");
-                          } else {
-                            finalizeRecruit(
-                              r,
-                              c,
-                              recruitStep === 1 ? "cub" : card.id,
-                              turn === 2 ? 1 : 2
-                            );
-                            setRecruitStep(0);
-                          }
-                        } else handleSelectUnit(r, c);
-                      }}
+                      onClick={() => handleBoardClick(r, c)}
                       style={{
                         position: "absolute",
                         top: coords.top,
@@ -938,6 +1159,8 @@ const Versus = () => {
                           className={`absolute w-full h-full rounded-full border-2 ${
                             actionMove.type.includes("ability")
                               ? "bg-red-500/30 action-ability"
+                              : actionMove.type === "reaction_move" 
+                              ? "bg-purple-500/50 action-reaction"
                               : "bg-green-500/30 action-move"
                           }`}
                         ></div>
@@ -954,7 +1177,7 @@ const Versus = () => {
                           className={`relative w-[95%] h-[95%] transition-all duration-300 ease-out ${
                             cell.isNew ? "animate-spawn" : ""
                           } ${
-                            cell.moved
+                            cell.moved && !nemesisPending
                               ? "grayscale-[0.8] opacity-80"
                               : "hover:scale-110 cursor-pointer"
                           }`}
@@ -977,7 +1200,7 @@ const Versus = () => {
                               cell.owner === 1
                                 ? "border-blue-500 shadow-blue-500/50"
                                 : "border-red-600 shadow-red-600/50"
-                            }`}
+                            } ${isNemesisTarget ? "border-purple-400 animate-bounce shadow-[0_0_20px_#A855F7]" : ""}`}
                           ></div>
                         </div>
                       )}

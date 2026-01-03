@@ -1,8 +1,3 @@
-// src/components/db_monster.js
-
-// ==========================================
-// 1. ASSETS IMPORT
-// ==========================================
 import roiPlayer1Coin from "../assets/coins/RoiPlayer1Coin.png";
 import roiPlayer2Coin from "../assets/coins/ReinePlayer2Coin.png";
 import acrobateCoin from "../assets/coins/AcrobateCoin.png";
@@ -40,10 +35,6 @@ import vizierCard from "../assets/cards/Vizier.png";
 import wandererCard from "../assets/cards/Wanderer.png";
 import roiCard from "../assets/cards/Roi.png";
 import reineCard from "../assets/cards/Reine.png";
-
-// ==========================================
-// 2. CONFIG & COORDINATES
-// ==========================================
 
 export const SLOT_COORDINATES = [
   [{ top: "9%", left: "50%" }], //0,0
@@ -98,11 +89,6 @@ export const SLOT_COORDINATES = [
   ],
   [{ top: "90.5%", left: "50%" }], //8,0
 ];
-
-// ==========================================
-// 3. DATABASE CONFIGURATION
-// ==========================================
-
 export const ABILITY_DB = {
   leader: {
     name: "LEADER",
@@ -154,7 +140,7 @@ export const ABILITY_DB = {
     type: "Active",
     desc: "Move adjacent ally 1 space.",
   },
-  archer: { name: "Passive", desc: "Ranged Support (Capture from 2 tiles)." }, // Fixed type key
+  archer: { name: "ARCHER", desc: "Ranged Support (Capture from 2 tiles)." },
   vizier: { name: "VIZIER", type: "Passive", desc: "Leader moves +1 space." },
   hermit: { name: "HERMIT", type: "Special", desc: "Recruits with Cub." },
   cub: { name: "CUB", type: "Special", desc: "Cannot capture Leader." },
@@ -172,7 +158,7 @@ export const ABILITY_DB = {
   nemesis: {
     name: "NEMESIS",
     type: "Special",
-    desc: "Must move when enemy Leader moves.",
+    desc: "MUST move 2 spaces when enemy Leader moves.",
   },
 };
 
@@ -488,29 +474,16 @@ export const calculateBruiserPushTargets = (
 ) => {
   const enemyNeighbors = getNeighbors(enemyR, enemyC);
   const bruiserNeighbors = getNeighbors(bruiserR, bruiserC);
-
   const pushOptions = [];
-
   enemyNeighbors.forEach(([nr, nc]) => {
-    // Skip bruiser's position
     if (nr === bruiserR && nc === bruiserC) return;
-
-    // Check if this spot is shared (adjacent to both)
     const isShared = bruiserNeighbors.some(
       ([br, bc]) => br === nr && bc === nc
     );
-
     if (!isShared && board[nr] && board[nr][nc] === null) {
       pushOptions.push({ r: nr, c: nc });
     }
   });
-
-  console.log("💪 Bruiser Push Options:", {
-    bruiser: [bruiserR, bruiserC],
-    enemy: [enemyR, enemyC],
-    options: pushOptions,
-  });
-
   return pushOptions;
 };
 
@@ -537,11 +510,17 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   const enemyOwner = owner === 1 ? 2 : 1;
   const cardId = unit.cardId;
 
+  if (cardId === "nemesis") {
+    return [];
+  }
+
   const isJailed = neighbors.some(([nr, nc]) => {
     const nUnit = board[nr][nc];
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
-  if (isJailed) return [];
+  if (isJailed) {
+    return []; 
+  }
 
   switch (cardId) {
     case "acrobat":
@@ -692,52 +671,36 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "illusionist":
-      // Get Illusionist's visual X position
       if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
       const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
-
-      // Iterate all potential targets
       board.forEach((row, tr) =>
         row.forEach((target, tc) => {
-          // Target must exist (Ally or Enemy) and NOT be self
           if (target && (tr !== r || tc !== c)) {
-            // 1. Check Non-Adjacent
             const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
             if (isAdj) return;
-
-            // 2. Check Y-Axis Alignment (Visual Vertical Line)
             if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
             const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
-
-            // Allow small float tolerance for "Same Column"
             if (Math.abs(myLeft - targetLeft) < 4) {
-              // 3. Check Visibility (No units in between)
               let pathBlocked = false;
               const minR = Math.min(r, tr);
               const maxR = Math.max(r, tr);
-
-              // Iterate rows between self and target
               for (let i = minR + 1; i < maxR; i++) {
                 if (SLOT_COORDINATES[i]) {
-                  // Find cell in this row that matches the vertical column
                   const colIndex = SLOT_COORDINATES[i].findIndex(
                     (co) => Math.abs(parseFloat(co.left) - myLeft) < 4
                   );
                   if (colIndex !== -1 && board[i][colIndex]) {
-                    pathBlocked = true; // Obstacle found
+                    pathBlocked = true;
                     break;
                   }
                 }
               }
-
               if (!pathBlocked) {
-                // 4. Enemy Protection Check
                 if (
                   target.owner === enemyOwner &&
                   isProtected(tr, tc, board, getNeighbors)
                 )
                   return;
-
                 actions.push({ r: tr, c: tc, type: "ability_swap" });
               }
             }
@@ -788,16 +751,33 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
   return actions;
 };
 
-// ==========================================
-// 5. VISUAL ABILITY LOGIC
-// ==========================================
-
 export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
-  const moves = [];
-  const myCoords = SLOT_COORDINATES[r][c];
+  const myCoords = SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c];
   if (!myCoords) return [];
+  const myTop = parseFloat(myCoords.top);
   const myLeft = parseFloat(myCoords.left);
 
+  const isJailed = currentBoard.some((row, jr) =>
+    row.some((cell, jc) => {
+      if (
+        cell &&
+        cell.cardId === "jailer" &&
+        cell.owner !== unit.owner &&
+        SLOT_COORDINATES[jr] &&
+        SLOT_COORDINATES[jr][jc]
+      ) {
+        const jCoords = SLOT_COORDINATES[jr][jc];
+        const dy = parseFloat(jCoords.top) - myTop;
+        const dx = parseFloat(jCoords.left) - myLeft;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < 16.0;
+      }
+      return false;
+    })
+  );
+  if (isJailed) return [];
+
+  const moves = [];
   let alignedEnemies = [];
   currentBoard.forEach((row, tr) => {
     row.forEach((cell, tc) => {
@@ -811,18 +791,15 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
       }
     });
   });
-
   const enemiesAbove = alignedEnemies
     .filter((e) => e.r < r)
     .sort((a, b) => a.dist - b.dist);
   const enemiesBelow = alignedEnemies
     .filter((e) => e.r > r)
     .sort((a, b) => a.dist - b.dist);
-
   const validTargets = [];
   if (enemiesAbove.length > 0) validTargets.push(enemiesAbove[0]);
   if (enemiesBelow.length > 0) validTargets.push(enemiesBelow[0]);
-
   validTargets.forEach((target) => {
     const { r: tr, c: tc } = target;
     if (mode === "dash") {
@@ -859,4 +836,31 @@ export const calculateVisualClawMoves = (r, c, unit, currentBoard, mode) => {
     }
   });
   return moves;
+};
+
+export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
+  const neighbors = getNeighbors(r, c);
+  let dist2Moves = [];
+  let dist1Moves = [];
+
+  neighbors.forEach(([n1r, n1c]) => {
+    if (!board[n1r][n1c]) {
+      dist1Moves.push({ r: n1r, c: n1c, type: "reaction_move" });
+
+      const neighbors2 = getNeighbors(n1r, n1c);
+      neighbors2.forEach(([n2r, n2c]) => {
+        if (n2r === r && n2c === c) return;
+     
+        if (!board[n2r][n2c]) {
+          if (!dist2Moves.some((m) => m.r === n2r && m.c === n2c)) {
+            dist2Moves.push({ r: n2r, c: n2c, type: "reaction_move" });
+          }
+        }
+      });
+    }
+  });
+
+  if (dist2Moves.length > 0) return dist2Moves;
+  if (dist1Moves.length > 0) return dist1Moves;
+  return [];
 };
