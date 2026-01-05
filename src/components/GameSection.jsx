@@ -330,6 +330,7 @@ const GameSection = ({ onBack }) => {
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
   const [manipulatorTarget, setManipulatorTarget] = useState(null);
+  const [brewmasterTarget, setBrewmasterTarget] = useState(null);
 
   const [nemesisPending, setNemesisPending] = useState(null);
 
@@ -376,44 +377,11 @@ const GameSection = ({ onBack }) => {
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
+    setBrewmasterTarget(null);
     setNemesisPending(null);
     isAiProcessing.current = false;
     aiTurnCounter.current = 0;
   };
-
-  // const initializeGame = () => {
-  //   // 1. Setup Board (Kosongkan board & taruh Leader)
-  //   const b = Array(9)
-  //     .fill(null)
-  //     .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
-
-  //   b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
-  //   b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
-  //   setBoard(b);
-
-  //   // 2. --- SETUP DECK (DEBUG MODE: SEMUA KARTU MUNCUL) ---
-  //   // Kosongkan tumpukan kartu tertutup
-  //   setDeck([]);
-
-  //   // Masukkan SEMUA data kartu dari database ke 'tangan' (visibleDeck)
-  //   // agar semuanya bisa dipilih saat fase rekrutmen
-  //   setVisibleDeck([...TOTAL_CARDS_DATA]);
-  //   // -----------------------------------------------------
-
-  //   // 3. Reset State Game
-  //   setTurn(1);
-  //   setTurnPhaseType(null);
-  //   setGameOver(null);
-  //   setRecruitStep(0);
-  //   setClawMode("pull");
-  //   setGameLog("Your Turn");
-  //   setBruiserTarget(null);
-  //   setBruiserPendingMoves([]);
-  //   setManipulatorTarget(null);
-  //   setNemesisPending(null);
-  //   isAiProcessing.current = false;
-  //   aiTurnCounter.current = 0;
-  // };
 
   const getAllPossibleMoves = (board, owner) => {
     let allMoves = [];
@@ -755,7 +723,7 @@ const checkWinCondition = (currentBoard) => {
   };
 
   const applySimMove = (simBoard, move) => {
-    const { from, to, type, pushTo, pullTo, landAt } = move;
+    const { from, to, type, pushTo, pullTo, landAt, allyFrom } = move;
     const unit = simBoard[from[0]][from[1]];
     if (!unit) return simBoard;
 
@@ -778,6 +746,12 @@ const checkWinCondition = (currentBoard) => {
     } else if (type === "ability_claw_dash" && landAt) {
       simBoard[landAt[0]][landAt[1]] = unit;
       simBoard[from[0]][from[1]] = null;
+    } else if (type === "ability_brew_execute" && allyFrom) {
+      const ally = simBoard[allyFrom[0]][allyFrom[1]];
+      if (ally) {
+        simBoard[to[0]][to[1]] = ally;
+        simBoard[allyFrom[0]][allyFrom[1]] = null;
+      }
     }
     return simBoard;
   };
@@ -1168,6 +1142,7 @@ useEffect(() => {
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
+    setBrewmasterTarget(null);
 
     if (unit && unit.owner === 1) {
       if (unit.moved && !nemesisPending) {
@@ -1219,6 +1194,7 @@ useEffect(() => {
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
+    setBrewmasterTarget(null);
 
     if (actionMode === "move") {
       setActionMode("ability");
@@ -1356,6 +1332,28 @@ useEffect(() => {
           return;
         }
 
+        if (action.type === "ability_brew_select") {
+          setBrewmasterTarget({ r, c });
+          
+          const allyUnit = board[r][c];
+          // We check where the ally can move using normal movement logic
+          const validAllySteps = calculateBasicMoves(r, c, allyUnit, board, getNeighbors);
+          
+          const executeMoves = validAllySteps.map(m => ({
+            ...m,
+            type: "ability_brew_execute",
+            allyFrom: [r, c] 
+          }));
+          
+          if (executeMoves.length === 0) {
+            setGameLog("Ally has no moves!");
+          } else {
+            setValidMoves(executeMoves);
+            setGameLog("Select Ally Destination");
+          }
+          return;
+        }
+
         const boardBeforeMove = cloneBoard(board);
         const newBoard = cloneBoard(board);
         const [sr, sc] = selectedPos;
@@ -1414,6 +1412,11 @@ useEffect(() => {
             newBoard[action.landAt[0]][action.landAt[1]] = unit;
             newBoard[sr][sc] = null;
           }
+        } else if (action.type === "ability_brew_execute" && action.allyFrom) {
+          const allyPos = action.allyFrom;
+          const allyUnit = newBoard[allyPos[0]][allyPos[1]];
+          newBoard[r][c] = allyUnit;
+          newBoard[allyPos[0]][allyPos[1]] = null;
         }
 
         setBoard(newBoard);
@@ -1425,6 +1428,7 @@ useEffect(() => {
         setBruiserTarget(null);
         setBruiserPendingMoves([]);
         setManipulatorTarget(null);
+        setBrewmasterTarget(null);
 
         if (nemesisPending) {
           setNemesisPending(null);
@@ -1481,6 +1485,7 @@ useEffect(() => {
     setSelectedUnitAbility(null); // Hapus info ability
     setBruiserTarget(null); // Reset target khusus
     setManipulatorTarget(null); // Reset target khusus
+    setBrewmasterTarget(null);
     setTurnPhaseType(null);
     if (nemesisPending) {
       setGameLog("Resolve Nemesis First!");
