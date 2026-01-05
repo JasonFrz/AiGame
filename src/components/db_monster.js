@@ -376,26 +376,39 @@ export const STRAIGHT_JUMPS_PATHS = {
 };
 
 export const UNIT_VALUES = {
-  leader: 100000,
-  leader2: 100000,
-  assassin: 2000,
-  manipulator: 1800,
-  claw: 1700,
-  guard: 1500,
-  illusionist: 1400,
-  archer: 1300,
-  rider: 1200,
-  bruiser: 1200,
-  jailer: 1000,
-  wanderer: 900,
-  acrobat: 800,
-  protector: 800,
-  nemesis: 800,
-  vizier: 600,
-  brewmaster: 600,
-  hermit: 500,
-  cub: 100,
+  // LEADERS: High enough to never be sacrificed, but lower than WIN_SCORE (1,000,000)
+  leader: 20000,
+  leader2: 20000,
+
+  // S-TIER: The "Win Condition" units. 
+  // The AI will aggressively hunt yours and protect its own.
+  assassin: 1600,    // Can kill leader instantly. High priority.
+  archer: 1500,      // Controls the board from distance. Very oppressive.
+  manipulator: 1450, // Moving enemy units is the strongest ability in the game.
+
+  // A-TIER: Strong positioning tools
+  claw: 1300,        // Pulling enemies into traps is deadly.
+  bruiser: 1200,     // Displacement is strong, but risks the unit itself.
+  illusionist: 1100, // slippery, hard to kill.
+
+  // B-TIER: Mobility & Utility
+  rider: 950,        // Good range, decent threat.
+  wanderer: 900,     // Hard to pin down.
+  guard: 850,        // Good for leader synergy.
+  acrobat: 850,      // Situational mobility.
+
+  // C-TIER: Expendable / Passive
+  // The AI will sacrifice these to save an S-Tier unit.
+  jailer: 700,       // Only useful if adjacent to enemy.
+  protector: 600,    // Its job is to die. Low value encourages blocking.
+  vizier: 500,       // Passive buff, weak body.
+  brewmaster: 500,   // Very situational.
+  hermit: 400,       // Weak body.
+  
+  // F-TIER
+  cub: 50,           // Ideally, AI ignores capturing these unless it's a free move.
 };
+
 
 export const TOTAL_CARDS_DATA = [
   { id: "acrobat", unitImg: acrobateCoin, cardImg: acrobatCard },

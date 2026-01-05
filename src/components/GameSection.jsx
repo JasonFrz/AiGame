@@ -335,10 +335,13 @@ const GameSection = ({ onBack }) => {
 
   const isAiProcessing = useRef(false);
   const aiTurnCounter = useRef(0);
+  const [aiStep, setAiStep] = useState(0);
+  
 
   useEffect(() => {
     initializeGame();
   }, []);
+  
 
   useEffect(() => {
     if (board.length === 0) return;
@@ -351,6 +354,8 @@ const GameSection = ({ onBack }) => {
     myUnits.sort((a, b) => (a.cardId.includes("leader") ? -1 : 1));
     setPlayerRoster(myUnits);
   }, [board]);
+
+
 
   const initializeGame = () => {
     const b = Array(9)
@@ -412,67 +417,96 @@ const GameSection = ({ onBack }) => {
 
   const getAllPossibleMoves = (board, owner) => {
     let allMoves = [];
+    let enemyLeaderPos = null;
+
+    // Find enemy leader for sorting heuristics
+    board.forEach((row, r) => row.forEach((u, c) => {
+      if (u && u.owner !== owner && u.cardId.includes("leader")) {
+        enemyLeaderPos = { r, c };
+      }
+    }));
 
     board.forEach((row, r) => {
       row.forEach((unit, c) => {
-        if (unit && unit.owner === owner) {
+        // CHECK: If unit has already moved, skip it
+        if (unit && unit.owner === owner && !unit.moved) {
           const basics = calculateBasicMoves(r, c, unit, board, getNeighbors);
-          const abilities = calculateAbilityMoves(
-            r,
-            c,
-            unit,
-            board,
-            getNeighbors
-          );
-
+          const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+          
           const moves = [...basics, ...abilities].map((m) => ({
             ...m,
             from: [r, c],
             to: [m.r, m.c],
+            // Pre-calculate a basic heuristic score for sorting
+            sortScore: 0
           }));
+          
+          moves.forEach(m => {
+            // Heuristic 1: Prioritize Kills (Landing on a unit)
+            const targetCell = board[m.r][m.c];
+            if (targetCell && targetCell.owner !== owner) {
+              m.sortScore += (UNIT_VALUES[targetCell.cardId] || 100) * 10;
+            }
+
+            // Heuristic 2: Prioritize Abilities
+            if (m.type.includes("ability")) m.sortScore += 500;
+
+            // Heuristic 3: Move closer to enemy Leader (Aggression)
+            if (enemyLeaderPos) {
+              const oldDist = getDist(r, c, enemyLeaderPos.r, enemyLeaderPos.c);
+              const newDist = getDist(m.r, m.c, enemyLeaderPos.r, enemyLeaderPos.c);
+              if (newDist < oldDist) m.sortScore += 50;
+            }
+          });
 
           allMoves = allMoves.concat(moves);
         }
       });
     });
 
-    return allMoves.sort(() => Math.random() - 0.5);
+    // CRITICAL: Sort moves so Alpha-Beta pruning works efficiently.
+    return allMoves.sort((a, b) => b.sortScore - a.sortScore);
   };
 
-  const minimax = (board, depth, isMaximizingPlayer, alpha, beta) => {
+const WIN_SCORE = 1_000_000;
+
+  const minimax = (board, depth, isMaximizing, alpha, beta) => {
+    // Check terminal states first
     const winStatus = checkWinCondition(board);
-    if (winStatus === "AI") return 1000000;
-    if (winStatus === "Player") return -1000000;
+    if (winStatus === "AI") return WIN_SCORE + depth; // Win faster is better
+    if (winStatus === "Player") return -WIN_SCORE - depth; // Lose slower is better
+
     if (depth === 0) return evaluateBoardState(board);
 
-    if (isMaximizingPlayer) {
-      let maxEval = -Infinity;
-      const allMoves = getAllPossibleMoves(board, 2);
+    const player = isMaximizing ? 2 : 1;
+    // Moves are already sorted by potential impact in getAllPossibleMoves
+    const moves = getAllPossibleMoves(board, player);
 
-      for (let move of allMoves) {
+    if (moves.length === 0) return isMaximizing ? -WIN_SCORE : WIN_SCORE;
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (const move of moves) {
         const nextBoard = applySimMove(cloneBoard(board), move);
         const evalScore = minimax(nextBoard, depth - 1, false, alpha, beta);
         maxEval = Math.max(maxEval, evalScore);
-
         alpha = Math.max(alpha, evalScore);
-        if (beta <= alpha) break;
+        if (beta <= alpha) break; // Pruning
       }
       return maxEval;
     } else {
       let minEval = Infinity;
-      const allMoves = getAllPossibleMoves(board, 1); // 1 = Owner Player
-
-      for (let move of allMoves) {
+      for (const move of moves) {
         const nextBoard = applySimMove(cloneBoard(board), move);
         const evalScore = minimax(nextBoard, depth - 1, true, alpha, beta);
         minEval = Math.min(minEval, evalScore);
-
         beta = Math.min(beta, evalScore);
-        if (beta <= alpha) break;
+        if (beta <= alpha) break; // Pruning
       }
       return minEval;
     }
   };
+
 
   const getArcherThreatCount = (targetPos, enemyOwner, currentBoard) => {
     let threatCount = 0;
@@ -605,87 +639,118 @@ const checkWinCondition = (currentBoard) => {
     let aiUnits = [];
     let pUnits = [];
 
+    // 1. MATERIAL & SNAPSHOT
     simBoard.forEach((row, r) => {
       row.forEach((c, cIdx) => {
-        if (c) {
-          const val = UNIT_VALUES[c.cardId] || 100;
-          if (c.owner === 2) {
-            score += val;
-            if (c.cardId === "leader2") aiLeader = [r, cIdx];
-            else aiUnits.push({ r, c: cIdx, id: c.cardId });
-          } else {
-            score -= val;
-            if (c.cardId === "leader") pLeader = [r, cIdx];
-            else pUnits.push({ r, c: cIdx, id: c.cardId });
-          }
+        if (!c) return;
+        
+        // Use the new Aggressive UNIT_VALUES from db_monster
+        const val = UNIT_VALUES[c.cardId] || 100;
+
+        if (c.owner === 2) {
+          score += val;
+          if (c.cardId === "leader2") aiLeader = [r, cIdx];
+          else aiUnits.push({ r, c: cIdx, id: c.cardId });
+        } else {
+          score -= val;
+          if (c.cardId === "leader") pLeader = [r, cIdx];
+          else pUnits.push({ r, c: cIdx, id: c.cardId });
         }
       });
     });
 
-    if (!aiLeader) return -999999;
-    if (!pLeader) return 999999;
+    // Forced Win/Loss Detection
+    if (!aiLeader) return -WIN_SCORE;
+    if (!pLeader) return WIN_SCORE;
 
-    const analyzeLeader = (pos, owner) => {
-      const neighbors = getNeighbors(pos[0], pos[1]);
-      const enemyOwner = owner === 1 ? 2 : 1;
-      let directThreats = 0;
-      let blockedSpaces = 0;
+    // ------------------------------------------------------
+    // THE "THREAT RADAR" (Intelligent Defense)
+    // ------------------------------------------------------
+    let dangerLevel = 0;
+    
+    // Check every player unit to see how threatening it is
+    pUnits.forEach(pU => {
+      const distToAI = getDist(pU.r, pU.c, aiLeader[0], aiLeader[1]);
+      
+      // If player is close (Distance 1, 2, or 3)
+      if (distToAI <= 3) {
+        // Base threat score: Closer = Scarier
+        let threat = (4 - distToAI) * 1000; 
 
-      neighbors.forEach(([nr, nc]) => {
-        const u = simBoard[nr][nc];
-        if (u) {
-          blockedSpaces++;
-          if (
-            u.owner === enemyOwner &&
-            u.cardId !== "cub" &&
-            u.cardId !== "archer"
-          ) {
-            directThreats++;
-          }
+        // Multiplier based on Unit Type
+        // Assassins and Manipulators are terrifying near the leader
+        if (pU.id === 'assassin') threat *= 2.5; 
+        if (pU.id === 'manipulator') threat *= 2.0; 
+        if (pU.id === 'claw') threat *= 1.5; 
+
+        dangerLevel += threat;
+      }
+    });
+
+    // Apply the stress to the score
+    score -= dangerLevel;
+
+    // ------------------------------------------------------
+    // THE "BODYGUARD" RESPONSE (Blocking Logic)
+    // ------------------------------------------------------
+    // If we are in danger, REWARD units for coming back to help.
+    if (dangerLevel > 1000) {
+      let bodyguards = 0;
+      aiUnits.forEach(u => {
+        const distToLeader = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
+        
+        // Huge bonus for being adjacent to leader when under attack
+        if (distToLeader === 1) {
+          bodyguards++;
+          score += 2500; // Incentivize filling the gap
+          
+          // Extra bonus if it's a defensive unit
+          if (u.id === 'protector' || u.id === 'guard') score += 500;
+        }
+        // Smaller bonus for being range 2 (ready to jump in)
+        else if (distToLeader === 2) {
+          score += 500;
         }
       });
-      return { directThreats, blockedSpaces, total: neighbors.length };
-    };
 
-    const aiStatus = analyzeLeader(aiLeader, 2);
-    const pStatus = analyzeLeader(pLeader, 1);
+      // If under heavy attack but NO bodyguards, huge penalty
+      if (bodyguards === 0) score -= 5000; 
+    }
 
+    // ------------------------------------------------------
+    // BASIC POSITIONAL LOGIC (Mobility & Offense)
+    // ------------------------------------------------------
+    
+    // 1. AI Leader Mobility (Don't get boxed in)
+    const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
+    const aiFreeSpots = aiNeighbors.filter(([nr, nc]) => !simBoard[nr][nc]).length;
+    score += aiFreeSpots * 200; // Small value compared to threats
+
+    // 2. Archer/Support Positioning (Don't let them get captured)
     const aiArcherThreats = getArcherThreatCount(aiLeader, 1, simBoard);
-    const pArcherThreats = getArcherThreatCount(pLeader, 2, simBoard);
+    score -= aiArcherThreats * 4000; // High priority to step out of Archer line of sight
 
-    const totalAiThreats = aiStatus.directThreats + aiArcherThreats;
-    const totalPThreats = pStatus.directThreats + pArcherThreats;
-
-    if (totalAiThreats >= 2) return -500000;
-    if (totalPThreats >= 2) return 500000;
-
-    if (aiStatus.blockedSpaces === aiStatus.total && totalAiThreats >= 1)
-      return -400000;
-    if (pStatus.blockedSpaces === pStatus.total && totalPThreats >= 1)
-      return 400000;
-
-    if (totalAiThreats === 1) score -= 25000;
-    if (totalPThreats === 1) score += 25000;
-
-    pUnits.forEach((u) => {
-      const d = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
-      if (d <= 2) score -= 1000;
-    });
-
+    // 3. ATTACK LOGIC (Don't sacrifice offense)
     aiUnits.forEach((u) => {
-      const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
-      if (d <= 2) score += 500;
-      if (u.id === "assassin" && d <= 3) score += 2000;
-      if (u.id === "archer" && d <= 4) score += 1500;
-      if (
-        u.id === "protector" &&
-        getDist(u.r, u.c, aiLeader[0], aiLeader[1]) <= 1
-      )
-        score += 1000;
+      const distToP = getDist(u.r, u.c, pLeader[0], pLeader[1]);
+      
+      // Basic drive: Go forward
+      score += (10 - distToP) * 50; 
+
+      // Kill Pressure
+      if (distToP === 1) score += 3000; // Check
+      if (distToP === 2 && u.id === 'archer') score += 2500; // Ranged Check
+      if (distToP <= 2 && u.id === 'assassin') score += 4000; // Assassin lurking
     });
+
+    // 4. Player Leader Pressure (Reward restricting player)
+    const pNeighbors = getNeighbors(pLeader[0], pLeader[1]);
+    const pTrapped = pNeighbors.every(([nr, nc]) => simBoard[nr][nc]);
+    if (pTrapped) score += 5000;
 
     return score;
   };
+
 
   const applySimMove = (simBoard, move) => {
     const { from, to, type, pushTo, pullTo, landAt } = move;
@@ -828,6 +893,7 @@ const checkWinCondition = (currentBoard) => {
 
   // --- AI EXECUTION ---
   const runAITurn = useCallback(async () => {
+    // 1. Safety Checks
     if (gameOver || isAiProcessing.current) return;
     isAiProcessing.current = true;
 
@@ -837,107 +903,121 @@ const checkWinCondition = (currentBoard) => {
       return;
     }
 
-    const aiHasMoved = board.some((row) =>
-      row.some((c) => c && c.owner === 2 && c.moved)
-    );
-    if (!aiHasMoved) {
-      aiTurnCounter.current += 1;
-    }
-
-    const recruitLimit = aiTurnCounter.current === 1 ? 2 : 1;
-
-    const winStart = checkWinCondition(board);
-    if (winStart) {
-      setGameOver(winStart);
-      isAiProcessing.current = false;
-      return;
-    }
-
-    setGameLog("AI Thinking...");
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    let currentBoard = cloneBoard(board);
-
-    const allPossibleMoves = getAllPossibleMoves(currentBoard, 2);
-
-    let bestMove = null;
-    let bestScore = -Infinity;
-
-    console.log(`🤖 AI Considering ${allPossibleMoves.length} moves...`);
-
-    const SEARCH_DEPTH = 2;
-
-    for (let move of allPossibleMoves) {
-      const simBoard = applySimMove(cloneBoard(currentBoard), move);
-
-      let score = minimax(simBoard, SEARCH_DEPTH, false, -Infinity, Infinity);
-
-      if (move.type.includes("ability")) score += 50;
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
+    // 2. Analyze State
+    let aiMovesMade = 0;
+    let aiTotalUnits = 0;
+    board.forEach(row => row.forEach(c => {
+      if (c && c.owner === 2) {
+        aiTotalUnits++;
+        if (c.moved) aiMovesMade++;
       }
-    }
+    }));
 
-    if (bestMove) {
-      const unit = currentBoard[bestMove.from[0]][bestMove.from[1]];
-      const unitName = getCardData(unit.cardId).name;
+    const MAX_AI_MOVES = 2; 
 
-      console.log(
-        `✅ AI Chose: ${unitName} to [${bestMove.to}] Score: ${bestScore}`
-      );
+    // 3. Move Logic
+    // We move if we are under the limit AND have units left to move
+    const canMove = aiMovesMade < MAX_AI_MOVES && aiMovesMade < aiTotalUnits;
 
-      const boardBeforeMove = cloneBoard(currentBoard);
+    if (canMove) {
+      if (aiMovesMade === 0) aiTurnCounter.current += 1;
 
-      if (currentBoard[bestMove.from[0]][bestMove.from[1]]) {
-        currentBoard[bestMove.from[0]][bestMove.from[1]].moved = true;
-      }
-
-      currentBoard = applySimMove(currentBoard, bestMove);
-      setBoard(cloneBoard(currentBoard));
-      setGameLog(`AI moves ${unitName}`);
-
-      await new Promise((r) => setTimeout(r, 600));
-
-      const nemesisTriggered = await checkForNemesisTrigger(
-        boardBeforeMove,
-        currentBoard
-      );
-
-      if (nemesisTriggered) {
-        const playerNemesis = findUnit(currentBoard, "nemesis", 1);
-
-        if (playerNemesis) {
-          isAiProcessing.current = false;
-          return;
-        }
-      }
-
-      const midWin = checkWinCondition(currentBoard);
-      if (midWin) {
-        setGameOver(midWin);
-        setGameLog(midWin === "AI" ? "AI Wins!" : "You Win!");
+      // ... Win Condition Checks ...
+      const winStart = checkWinCondition(board);
+      if (winStart) {
+        setGameOver(winStart);
         isAiProcessing.current = false;
         return;
       }
-    } else {
-      setGameLog("AI Holds Position");
-      await new Promise((r) => setTimeout(r, 500));
+
+      setGameLog(`AI Thinking (${aiMovesMade + 1}/${MAX_AI_MOVES})...`);
+      
+      // Short think time before move
+      await new Promise((r) => setTimeout(r, 300));
+
+      let currentBoard = cloneBoard(board);
+      const SEARCH_DEPTH = 3; 
+
+      const allPossibleMoves = getAllPossibleMoves(currentBoard, 2);
+      
+      let bestMove = null;
+      let bestScore = -Infinity;
+      let alpha = -Infinity;
+      let beta = Infinity;
+
+      for (let move of allPossibleMoves) {
+        const simBoard = applySimMove(cloneBoard(currentBoard), move);
+        let score = minimax(simBoard, SEARCH_DEPTH - 1, false, alpha, beta);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+        alpha = Math.max(alpha, score);
+      }
+
+      if (bestMove) {
+        const unit = currentBoard[bestMove.from[0]][bestMove.from[1]];
+        const unitName = getCardData(unit.cardId).name;
+        
+        // --- EXECUTE MOVE ---
+        const boardBeforeMove = cloneBoard(currentBoard);
+        if (currentBoard[bestMove.from[0]][bestMove.from[1]]) {
+          currentBoard[bestMove.from[0]][bestMove.from[1]].moved = true;
+        }
+        currentBoard = applySimMove(currentBoard, bestMove);
+        
+        // UPDATE BOARD (Triggers Render)
+        setBoard(cloneBoard(currentBoard));
+        setGameLog(`AI moves ${unitName}`);
+
+        // WAIT FOR ANIMATION/VISUALS
+        await new Promise((r) => setTimeout(r, 600));
+
+        // Check Nemesis
+        const nemesisTriggered = await checkForNemesisTrigger(
+          boardBeforeMove,
+          currentBoard
+        );
+
+        if (nemesisTriggered) {
+          const playerNemesis = findUnit(currentBoard, "nemesis", 1);
+          if (playerNemesis) {
+            isAiProcessing.current = false;
+            return; // Exit and wait for player interaction
+          }
+        }
+
+        const midWin = checkWinCondition(currentBoard);
+        if (midWin) {
+          setGameOver(midWin);
+          isAiProcessing.current = false;
+          return;
+        }
+        
+        // --- CRITICAL FIX ---
+        // Release the lock
+        isAiProcessing.current = false;
+        // PING the useEffect to run again immediately for the 2nd move
+        setAiStep(prev => prev + 1); 
+        return; 
+      }
     }
 
+    // 4. Recruitment Phase
+    // (We only reach here if canMove is false OR no moves found)
+    const recruitLimit = aiTurnCounter.current === 1 ? 2 : 1;
     let aiLeaderPos = null;
-    currentBoard.forEach((row, r) =>
+    board.forEach((row, r) =>
       row.forEach((c, idx) => {
         if (c && c.owner === 2 && c.cardId === "leader2")
           aiLeaderPos = [r, idx];
       })
     );
-
-    await smartRecruit(currentBoard, aiLeaderPos, recruitLimit);
-
+    
+    await smartRecruit(board, aiLeaderPos, recruitLimit);
     isAiProcessing.current = false;
+
   }, [board, gameOver, nemesisPending]);
 
   const smartRecruit = async (currentBoard, aiLeaderPos, limit) => {
@@ -1054,10 +1134,11 @@ const checkWinCondition = (currentBoard) => {
     setGameLog("Your Turn");
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (nemesisPending) return;
+    // We now depend on aiStep to retry if the previous turn blocked us
     if (turn === 3) runAITurn();
-  }, [turn, runAITurn, nemesisPending]);
+  }, [turn, runAITurn, nemesisPending, aiStep]); // <--- Added aiStep
 
   const handleSelectUnit = (r, c, isForced = false) => {
     if (gameOver) return;
