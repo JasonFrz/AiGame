@@ -521,8 +521,9 @@ const GameSection = ({ onBack }) => {
     return threatCount;
   };
 
-  const checkWinCondition = (currentBoard) => {
+const checkWinCondition = (currentBoard) => {
     let p1Pos, p2Pos;
+    
     currentBoard.forEach((row, r) =>
       row.forEach((c, cIdx) => {
         if (c && c.cardId === "leader") p1Pos = [r, cIdx];
@@ -536,20 +537,24 @@ const GameSection = ({ onBack }) => {
     const isLeaderDefeated = (pos, owner) => {
       const neighbors = getNeighbors(pos[0], pos[1]);
       const enemyOwner = owner === 1 ? 2 : 1;
-      let adjacentEnemies = 0;
+      
       let occupiedNeighbors = 0;
+      let directThreats = 0;     
       let assassinThreat = false;
 
       neighbors.forEach(([nr, nc]) => {
         const cell = currentBoard[nr][nc];
+        
         if (cell) {
-          occupiedNeighbors++;
+          occupiedNeighbors++; 
+
           if (cell.owner === enemyOwner) {
             if (cell.cardId === "assassin") {
               assassinThreat = true;
             }
+            
             if (cell.cardId !== "cub" && cell.cardId !== "archer") {
-              adjacentEnemies++;
+              directThreats++;
             }
           }
         }
@@ -558,22 +563,22 @@ const GameSection = ({ onBack }) => {
       if (assassinThreat) return true;
 
       const archerThreats = getArcherThreatCount(pos, enemyOwner, currentBoard);
-      const totalThreats = adjacentEnemies + archerThreats;
+      const totalThreats = directThreats + archerThreats;
 
       if (totalThreats >= 2) return true;
-      if (
-        neighbors.length > 0 &&
-        occupiedNeighbors === neighbors.length &&
-        totalThreats >= 2
-      )
+
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length) {
         return true;
+      }
+      
       return false;
     };
 
     if (isLeaderDefeated(p1Pos, 1)) return "AI";
     if (isLeaderDefeated(p2Pos, 2)) return "Player";
+    
     return null;
-  };
+  };  
 
   const cloneBoard = (b) => {
     const len = b.length;
