@@ -632,7 +632,7 @@ const checkWinCondition = (currentBoard) => {
 
   const getDist = (r1, c1, r2, c2) => Math.abs(r1 - r2) + Math.abs(c1 - c2);
 
-  const evaluateBoardState = (simBoard) => {
+ const evaluateBoardState = (simBoard) => {
     let score = 0;
     let aiLeader = null;
     let pLeader = null;
@@ -643,8 +643,6 @@ const checkWinCondition = (currentBoard) => {
     simBoard.forEach((row, r) => {
       row.forEach((c, cIdx) => {
         if (!c) return;
-        
-        // Use the new Aggressive UNIT_VALUES from db_monster
         const val = UNIT_VALUES[c.cardId] || 100;
 
         if (c.owner === 2) {
@@ -659,98 +657,102 @@ const checkWinCondition = (currentBoard) => {
       });
     });
 
-    // Forced Win/Loss Detection
     if (!aiLeader) return -WIN_SCORE;
     if (!pLeader) return WIN_SCORE;
 
     // ------------------------------------------------------
-    // THE "THREAT RADAR" (Intelligent Defense)
+    // 2. EXTREME EVASION LOGIC
     // ------------------------------------------------------
-    let dangerLevel = 0;
+    let closestThreatDist = 100;
     
-    // Check every player unit to see how threatening it is
     pUnits.forEach(pU => {
       const distToAI = getDist(pU.r, pU.c, aiLeader[0], aiLeader[1]);
+      if (distToAI < closestThreatDist) closestThreatDist = distToAI;
       
-      // If player is close (Distance 1, 2, or 3)
-      if (distToAI <= 3) {
-        // Base threat score: Closer = Scarier
-        let threat = (4 - distToAI) * 1000; 
+      // EXPANDED THREAT ZONE (Distance 6)
+      // The AI now feels "pressure" even if you are far away.
+      if (distToAI <= 6) {
+         let threat = 0;
+         // Massive penalties to force immediate movement
+         if (distToAI <= 1) threat = 100000;      // Instant Death
+         else if (distToAI <= 2) threat = 50000;  // Critical
+         else if (distToAI === 3) threat = 20000; // High Danger
+         else if (distToAI === 4) threat = 10000; // Danger
+         else if (distToAI === 5) threat = 5000;  // Uncomfortable
+         else if (distToAI === 6) threat = 2000;  // Wary
 
-        // Multiplier based on Unit Type
-        // Assassins and Manipulators are terrifying near the leader
-        if (pU.id === 'assassin') threat *= 2.5; 
-        if (pU.id === 'manipulator') threat *= 2.0; 
-        if (pU.id === 'claw') threat *= 1.5; 
+         // Specific Phobias (Assassins/Archers are terrifying)
+         if (pU.id === 'assassin') threat *= 4.0; 
+         if (pU.id === 'archer') threat *= 3.0;
+         if (pU.id === 'manipulator') threat *= 2.5;
 
-        dangerLevel += threat;
+         score -= threat;
       }
     });
 
-    // Apply the stress to the score
-    score -= dangerLevel;
+    // --- THE "RUN AWAY" FACTOR ---
+    // Drastically increased from 800 to 5000.
+    // Every single step backwards is now worth as much as killing a unit.
+    // The AI will almost always choose to move the Leader back over attacking.
+    score += closestThreatDist * 5000; 
 
     // ------------------------------------------------------
-    // THE "BODYGUARD" RESPONSE (Blocking Logic)
+    // 3. HOME FIELD ADVANTAGE (Retreat Logic)
     // ------------------------------------------------------
-    // If we are in danger, REWARD units for coming back to help.
-    if (dangerLevel > 1000) {
-      let bodyguards = 0;
-      aiUnits.forEach(u => {
-        const distToLeader = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
-        
-        // Huge bonus for being adjacent to leader when under attack
-        if (distToLeader === 1) {
-          bodyguards++;
-          score += 2500; // Incentivize filling the gap
-          
-          // Extra bonus if it's a defensive unit
-          if (u.id === 'protector' || u.id === 'guard') score += 500;
-        }
-        // Smaller bonus for being range 2 (ready to jump in)
-        else if (distToLeader === 2) {
-          score += 500;
-        }
-      });
-
-      // If under heavy attack but NO bodyguards, huge penalty
-      if (bodyguards === 0) score -= 5000; 
+    // The AI Leader (Owner 2) starts at the top (Row 0).
+    // It should prefer staying in rows 0, 1, 2 (Safety) rather than advancing.
+    if (closestThreatDist <= 6) {
+        if (aiLeader[0] <= 1) score += 5000;      // Safe Zone
+        else if (aiLeader[0] === 2) score += 2000; // Mid Zone
+        else score -= aiLeader[0] * 2000;          // Penalize advancing into the field
     }
 
     // ------------------------------------------------------
-    // BASIC POSITIONAL LOGIC (Mobility & Offense)
+    // 4. SURVIVAL OVER FORMATION
     // ------------------------------------------------------
-    
-    // 1. AI Leader Mobility (Don't get boxed in)
     const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
-    const aiFreeSpots = aiNeighbors.filter(([nr, nc]) => !simBoard[nr][nc]).length;
-    score += aiFreeSpots * 200; // Small value compared to threats
+    const escapeOptions = aiNeighbors.filter(([nr, nc]) => !simBoard[nr][nc]).length;
 
-    // 2. Archer/Support Positioning (Don't let them get captured)
-    const aiArcherThreats = getArcherThreatCount(aiLeader, 1, simBoard);
-    score -= aiArcherThreats * 4000; // High priority to step out of Archer line of sight
+    // Only reward bodyguards if the leader is NOT trapped by them.
+    if (closestThreatDist <= 5) {
+      aiUnits.forEach(u => {
+        const distToLeader = getDist(u.r, u.c, aiLeader[0], aiLeader[1]);
+        
+        if (distToLeader === 1) {
+          // If we have open exits, bodyguards are good (+2000).
+          // If we are getting boxed in (escapeOptions < 2), bodyguards are BAD (-500).
+          // This forces the AI to move units OUT of the Leader's way.
+          if (escapeOptions >= 2) score += 2000; 
+          else score -= 500; 
+        }
+        
+        // Blocking incoming enemies is still good
+        pUnits.forEach(pU => {
+           if (getDist(pU.r, pU.c, aiLeader[0], aiLeader[1]) <= 5) {
+               const distUnitToEnemy = getDist(u.r, u.c, pU.r, pU.c);
+               const distLeaderToEnemy = getDist(aiLeader[0], aiLeader[1], pU.r, pU.c);
+               
+               if (distUnitToEnemy < distLeaderToEnemy && distToLeader <= 3) {
+                   score += 3000; 
+               }
+           }
+        });
+      });
+    }
 
-    // 3. ATTACK LOGIC (Don't sacrifice offense)
+    // Critical Mobility check
+    if (escapeOptions === 0) score -= 100000; // TRAPPED IS INSTANT LOSS
+    score += escapeOptions * 3000; // Reward having multiple places to run
+
+    // 5. MINIMAL OFFENSE
     aiUnits.forEach((u) => {
       const distToP = getDist(u.r, u.c, pLeader[0], pLeader[1]);
-      
-      // Basic drive: Go forward
-      score += (10 - distToP) * 50; 
-
-      // Kill Pressure
-      if (distToP === 1) score += 3000; // Check
-      if (distToP === 2 && u.id === 'archer') score += 2500; // Ranged Check
-      if (distToP <= 2 && u.id === 'assassin') score += 4000; // Assassin lurking
+      score += (10 - distToP) * 10; // Very low attack weight
+      if (distToP === 1) score += 2000; // Only checkmate matters
     });
-
-    // 4. Player Leader Pressure (Reward restricting player)
-    const pNeighbors = getNeighbors(pLeader[0], pLeader[1]);
-    const pTrapped = pNeighbors.every(([nr, nc]) => simBoard[nr][nc]);
-    if (pTrapped) score += 5000;
 
     return score;
   };
-
 
   const applySimMove = (simBoard, move) => {
     const { from, to, type, pushTo, pullTo, landAt } = move;
