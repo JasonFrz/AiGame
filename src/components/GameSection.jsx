@@ -287,7 +287,6 @@ const GameSection = ({ onBack }) => {
         [7, 2],
         [6, 3],
         [5, 4],
-        [5, 5],
         [6, 4],
       ],
       "8,0": [
@@ -353,16 +352,50 @@ const GameSection = ({ onBack }) => {
     setPlayerRoster(myUnits);
   }, [board]);
 
+  // const initializeGame = () => {
+  //   const b = Array(9)
+  //     .fill(null)
+  //     .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+  //   b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
+  //   b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
+  //   setBoard(b);
+  //   const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
+  //   setDeck(shuffled.slice(3));
+  //   setVisibleDeck(shuffled.slice(0, 3));
+  //   setTurn(1);
+  //   setTurnPhaseType(null);
+  //   setGameOver(null);
+  //   setRecruitStep(0);
+  //   setClawMode("pull");
+  //   setGameLog("Your Turn");
+  //   setBruiserTarget(null);
+  //   setBruiserPendingMoves([]);
+  //   setManipulatorTarget(null);
+  //   setNemesisPending(null);
+  //   isAiProcessing.current = false;
+  //   aiTurnCounter.current = 0;
+  // };
+
   const initializeGame = () => {
+    // 1. Setup Board (Kosongkan board & taruh Leader)
     const b = Array(9)
       .fill(null)
       .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+
     b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
     b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
     setBoard(b);
-    const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
-    setDeck(shuffled.slice(3));
-    setVisibleDeck(shuffled.slice(0, 3));
+
+    // 2. --- SETUP DECK (DEBUG MODE: SEMUA KARTU MUNCUL) ---
+    // Kosongkan tumpukan kartu tertutup
+    setDeck([]);
+
+    // Masukkan SEMUA data kartu dari database ke 'tangan' (visibleDeck)
+    // agar semuanya bisa dipilih saat fase rekrutmen
+    setVisibleDeck([...TOTAL_CARDS_DATA]);
+    // -----------------------------------------------------
+
+    // 3. Reset State Game
     setTurn(1);
     setTurnPhaseType(null);
     setGameOver(null);
@@ -957,7 +990,9 @@ const GameSection = ({ onBack }) => {
 
     setBoard((prev) =>
       prev.map((row) =>
-        row.map((c) => (c ? { ...c, moved: false, isNew: false } : null))
+        row.map((c) =>
+          c ? { ...c, moved: false, isNew: false, hasBonusMoved: false } : null
+        )
       )
     );
     setTurn(1);
@@ -1123,6 +1158,12 @@ const GameSection = ({ onBack }) => {
     }
   };
 
+  const hasVizierInTeam = (owner, currentBoard) => {
+    return currentBoard.some((row) =>
+      row.some((u) => u && u.owner === owner && u.cardId === "vizier")
+    );
+  };
+
   const handleBoardClick = async (r, c) => {
     if (gameOver) return;
 
@@ -1222,6 +1263,24 @@ const GameSection = ({ onBack }) => {
         ) {
           newBoard[r][c] = unit;
           newBoard[sr][sc] = null;
+
+          const isLeader = unit.cardId === "leader";
+          const hasVizier = hasVizierInTeam(unit.owner, board);
+
+          if (isLeader && hasVizier && !unit.hasBonusMoved) {
+            newBoard[r][c] = {
+              ...unit,
+              moved: false,
+              hasBonusMoved: true,
+            };
+
+            setBoard(newBoard);
+            setGameLog("Vizier Power: Leader Moves Again!");
+
+            setTimeout(() => handleSelectUnit(r, c), 50);
+
+            return;
+          }
         } else if (action.type === "ability_swap") {
           const target = newBoard[r][c];
           newBoard[sr][sc] = target;
@@ -1320,6 +1379,13 @@ const GameSection = ({ onBack }) => {
   };
 
   const handleEndAction = () => {
+    setSelectedPos(null); // Hapus seleksi unit (lingkaran biru/kuning)
+    setValidMoves([]); // Hapus gerakan valid (lingkaran hijau)
+    setActionMode("move"); // Reset mode ke default
+    setSelectedUnitAbility(null); // Hapus info ability
+    setBruiserTarget(null); // Reset target khusus
+    setManipulatorTarget(null); // Reset target khusus
+    setTurnPhaseType(null);
     if (nemesisPending) {
       setGameLog("Resolve Nemesis First!");
       return;
@@ -1405,62 +1471,76 @@ const GameSection = ({ onBack }) => {
     );
   };
 
-  // // --- GANTI SELURUH RETURN DI GameSection.jsx DENGAN INI ---
+  // // ============================================================
+  // // 🔧 DEBUG MODE: VISUALISASI KOORDINAT TILES
+  // // ============================================================
+  // // Ganti return asli Anda dengan ini untuk melihat koordinat
   // return (
-  //   <div className="w-full h-[100dvh] flex flex-col bg-black items-center justify-center font-sans">
-  //     {/* HEADER DEBUG */}
-  //     <div className="absolute top-4 left-4 z-50 bg-black/80 p-4 rounded border border-yellow-500 text-white">
-  //       <h1 className="text-xl font-bold text-yellow-400">
-  //         🔧 MODE KALIBRASI DEBUG
+  //   <div className="w-full h-[100dvh] flex flex-col bg-slate-900 items-center justify-center font-mono overflow-hidden relative">
+  //     {/* PANEL INFO */}
+  //     <div className="absolute top-4 left-4 z-50 bg-black/80 p-4 rounded-lg border border-yellow-500 text-white shadow-2xl">
+  //       <h1 className="text-xl font-bold text-yellow-400 mb-2">
+  //         🚧 DEBUG: TILE COORDINATES
   //       </h1>
-  //       <p className="text-sm text-gray-300 mt-1">
-  //         1. Klik kanan lingkaran merah yang melenceng -> <b>Inspect</b>.<br />
-  //         2. Ubah <code>top</code> / <code>left</code> di panel Styles browser.
-  //         <br />
-  //         3. Salin angka persen yang pas ke <code>db_monster.js</code>.
-  //       </p>
+  //       <ul className="text-xs text-gray-300 space-y-1">
+  //         <li>
+  //           • <span className="text-red-400 font-bold">Merah</span> = Posisi
+  //           Slot
+  //         </li>
+  //         <li>• Angka = [Baris, Kolom]</li>
+  //         <li>• Klik lingkaran untuk log detail di Console (F12)</li>
+  //       </ul>
+  //       <button
+  //         onClick={() => window.location.reload()}
+  //         className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm w-full"
+  //       >
+  //         Reload Game
+  //       </button>
   //     </div>
 
-  //     {/* BOARD CONTAINER */}
-  //     <div className="relative max-h-full max-w-full aspect-[650/750] border-2 border-yellow-500 shadow-2xl">
-  //       {/* GAMBAR PAPAN (Dibuat agak transparan biar grid terlihat jelas) */}
+  //     {/* KONTAINER PAPAN */}
+  //     <div className="relative max-h-[95vh] max-w-[95vw] aspect-[650/750] border-4 border-slate-700 shadow-2xl bg-black">
+  //       {/* GAMBAR BACKGROUND (Dibuat agak gelap/transparan supaya tulisan terbaca) */}
   //       <img
   //         src={board_img}
-  //         alt="Board"
-  //         className="w-full h-full object-contain pointer-events-none opacity-70"
+  //         alt="Board Debug"
+  //         className="w-full h-full object-contain opacity-50 pointer-events-none"
   //       />
 
-  //       {/* RENDER SEMUA SLOT (DEBUG OVERLAY) */}
+  //       {/* LOOP SEMUA KOORDINAT & RENDER LABEL */}
   //       {SLOT_COORDINATES.map((row, r) =>
   //         row.map((coords, c) => (
   //           <div
   //             key={`${r}-${c}`}
-  //             id={`debug-slot-${r}-${c}`} // ID untuk memudahkan pencarian di Elements panel
   //             onClick={() => {
-  //               console.log(`📍 Koordinat Slot [${r},${c}]`);
+  //               console.log(`📍 KLIK TILE: [${r}, ${c}]`);
   //               console.log(
-  //                 `   Current: top: ${coords.top}, left: ${coords.left}`
+  //                 `   CSS: top: "${coords.top}", left: "${coords.left}"`
   //               );
+  //               // Cek tetangga di console
+  //               const neighbors = getNeighbors(r, c);
+  //               console.log(`   Tetangga:`, neighbors);
   //             }}
   //             style={{
   //               position: "absolute",
   //               top: coords.top,
   //               left: coords.left,
-  //               transform: "translate(-50%, -50%)", // Center anchor point
-  //               width: "11.5%", // Ukuran visual slot (samakan dengan game asli)
+  //               transform: "translate(-50%, -50%)", // Supaya titik koordinat pas di tengah
+  //               width: "10%", // Ukuran visual marker
   //               aspectRatio: "1/1",
   //             }}
-  //             className="rounded-full bg-red-600/40 border-2 border-red-500 flex flex-col items-center justify-center cursor-pointer hover:bg-green-500/60 hover:scale-110 transition-transform z-50"
+  //             className="group flex flex-col items-center justify-center cursor-pointer z-50 hover:z-[60]"
   //           >
-  //             {/* Label Koordinat */}
-  //             <span className="text-white font-bold text-[10px] md:text-xs bg-black/80 px-1.5 py-0.5 rounded shadow-sm pointer-events-none">
-  //               {r},{c}
-  //             </span>
+  //             {/* Marker Lingkaran */}
+  //             <div className="w-full h-full rounded-full border-2 border-red-500 bg-red-500/20 group-hover:bg-green-500/40 group-hover:border-green-400 transition-all flex items-center justify-center relative">
+  //               {/* Titik Tengah Akurat (Crosshair) */}
+  //               <div className="absolute w-1 h-1 bg-yellow-400 rounded-full"></div>
 
-  //             {/* Titik Tengah Presisi (Crosshair) */}
-  //             <div className="absolute w-1 h-1 bg-yellow-400 rounded-full pointer-events-none"></div>
-  //             <div className="absolute w-full h-[1px] bg-red-500/50 pointer-events-none"></div>
-  //             <div className="absolute h-full w-[1px] bg-red-500/50 pointer-events-none"></div>
+  //               {/* Label Angka Koordinat */}
+  //               <span className="absolute -top-6 bg-black/90 text-white text-[10px] md:text-sm font-bold px-2 py-1 rounded border border-white/20 shadow-lg pointer-events-none whitespace-nowrap z-50">
+  //                 {r} , {c}
+  //               </span>
+  //             </div>
   //           </div>
   //         ))
   //       )}

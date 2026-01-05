@@ -162,6 +162,218 @@ export const ABILITY_DB = {
   },
 };
 
+export const STRAIGHT_JUMPS_PATHS = {
+  "0,0": {
+    "1,0": [1, 2],
+    "2,2": [3, 3],
+    "1,1": [1, 3],
+  },
+  "1,0": {
+    "1,2": [2, 0],
+    "2,1": [3, 2],
+    "2,2": [2, 3],
+  },
+  "2,2": {
+    "2,1": [3, 1],
+    "3,3": [4, 2],
+    "2,3": [3, 4],
+  },
+  "1,1": {
+    "2,2": [2, 1],
+    "2,3": [4, 3],
+    "1,3": [2, 4],
+  },
+  "1,2": {
+    "3,1": [4, 1],
+    "2,1": [3, 3],
+    "1,0": [0, 0],
+  },
+  "2,1": {
+    "3,1": [3, 0],
+    "3,2": [5, 1],
+    "3,3": [4, 3],
+    "2,2": [1, 1],
+  },
+  "3,3": {
+    "2,2": [0, 0],
+    "2,1": [1, 2],
+    "3,2": [4, 1],
+    "4,2": [5, 2],
+    "4,3": [4, 4],
+    "2,3": [1, 3],
+  },
+  "2,3": {
+    "2,2": [1, 0],
+    "3,3": [3, 2],
+    "4,3": [5, 3],
+    "3,4": [3, 5],
+  },
+  "1,3": {
+    "1,1": [0, 0],
+    "2,3": [3, 3],
+    "3,4": [4, 4],
+  },
+  "2,0": {
+    "3,0": [4, 0],
+    "3,1": [3, 2],
+    "1,2": [1, 0],
+  },
+  "3,1": {
+    "4,1": [5, 0],
+    "3,2": [4, 2],
+    "2,1": [2, 2],
+  },
+  "3,2": {
+    "2,1": [1, 0],
+    "4,1": [4, 0],
+    "5,1": [6, 1],
+    "4,2": [5, 3],
+    "3,3": [2, 3],
+  },
+  "4,2": {
+    "3,3": [2, 2],
+    "3,2": [3, 1],
+    "5,1": [5, 0],
+    "5,2": [6, 2],
+    "5,3": [5, 4],
+    "4,3": [3, 4],
+  },
+  "4,3": {
+    "2,3": [1, 1],
+    "3,3": [2, 1],
+    "4,2": [5, 1],
+    "5,3": [6, 3],
+    "4,4": [5, 5],
+    "3,4": [2, 4],
+  },
+  "3,4": {
+    "2,3": [2, 2],
+    "4,3": [4, 2],
+    "4,4": [5, 4],
+  },
+  "2,4": {
+    "1,3": [1, 1],
+    "3,4": [4, 3],
+    "3,5": [5, 5],
+  },
+  "3,0": {
+    "3,1": [2, 1],
+    "4,1": [5, 1],
+    "4,0": [6, 0],
+  },
+  "4,1": {
+    "3,1": [1, 2],
+    "3,2": [3, 3],
+    "5,1": [5, 2],
+    "5,0": [7, 0],
+  },
+  "5,1": {
+    "3,2": [2, 1],
+    "4,1": [3, 0],
+    "5,0": [6, 0],
+    "6,1": [7, 1],
+    "5,2": [6, 3],
+    "4,2": [4, 3],
+  },
+  "5,2": {
+    "4,2": [3, 3],
+    "5,1": [4, 1],
+    "6,1": [7, 0],
+    "6,2": [8, 0],
+    "6,3": [7, 3],
+    "5,3": [4, 4],
+  },
+  "5,3": {
+    "4,3": [2, 3],
+    "4,2": [3, 2],
+    "5,2": [6, 1],
+    "6,3": [7, 2],
+    "5,4": [6, 4],
+    "4,4": [3, 5],
+  },
+  "4,4": {
+    "3,4": [1, 3],
+    "4,3": [3, 3],
+    "5,3": [5, 2],
+    "5,4": [7, 3],
+  },
+  "3,5": {
+    "3,4": [2, 3],
+    "4,4": [5, 3],
+    "5,5": [6, 4],
+  },
+  "4,0": {
+    "3,0": [2, 0],
+    "4,1": [3, 2],
+    "5,0": [6, 1],
+  },
+  "5,0": {
+    "4,1": [3, 1],
+    "5,1": [4, 2],
+    "6,1": [6, 2],
+  },
+  "6,1": {
+    "5,1": [3, 2],
+    "5,0": [4, 0],
+    "6,2": [7, 2],
+    "5,2": [5, 3],
+  },
+  "6,2": {
+    "5,2": [4, 2],
+    "6,1": [5, 0],
+    "6,3": [5, 4],
+  },
+  "6,3": {
+    "5,3": [4, 3],
+    "5,2": [5, 1],
+    "6,2": [7, 1],
+    "5,4": [5, 5],
+  },
+  "5,4": {
+    "4,4": [3, 4],
+    "5,3": [4, 2],
+    "6,3": [6, 2],
+  },
+  "5,5": {
+    "3,5": [2, 4],
+    "4,4": [4, 3],
+    "5,4": [6, 3],
+  },
+  "6,0": {
+    "4,0": [3, 0],
+    "5,0": [5, 1],
+    "7,0": [7, 1],
+  },
+  "7.0": {
+    "5,0": [4, 1],
+    "6,1": [5, 2],
+    "7,1": [8, 0],
+  },
+  "7,1": {
+    "6,1": [5, 1],
+    "7,0": [6, 0],
+    "6,2": [6, 3],
+  },
+  "8,0": {
+    "6,2": [5, 2],
+    "7,1": [7, 0],
+    "7,2": [7, 3],
+  },
+  "7,2": {
+    "6,2": [6, 1],
+    "6,3": [5, 3],
+    "7,3": [6, 4],
+  },
+  "7,3": {
+    "6,3": [5, 2],
+    "5,4": [4, 4],
+  },
+  "6,4": {
+    "5,5": [3, 5],
+    "5,4": [5, 3],
+  },
+};
+
 export const UNIT_VALUES = {
   leader: 100000,
   leader2: 100000,
@@ -343,57 +555,45 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
     return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
   });
   if (isJailed) {
-    return []; 
+    return [];
   }
 
   switch (cardId) {
     case "acrobat":
       neighbors.forEach(([nr, nc]) => {
-        if (board[nr][nc]) {
-          const landingSpots = getNeighbors(nr, nc);
-          landingSpots.forEach(([lr, lc]) => {
-            const lineCheck = isHexStraight(r, c, lr, lc, board, getNeighbors);
-            if (lineCheck.valid && !board[lr][lc]) {
-              actions.push({ r: lr, c: lc, type: "move" });
+        if (board[nr] && board[nr][nc]) {
+          const startKey = `${r},${c}`;
+          const bridgeKey = `${nr},${nc}`;
+
+          const targetPos = STRAIGHT_JUMPS_PATHS[startKey]?.[bridgeKey];
+
+          if (targetPos) {
+            const [targetR, targetC] = targetPos;
+
+            if (board[targetR] && !board[targetR][targetC]) {
+              actions.push({ r: targetR, c: targetC, type: "move" });
             }
-          });
+          }
         }
       });
       break;
 
-     case "rider":
-      if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
-      const startCoords = SLOT_COORDINATES[r][c];
-      const x0 = parseFloat(startCoords.left);
-      const y0 = parseFloat(startCoords.top);
+    case "rider":
+      neighbors.forEach(([nr, nc]) => {
+        if (board[nr] && !board[nr][nc]) {
+          const startKey = `${r},${c}`;
+          const pathKey = `${nr},${nc}`;
 
-      neighbors.forEach(([r1, c1]) => {
-        const neighbors2 = getNeighbors(r1, c1);
-        neighbors2.forEach(([r2, c2]) => {
-            if (r2 === r && c2 === c) return;
-            
-            if (board[r2][c2]) return;
+          const targetPos = STRAIGHT_JUMPS_PATHS[startKey]?.[pathKey];
 
-            const coords1 = SLOT_COORDINATES[r1][c1];
-            const coords2 = SLOT_COORDINATES[r2][c2];
+          if (targetPos) {
+            const [targetR, targetC] = targetPos;
 
-            const x1 = parseFloat(coords1.left);
-            const y1 = parseFloat(coords1.top);
-            const x2 = parseFloat(coords2.left);
-            const y2 = parseFloat(coords2.top);
-
-            const dx1 = x1 - x0;
-            const dy1 = y1 - y0;
-            const dx2 = x2 - x1;
-            const dy2 = y2 - y1;
-
-            const angle1 = Math.atan2(dy1, dx1);
-            const angle2 = Math.atan2(dy2, dx2);
-
-            if (Math.abs(angle1 - angle2) < 0.2) {
-                actions.push({ r: r2, c: c2, type: "move" }); 
+            if (board[targetR] && !board[targetR][targetC]) {
+              actions.push({ r: targetR, c: targetC, type: "move" });
             }
-        });
+          }
+        }
       });
       break;
 
@@ -675,7 +875,7 @@ export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
       const neighbors2 = getNeighbors(n1r, n1c);
       neighbors2.forEach(([n2r, n2c]) => {
         if (n2r === r && n2c === c) return;
-     
+
         if (!board[n2r][n2c]) {
           if (!dist2Moves.some((m) => m.r === n2r && m.c === n2c)) {
             dist2Moves.push({ r: n2r, c: n2c, type: "reaction_move" });
