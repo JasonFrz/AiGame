@@ -352,16 +352,50 @@ const GameSection = ({ onBack }) => {
     setPlayerRoster(myUnits);
   }, [board]);
 
+  const initializeGame = () => {
+    const b = Array(9)
+      .fill(null)
+      .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+    b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
+    b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
+    setBoard(b);
+    const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
+    setDeck(shuffled.slice(3));
+    setVisibleDeck(shuffled.slice(0, 3));
+    setTurn(1);
+    setTurnPhaseType(null);
+    setGameOver(null);
+    setRecruitStep(0);
+    setClawMode("pull");
+    setGameLog("Your Turn");
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
+    setNemesisPending(null);
+    isAiProcessing.current = false;
+    aiTurnCounter.current = 0;
+  };
+
   // const initializeGame = () => {
+  //   // 1. Setup Board (Kosongkan board & taruh Leader)
   //   const b = Array(9)
   //     .fill(null)
   //     .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+
   //   b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
   //   b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
   //   setBoard(b);
-  //   const shuffled = [...TOTAL_CARDS_DATA].sort(() => Math.random() - 0.5);
-  //   setDeck(shuffled.slice(3));
-  //   setVisibleDeck(shuffled.slice(0, 3));
+
+  //   // 2. --- SETUP DECK (DEBUG MODE: SEMUA KARTU MUNCUL) ---
+  //   // Kosongkan tumpukan kartu tertutup
+  //   setDeck([]);
+
+  //   // Masukkan SEMUA data kartu dari database ke 'tangan' (visibleDeck)
+  //   // agar semuanya bisa dipilih saat fase rekrutmen
+  //   setVisibleDeck([...TOTAL_CARDS_DATA]);
+  //   // -----------------------------------------------------
+
+  //   // 3. Reset State Game
   //   setTurn(1);
   //   setTurnPhaseType(null);
   //   setGameOver(null);
@@ -376,38 +410,68 @@ const GameSection = ({ onBack }) => {
   //   aiTurnCounter.current = 0;
   // };
 
-  const initializeGame = () => {
-    // 1. Setup Board (Kosongkan board & taruh Leader)
-    const b = Array(9)
-      .fill(null)
-      .map((_, i) => Array([1, 4, 5, 6, 5, 6, 5, 4, 1][i]).fill(null));
+  const getAllPossibleMoves = (board, owner) => {
+    let allMoves = [];
 
-    b[8][0] = { owner: 1, cardId: "leader", moved: false, isNew: true };
-    b[0][0] = { owner: 2, cardId: "leader2", moved: false, isNew: true };
-    setBoard(b);
+    board.forEach((row, r) => {
+      row.forEach((unit, c) => {
+        if (unit && unit.owner === owner) {
+          const basics = calculateBasicMoves(r, c, unit, board, getNeighbors);
+          const abilities = calculateAbilityMoves(
+            r,
+            c,
+            unit,
+            board,
+            getNeighbors
+          );
 
-    // 2. --- SETUP DECK (DEBUG MODE: SEMUA KARTU MUNCUL) ---
-    // Kosongkan tumpukan kartu tertutup
-    setDeck([]);
+          const moves = [...basics, ...abilities].map((m) => ({
+            ...m,
+            from: [r, c],
+            to: [m.r, m.c],
+          }));
 
-    // Masukkan SEMUA data kartu dari database ke 'tangan' (visibleDeck)
-    // agar semuanya bisa dipilih saat fase rekrutmen
-    setVisibleDeck([...TOTAL_CARDS_DATA]);
-    // -----------------------------------------------------
+          allMoves = allMoves.concat(moves);
+        }
+      });
+    });
 
-    // 3. Reset State Game
-    setTurn(1);
-    setTurnPhaseType(null);
-    setGameOver(null);
-    setRecruitStep(0);
-    setClawMode("pull");
-    setGameLog("Your Turn");
-    setBruiserTarget(null);
-    setBruiserPendingMoves([]);
-    setManipulatorTarget(null);
-    setNemesisPending(null);
-    isAiProcessing.current = false;
-    aiTurnCounter.current = 0;
+    return allMoves.sort(() => Math.random() - 0.5);
+  };
+
+  const minimax = (board, depth, isMaximizingPlayer, alpha, beta) => {
+    const winStatus = checkWinCondition(board);
+    if (winStatus === "AI") return 1000000;
+    if (winStatus === "Player") return -1000000;
+    if (depth === 0) return evaluateBoardState(board);
+
+    if (isMaximizingPlayer) {
+      let maxEval = -Infinity;
+      const allMoves = getAllPossibleMoves(board, 2);
+
+      for (let move of allMoves) {
+        const nextBoard = applySimMove(cloneBoard(board), move);
+        const evalScore = minimax(nextBoard, depth - 1, false, alpha, beta);
+        maxEval = Math.max(maxEval, evalScore);
+
+        alpha = Math.max(alpha, evalScore);
+        if (beta <= alpha) break;
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      const allMoves = getAllPossibleMoves(board, 1); // 1 = Owner Player
+
+      for (let move of allMoves) {
+        const nextBoard = applySimMove(cloneBoard(board), move);
+        const evalScore = minimax(nextBoard, depth - 1, true, alpha, beta);
+        minEval = Math.min(minEval, evalScore);
+
+        beta = Math.min(beta, evalScore);
+        if (beta <= alpha) break;
+      }
+      return minEval;
+    }
   };
 
   const getArcherThreatCount = (targetPos, enemyOwner, currentBoard) => {
@@ -784,102 +848,87 @@ const GameSection = ({ onBack }) => {
       return;
     }
 
-    setGameLog("AI Planning...");
-    await new Promise((r) => setTimeout(r, 600));
+    setGameLog("AI Thinking...");
 
-    let aiUnits = [];
-    let pLeaderPos = null;
-    let aiLeaderPos = null;
-
-    board.forEach((row, r) =>
-      row.forEach((c, idx) => {
-        if (c) {
-          if (c.owner === 2) {
-            aiUnits.push({ ...c, r, c: idx });
-            if (c.cardId === "leader2") aiLeaderPos = [r, idx];
-          } else if (c.cardId === "leader") {
-            pLeaderPos = [r, idx];
-          }
-        }
-      })
-    );
-
-    const isLeaderThreatened = () => {
-      if (!aiLeaderPos) return false;
-      const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
-      return neighbors.some(([nr, nc]) => {
-        const u = board[nr][nc];
-        return (
-          u && u.owner === 1 && u.cardId !== "cub" && u.cardId !== "archer"
-        );
-      });
-    };
-
-    aiUnits.sort((a, b) => {
-      if (a.cardId === "leader2" && isLeaderThreatened()) return -1;
-      if (b.cardId === "leader2" && isLeaderThreatened()) return 1;
-      const d1 = pLeaderPos
-        ? getDist(a.r, a.c, pLeaderPos[0], pLeaderPos[1])
-        : 10;
-      const d2 = pLeaderPos
-        ? getDist(b.r, b.c, pLeaderPos[0], pLeaderPos[1])
-        : 10;
-      return d1 - d2;
-    });
+    await new Promise((r) => setTimeout(r, 100));
 
     let currentBoard = cloneBoard(board);
-    let somethingMoved = false;
 
-    // AI MOVE LOOP
-    for (let unit of aiUnits) {
-      const freshUnit = currentBoard[unit.r][unit.c];
+    const allPossibleMoves = getAllPossibleMoves(currentBoard, 2);
 
-      if (!freshUnit || freshUnit.owner !== 2 || freshUnit.moved) continue;
-      if (freshUnit.cardId !== unit.cardId) continue;
-      if (freshUnit.cardId === "nemesis") continue;
+    let bestMove = null;
+    let bestScore = -Infinity;
 
-      const result = getBestMoveForUnit(
-        { ...freshUnit, r: unit.r, c: unit.c },
+    console.log(`🤖 AI Considering ${allPossibleMoves.length} moves...`);
+
+    const SEARCH_DEPTH = 2;
+
+    for (let move of allPossibleMoves) {
+      const simBoard = applySimMove(cloneBoard(currentBoard), move);
+
+      let score = minimax(simBoard, SEARCH_DEPTH, false, -Infinity, Infinity);
+
+      if (move.type.includes("ability")) score += 50;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+
+    if (bestMove) {
+      const unit = currentBoard[bestMove.from[0]][bestMove.from[1]];
+      const unitName = getCardData(unit.cardId).name;
+
+      console.log(
+        `✅ AI Chose: ${unitName} to [${bestMove.to}] Score: ${bestScore}`
+      );
+
+      const boardBeforeMove = cloneBoard(currentBoard);
+
+      if (currentBoard[bestMove.from[0]][bestMove.from[1]]) {
+        currentBoard[bestMove.from[0]][bestMove.from[1]].moved = true;
+      }
+
+      currentBoard = applySimMove(currentBoard, bestMove);
+      setBoard(cloneBoard(currentBoard));
+      setGameLog(`AI moves ${unitName}`);
+
+      await new Promise((r) => setTimeout(r, 600));
+
+      const nemesisTriggered = await checkForNemesisTrigger(
+        boardBeforeMove,
         currentBoard
       );
 
-      if (result && result.move) {
-        const boardBeforeMove = cloneBoard(currentBoard);
+      if (nemesisTriggered) {
+        const playerNemesis = findUnit(currentBoard, "nemesis", 1);
 
-        freshUnit.moved = true;
-
-        currentBoard = applySimMove(currentBoard, result.move);
-        setBoard(cloneBoard(currentBoard));
-        setGameLog(`AI moves ${getCardData(unit.cardId).name}`);
-        somethingMoved = true;
-        await new Promise((r) => setTimeout(r, 450));
-
-        const nemesisTriggered = await checkForNemesisTrigger(
-          boardBeforeMove,
-          currentBoard
-        );
-        if (nemesisTriggered) {
-          const playerNemesis = findUnit(currentBoard, "nemesis", 1);
-          if (playerNemesis) {
-            isAiProcessing.current = false;
-            return;
-          }
-        }
-
-        const midWin = checkWinCondition(currentBoard);
-        if (midWin) {
-          setGameOver(midWin);
-          setGameLog(midWin === "AI" ? "AI Wins!" : "You Win!");
+        if (playerNemesis) {
           isAiProcessing.current = false;
           return;
         }
       }
-    }
 
-    if (!somethingMoved) {
+      const midWin = checkWinCondition(currentBoard);
+      if (midWin) {
+        setGameOver(midWin);
+        setGameLog(midWin === "AI" ? "AI Wins!" : "You Win!");
+        isAiProcessing.current = false;
+        return;
+      }
+    } else {
       setGameLog("AI Holds Position");
       await new Promise((r) => setTimeout(r, 500));
     }
+
+    let aiLeaderPos = null;
+    currentBoard.forEach((row, r) =>
+      row.forEach((c, idx) => {
+        if (c && c.owner === 2 && c.cardId === "leader2")
+          aiLeaderPos = [r, idx];
+      })
+    );
 
     await smartRecruit(currentBoard, aiLeaderPos, recruitLimit);
 
@@ -1001,7 +1050,6 @@ const GameSection = ({ onBack }) => {
   };
 
   useEffect(() => {
-    // If nemesis is pending, pause flow
     if (nemesisPending) return;
     if (turn === 3) runAITurn();
   }, [turn, runAITurn, nemesisPending]);
@@ -1023,6 +1071,7 @@ const GameSection = ({ onBack }) => {
     }
 
     const unit = board[r][c];
+
     setSelectedPos(null);
     setValidMoves([]);
     setActionMode("move");
@@ -1037,6 +1086,7 @@ const GameSection = ({ onBack }) => {
         setGameLog("Unit already moved.");
         return;
       }
+
       const unitData = getCardData(unit.cardId);
       setSelectedPos([r, c]);
 
@@ -1058,41 +1108,15 @@ const GameSection = ({ onBack }) => {
         return;
       }
 
-      if (turnPhaseType === "ability") {
-        if (unitData.type !== "Active") {
-          setGameLog("Turn Locked: Abilities Only!");
-          return;
-        }
-        setGameLog("Turn Locked: Abilities");
+      setGameLog(`Selected ${unitData?.name || "Unit"}`);
 
-        setActionMode("ability");
-        if (unit.cardId === "claw") {
-          const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
-          setValidMoves(moves);
-          if (moves.length === 0) setGameLog("No ability targets");
-        } else {
-          const abilities = calculateAbilityMoves(
-            r,
-            c,
-            unit,
-            board,
-            getNeighbors
-          );
-          setValidMoves(abilities);
-          if (abilities.length === 0) setGameLog("No ability targets");
-        }
+      const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+      setValidMoves(moves);
+
+      if (unitData.type === "Active") {
         setSelectedUnitAbility(unitData);
-      } else if (turnPhaseType === "move") {
-        setGameLog("Turn Locked: Movement");
-
-        const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-        setValidMoves(moves);
-        setSelectedUnitAbility(null);
       } else {
-        setGameLog(`Selected ${unitData?.name || "Unit"}`);
-        const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-        setValidMoves(moves);
-        if (unitData.type === "Active") setSelectedUnitAbility(unitData);
+        setSelectedUnitAbility(null);
       }
     }
   };
@@ -1101,9 +1125,6 @@ const GameSection = ({ onBack }) => {
     if (!selectedPos) return;
     const [r, c] = selectedPos;
     const unit = board[r][c];
-
-    if (turnPhaseType === "move" && actionMode === "move") return;
-    if (turnPhaseType === "ability" && actionMode === "ability") return;
 
     if (getCardData(unit.cardId).type === "Passive") return;
 
@@ -1326,20 +1347,7 @@ const GameSection = ({ onBack }) => {
           return;
         }
 
-        if (!nemesisPending) {
-          if (turnPhaseType === null) {
-            const isAbility = action.type.includes("ability");
-            if (isAbility) {
-              setTurnPhaseType("ability");
-              setGameLog("Turn Locked: ABILITIES");
-            } else {
-              setTurnPhaseType("move");
-              setGameLog("Turn Locked: MOVEMENT");
-            }
-          }
-        }
-
-        await checkForNemesisTrigger(boardBeforeMove, newBoard);
+        setGameLog("Action Complete");
 
         const w = checkWinCondition(newBoard);
         if (w) {
