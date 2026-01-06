@@ -593,22 +593,60 @@ export const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
       break;
 
     case "rider":
-      neighbors.forEach(([nr, nc]) => {
-        if (board[nr] && !board[nr][nc]) {
-          const startKey = `${r},${c}`;
-          const pathKey = `${nr},${nc}`;
+      // Ambil posisi visual Rider saat ini
+      const myCoords = SLOT_COORDINATES[r] && SLOT_COORDINATES[r][c];
+      
+      if (myCoords) {
+        const myY = parseFloat(myCoords.top);
+        const myX = parseFloat(myCoords.left);
 
-          const targetPos = STRAIGHT_JUMPS_PATHS[startKey]?.[pathKey];
+        // Loop semua petak di papan untuk mencari target potensial
+        board.forEach((row, tr) => {
+          row.forEach((cell, tc) => {
+            // Target akhir harus kosong
+            if (!cell) {
+              const tCoords = SLOT_COORDINATES[tr] && SLOT_COORDINATES[tr][tc];
+              if (tCoords) {
+                const tY = parseFloat(tCoords.top);
+                const tX = parseFloat(tCoords.left);
 
-          if (targetPos) {
-            const [targetR, targetC] = targetPos;
+                // Hitung Titik Tengah (Midpoint) secara matematika
+                const midY = (myY + tY) / 2;
+                const midX = (myX + tX) / 2;
 
-            if (board[targetR] && !board[targetR][targetC]) {
-              actions.push({ r: targetR, c: targetC, type: "move" });
+                // Cek apakah ada petak valid di koordinat Titik Tengah tersebut
+                let midR = -1, midC = -1;
+                
+                // Cari petak mana yang posisinya paling dekat dengan Titik Tengah
+                SLOT_COORDINATES.forEach((sRow, sr) => {
+                  sRow.forEach((sCoords, sc) => {
+                    const sY = parseFloat(sCoords.top);
+                    const sX = parseFloat(sCoords.left);
+                    // Hitung jarak visual
+                    const dist = Math.sqrt(Math.pow(sY - midY, 2) + Math.pow(sX - midX, 2));
+                    
+                    // Jika jarak sangat dekat (< 2%), berarti ini petak tengahnya
+                    if (dist < 2.0) { 
+                      midR = sr;
+                      midC = sc;
+                    }
+                  });
+                });
+
+                if (midR !== -1) {
+                   const totalDist = Math.sqrt(Math.pow(tY - myY, 2) + Math.pow(tX - myX, 2));
+                   
+                   if (totalDist > 10 && totalDist < 35) {
+                       if (board[midR] && !board[midR][midC]) {
+                         actions.push({ r: tr, c: tc, type: "ability_move" });
+                       }
+                   }
+                }
+              }
             }
-          }
-        }
-      });
+          });
+        });
+      }
       break;
 
     case "bruiser":
