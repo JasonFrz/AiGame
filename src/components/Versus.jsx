@@ -5,7 +5,6 @@ import {
   TOTAL_CARDS_DATA,
   getCardData as getDbCardData,
   calculateBasicMoves,
-  // We will use local versions of complex moves to match GameSection exactly
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
@@ -59,7 +58,7 @@ const Versus = () => {
     }
   };
 
-  // --- NEIGHBOR LOGIC (MATCHING GameSection.jsx) ---
+  // --- NEIGHBOR LOGIC ---
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
@@ -96,7 +95,7 @@ const Versus = () => {
       "6,3": [[5, 2], [5, 3], [5, 4], [6, 2], [7, 2], [7, 3]],
       "6,4": [[7, 3], [5, 4], [5, 5]],
       "7,0": [[6, 0], [5, 0], [6, 1], [7, 1]],
-      "7,1": [[7, 0], [6, 1], [6, 2], [8, 0]],
+      "7,1": [[7, 0], [6, 1], [6, 2],[8, 0]],
       "7,2": [[8, 0], [6, 2], [6, 3], [7, 3]],
       "7,3": [[7, 2], [6, 3], [5, 4], [6, 4]],
       "8,0": [[7, 1], [6, 2], [7, 2]],
@@ -110,7 +109,7 @@ const Versus = () => {
     return false;
   };
 
-  // --- VISUAL MATH HELPERS (From GameSection) ---
+  // --- VISUAL MATH HELPERS ---
   const isVisuallyAligned = (r1, c1, r2, c2) => {
     if (!SLOT_COORDINATES[r1] || !SLOT_COORDINATES[r1][c1]) return false;
     if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
@@ -126,13 +125,11 @@ const Versus = () => {
     const dy = Math.abs(y2 - y1);
     const dx = Math.abs(x2 - x1);
 
-    // Vertical (Illusionist)
-    if (dx < 4.0) return true; 
+    if (dx < 4.0) return true; // Vertical (Illusionist)
 
-    // Diagonal (Archer/Claw/Rider)
     if (dx > 0) {
         const slope = dy / dx;
-        if (slope > 0.45 && slope < 0.65) return true;
+        if (slope > 0.45 && slope < 0.65) return true; // Diagonal (Archer/Claw/Rider)
     }
     return false;
   };
@@ -145,7 +142,7 @@ const Versus = () => {
     return Math.abs(x1 - x2) < 4.0;
   };
 
-  // --- LOCAL CALCULATE ABILITY MOVES (From GameSection) ---
+  // --- LOCAL CALCULATE ABILITY MOVES ---
   const calculateLocalAbilityMoves = (r, c, unit, board, getNeighbors) => {
     const actions = [];
     const neighbors = getNeighbors(r, c);
@@ -351,6 +348,19 @@ const Versus = () => {
     setCurrentRoster(units);
   }, [board, turn]);
 
+  // --- HELPER: RESET SELECTION STATE ---
+  // This ensures no ghost selections remain when turns change or actions end
+  const resetSelectionState = () => {
+    setSelectedPos(null);
+    setValidMoves([]);
+    setActionMode("move");
+    setSelectedUnitAbility(null);
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
+    setBrewmasterTarget(null);
+  };
+
   const initializeGame = () => {
     const b = Array(9)
       .fill(null)
@@ -372,9 +382,7 @@ const Versus = () => {
     setNemesisPending(null);
     setClawMode("pull");
     setTurnPhaseType(null);
-    setBruiserTarget(null);
-    setManipulatorTarget(null);
-    setBrewmasterTarget(null);
+    resetSelectionState(); // Reset selections on init
   };
 
   const findUnit = (b, cardId, owner) => {
@@ -410,14 +418,7 @@ const Versus = () => {
     const unit = board[r][c];
     const authorizedOwner = nemesisPending ? nemesisPending.owner : (turn === 1 ? 1 : 2);
 
-    setSelectedPos(null);
-    setValidMoves([]);
-    setActionMode("move");
-    setSelectedUnitAbility(null);
-    setBruiserTarget(null);
-    setBruiserPendingMoves([]);
-    setManipulatorTarget(null);
-    setBrewmasterTarget(null);
+    resetSelectionState(); // Clear previous selection before selecting new
 
     if (unit && unit.owner === authorizedOwner) {
       if (unit.moved && !nemesisPending) {
@@ -454,7 +455,6 @@ const Versus = () => {
              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
              setValidMoves(moves);
          } else {
-             // USE LOCAL CALCULATION HERE
              const abilities = calculateLocalAbilityMoves(r, c, unit, board, getNeighbors);
              setValidMoves(abilities);
          }
@@ -493,7 +493,6 @@ const Versus = () => {
           setValidMoves(moves);
           if (moves.length === 0) setGameLog(clawMode === 'pull' ? "No targets to Pull" : "No targets to Dash");
       } else {
-          // USE LOCAL CALCULATION HERE
           const abilities = calculateLocalAbilityMoves(r, c, unit, board, getNeighbors);
           setValidMoves(abilities);
           if (abilities.length === 0) setGameLog("No ability targets available!");
@@ -558,6 +557,15 @@ const Versus = () => {
       const action = validMoves.find(m => m.r === r && m.c === c);
 
       if (selectedPos && action) {
+          // --- SECURITY CHECK ---
+          const currentUnit = board[selectedPos[0]][selectedPos[1]];
+          const requiredOwner = turn === 1 ? 1 : 2;
+          
+          if (!nemesisPending && currentUnit && currentUnit.owner !== requiredOwner) {
+              resetSelectionState(); // Deselect instantly if cheat detected
+              return;
+          }
+
           if (action.type === "ability_bruiser_push" && !bruiserTarget) {
               const possiblePushes = validMoves.filter(m => m.type === "ability_bruiser_push" && m.r === r && m.c === c);
               setBruiserTarget({ r, c });
@@ -618,13 +626,15 @@ const Versus = () => {
     if (type === "move" || type === "reaction_move" || type === "ability_move") {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
+      
+      // --- VIZIER POWER CHECK ---
+      // If Vizier is in team, reset 'moved' to false, set 'hasBonusMoved' to true.
+      // Do NOT return. Fall through to allow selection reset and Nemesis/Win checks.
       if (unit.cardId.includes("leader") && hasVizierInTeam(unit.owner, board) && !unit.hasBonusMoved) {
           newBoard[targetR][targetC] = { ...unit, moved: false, hasBonusMoved: true };
-          setBoard(newBoard);
-          setGameLog("Vizier Power: Leader Moves Again!");
-          setTimeout(() => handleSelectUnit(targetR, targetC), 50);
-          return;
+          setGameLog("Vizier Power: Leader Can Move Again");
       }
+
     } else if (type === "ability_swap") {
       const targetUnit = newBoard[targetR][targetC];
       newBoard[sr][sc] = targetUnit;
@@ -658,14 +668,8 @@ const Versus = () => {
 
     setBoard(newBoard);
     
-    setSelectedPos(null);
-    setValidMoves([]);
-    setSelectedUnitAbility(null);
-    setActionMode("move");
-    setBruiserTarget(null);
-    setBruiserPendingMoves([]);
-    setManipulatorTarget(null);
-    setBrewmasterTarget(null);
+    // Clear selections immediately
+    resetSelectionState();
 
     if (nemesisPending) {
         setNemesisPending(null);
@@ -720,7 +724,6 @@ const Versus = () => {
     currentBoard.forEach((row, r) => {
       row.forEach((unit, c) => {
         if (unit && unit.owner === enemyOwner && unit.cardId === "archer") {
-          // Use the exact same visual math as GameSection
           if (isVisuallyAligned(r, c, tR, tC)) {
               threatCount++;
           }
@@ -787,6 +790,9 @@ const Versus = () => {
     );
     newBoard[r][c] = { owner, cardId, moved: true, isNew: true };
     setBoard(newBoard);
+    
+    // Clear selection after recruiting to prevent bugs
+    resetSelectionState();
 
     if (cardId === "hermit") return;
 
@@ -831,6 +837,9 @@ const Versus = () => {
         setGameLog("Must Resolve Nemesis Move!");
         return;
     }
+    
+    // BUG FIX: Clear selection immediately when turn logic starts
+    resetSelectionState();
 
     const count = (o) =>
       currentBoard
