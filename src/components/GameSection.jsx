@@ -962,6 +962,7 @@ const GameSection = ({ onBack }) => {
     let playerHasManipulator = false;
     let playerHasIllusionist = false;
 
+    // 1. Hitung Material (Nilai Unit)
     simBoard.forEach((row, r) => {
       row.forEach((c, cIdx) => {
         if (!c) return;
@@ -980,11 +981,15 @@ const GameSection = ({ onBack }) => {
       });
     });
 
+    // Cek Kondisi Menang/Kalah Mutlak
     if (!aiLeader) return -WIN_SCORE;
     if (!pLeader) return WIN_SCORE;
 
+    // 2. Analisis Ancaman & Jarak
     const playerThreatMap = getExtendedThreats(simBoard, 1);
     const aiInDanger = playerThreatMap.has(`${aiLeader[0]},${aiLeader[1]}`);
+
+    // Jarak ke Leader Musuh (Tujuan Utama jika aman)
     const distToPlayerLeader = getDist(
       aiLeader[0],
       aiLeader[1],
@@ -992,63 +997,81 @@ const GameSection = ({ onBack }) => {
       pLeader[1]
     );
 
-    // --- HARD MODE LOGIC ---
-    if (difficultyLevel === "hard") {
-      // 1. MANIPULATOR / ILLUSIONIST DEFENSE
-      if (playerHasManipulator || playerHasIllusionist) {
-        if (aiLeader[0] > 1) score -= 50000;
-        // Jika ada Illusionist, cek apakah AI Leader segaris vertikal
-        if (playerHasIllusionist) {
-          pUnits.forEach((pu) => {
-            if (
-              pu.id === "illusionist" &&
-              isVisuallyVertical(aiLeader[0], aiLeader[1], pu.r, pu.c)
-            ) {
-              score -= 200000; // BAHAYA VERTIKAL ILLUSIONIST!
-            }
-          });
+    // Hitung jarak ke Unit Musuh TERDEKAT (Untuk logika kabur)
+    let distToClosestEnemy = 100;
+    pUnits.forEach((p) => {
+      let d = getDist(aiLeader[0], aiLeader[1], p.r, p.c);
+      // Assassin & Archer dianggap lebih dekat 1 petak karena range/bahayanya
+      if (p.id === "assassin" || p.id === "archer") d = Math.max(1, d - 1);
+      if (d < distToClosestEnemy) distToClosestEnemy = d;
+    });
+
+    // --- LOGIKA EVALUASI UTAMA ---
+    if (difficultyLevel === "hard" || difficultyLevel === "medium") {
+      // A. MODE BERTAHAN (Musuh terlalu dekat)
+      if (distToClosestEnemy <= 2) {
+        // Logika: Semakin jauh jaraknya (distToClosestEnemy naik), skor semakin tinggi.
+        score += distToClosestEnemy * 5000;
+
+        // Penalty besar karena berada dalam zona bahaya (mendorong AI untuk keluar dari situasi ini)
+        score -= 20000;
+
+        // Bonus jika AI Leader mundur ke area aman (Baris 0 atau 1)
+        if (aiLeader[0] <= 1) score += 2000;
+      }
+      // B. MODE MENYERANG (Aman)
+      else {
+        // Logika: Semakin dekat ke Leader musuh (dist turun), skor semakin tinggi (minus dikurangi).
+        score -= distToPlayerLeader * 100;
+      }
+
+      // C. Logic Spesifik Hard Mode (Counter-Play)
+      if (difficultyLevel === "hard") {
+        // Anti Manipulator/Illusionist
+        if (playerHasManipulator || playerHasIllusionist) {
+          if (aiLeader[0] > 1) score -= 50000; // Jangan maju terlalu jauh
+          if (playerHasIllusionist) {
+            pUnits.forEach((pu) => {
+              if (
+                pu.id === "illusionist" &&
+                isVisuallyVertical(aiLeader[0], aiLeader[1], pu.r, pu.c)
+              ) {
+                score -= 200000; // Bahaya Swap Vertikal
+              }
+            });
+          }
         }
+
+        // Self Preservation (Bahaya dimakan langsung)
+        if (aiInDanger) score -= 1000000;
+
+        // Bunker Formation (Cari teman)
+        const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
+        const friendlyNeighbors = aiNeighbors.filter(([nr, nc]) => {
+          const u = simBoard[nr][nc];
+          return u && u.owner === 2;
+        }).length;
+
+        if (friendlyNeighbors === 0) score -= 5000;
+        else score += friendlyNeighbors * 2000;
+
+        // Bonus Posisi Unit Lain (Bukan Leader)
+        aiUnits.forEach((u) => {
+          const isDefensive = ["guard", "protector", "jailer"].includes(u.id);
+          // Unit agresif disuruh maju
+          if (!isDefensive && u.r > 3) score += 500;
+          // Unit defensif disuruh jaga kandang
+          if (isDefensive && u.r <= 2) score += 500;
+        });
       }
-      // 2. SELF PRESERVATION
-      if (aiInDanger) score -= 1000000;
 
-      // 3. BUNKER / BODYGUARD FORMATION
-      const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
-      const friendlyNeighbors = aiNeighbors.filter(([nr, nc]) => {
-        const u = simBoard[nr][nc];
-        return u && u.owner === 2;
-      }).length;
-      if (friendlyNeighbors === 0) score -= 5000;
-      else score += friendlyNeighbors * 2000;
-
-      // 4. HUNTER & POSITIONING
-      let minDistanceToKill = 100;
-      aiUnits.forEach((u) => {
-        const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
-        if (d < minDistanceToKill) minDistanceToKill = d;
-
-        const isDefensive = ["guard", "protector", "jailer"].includes(u.id);
-        if (!isDefensive && u.r > 3) score += 500;
-        if (isDefensive && u.r <= 2) score += 500;
-      });
-
-      if (minDistanceToKill === 1) score += 100000;
-      else score += (15 - minDistanceToKill) * 2000;
-
-      if (
-        !playerHasManipulator &&
-        !playerHasIllusionist &&
-        !aiInDanger &&
-        aiLeader[0] <= 3
-      ) {
-        score += aiLeader[0] * 500;
+      // Logic Medium sederhana
+      if (difficultyLevel === "medium") {
+        if (aiInDanger) score -= 5000;
       }
-    } else if (difficultyLevel === "medium") {
-      score += (aiUnits.length - pUnits.length) * 500;
-      if (aiInDanger) score -= 5000;
-      if (playerHasManipulator && aiLeader[0] > 2) score -= 1000;
     } else {
-      score += distToPlayerLeader * 100;
+      // EASY MODE: Polos, hanya hitung jarak ke leader musuh
+      score += (20 - distToPlayerLeader) * 100;
     }
 
     return score;
