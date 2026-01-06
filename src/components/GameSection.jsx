@@ -7,7 +7,6 @@ import {
   SLOT_COORDINATES,
   getCardData,
   calculateBasicMoves,
-  calculateAbilityMoves,
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
@@ -22,6 +21,7 @@ import board_img from "../assets/Leaders_Board.png";
 const GameSection = ({ onBack }) => {
   const navigate = useNavigate();
 
+  // --- STYLES ---
   const styles = `
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -91,6 +91,199 @@ const GameSection = ({ onBack }) => {
     return false;
   };
 
+  // --- HELPER: VISUAL LINE CHECK (MATH BASED) ---
+  const isVisuallyAligned = (r1, c1, r2, c2) => {
+    if (!SLOT_COORDINATES[r1] || !SLOT_COORDINATES[r1][c1]) return false;
+    if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
+
+    const p1 = SLOT_COORDINATES[r1][c1];
+    const p2 = SLOT_COORDINATES[r2][c2];
+    
+    const y1 = parseFloat(p1.top);
+    const x1 = parseFloat(p1.left);
+    const y2 = parseFloat(p2.top);
+    const x2 = parseFloat(p2.left);
+
+    const dy = Math.abs(y2 - y1);
+    const dx = Math.abs(x2 - x1);
+
+    // 1. VERTICAL CHECK (Kolom yang sama - untuk Illusionist)
+    if (dx < 4.0) return true; // Toleransi 4% left
+
+    // 2. DIAGONAL CHECK (Rasio dy/dx pada grid hex ini sekitar 0.54 - untuk Archer/Claw/Rider)
+    if (dx > 0) {
+        const slope = dy / dx;
+        if (slope > 0.45 && slope < 0.65) return true;
+    }
+
+    return false;
+  };
+
+  const isVisuallyVertical = (r1, c1, r2, c2) => {
+    if (!SLOT_COORDINATES[r1] || !SLOT_COORDINATES[r1][c1]) return false;
+    if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
+    const x1 = parseFloat(SLOT_COORDINATES[r1][c1].left);
+    const x2 = parseFloat(SLOT_COORDINATES[r2][c2].left);
+    return Math.abs(x1 - x2) < 4.0;
+  };
+
+  // --- LOCAL CALCULATE ABILITY ---
+  const calculateAbilityMoves = (r, c, unit, board, getNeighbors) => {
+    const actions = [];
+    const neighbors = getNeighbors(r, c);
+    const owner = unit.owner;
+    const enemyOwner = owner === 1 ? 2 : 1;
+    const cardId = unit.cardId;
+  
+    const isJailed = neighbors.some(([nr, nc]) => {
+      const nUnit = board[nr][nc];
+      return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
+    });
+    if (isJailed && cardId !== "nemesis") return [];
+  
+    switch (cardId) {
+      case "acrobat":
+        neighbors.forEach(([nr, nc]) => {
+          if (board[nr] && board[nr][nc]) { 
+            const startKey = `${r},${c}`;
+            const bridgeKey = `${nr},${nc}`;
+            const targetPos = STRAIGHT_JUMPS_PATHS[startKey]?.[bridgeKey];
+            if (targetPos) {
+              const [targetR, targetC] = targetPos;
+              if (board[targetR] && !board[targetR][targetC]) {
+                actions.push({ r: targetR, c: targetC, type: "ability_move" });
+              }
+            }
+          }
+        });
+        break;
+  
+      case "rider":
+        board.forEach((row, tr) => {
+            row.forEach((cell, tc) => {
+              if (!cell) {
+                 if (isVisuallyAligned(r, c, tr, tc)) {
+                     const p1 = SLOT_COORDINATES[r][c];
+                     const p2 = SLOT_COORDINATES[tr][tc];
+                     const dist = Math.sqrt(Math.pow(parseFloat(p1.top)-parseFloat(p2.top),2) + Math.pow(parseFloat(p1.left)-parseFloat(p2.left),2));
+                     if (dist > 20 && dist < 40) {
+                         const midY = (parseFloat(p1.top) + parseFloat(p2.top)) / 2;
+                         const midX = (parseFloat(p1.left) + parseFloat(p2.left)) / 2;
+                         let midR = -1, midC = -1;
+                         SLOT_COORDINATES.forEach((sRow, sr) => sRow.forEach((sCoords, sc) => {
+                             const d = Math.sqrt(Math.pow(parseFloat(sCoords.top)-midY,2) + Math.pow(parseFloat(sCoords.left)-midX,2));
+                             if (d < 3.0) { midR = sr; midC = sc; }
+                         }));
+                         if (midR !== -1 && board[midR] && !board[midR][midC]) {
+                             actions.push({ r: tr, c: tc, type: "ability_move" });
+                         }
+                     }
+                 }
+              }
+            });
+        });
+        break;
+  
+      case "bruiser":
+        neighbors.forEach(([nr, nc]) => {
+          const target = board[nr][nc];
+          if (target && target.owner === enemyOwner) {
+            const validDestinations = calculateBruiserPushTargets(r, c, nr, nc, board, getNeighbors);
+            validDestinations.forEach((dest) => {
+              actions.push({ r: nr, c: nc, type: "ability_bruiser_push", pushTo: [dest.r, dest.c] });
+            });
+          }
+        });
+        break;
+  
+      case "manipulator":
+        board.forEach((row, tr) =>
+          row.forEach((target, tc) => {
+            if (target && target.owner === enemyOwner) {
+              const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+              if (!isAdj) { 
+                const dests = calculateManipulatorDestinations(tr, tc, board, getNeighbors);
+                if (dests.length > 0) {
+                  actions.push({ r: tr, c: tc, type: "ability_manipulator_target" });
+                }
+              }
+            }
+          })
+        );
+        break;
+  
+      case "guard":
+        let leaderPos = null;
+        board.forEach((row, lr) =>
+          row.forEach((lUnit, lc) => {
+            if (lUnit && lUnit.owner === owner && (lUnit.cardId === "leader" || lUnit.cardId === "leader2")) {
+              leaderPos = [lr, lc];
+            }
+          })
+        );
+        if (leaderPos) {
+          const lNeighbors = getNeighbors(leaderPos[0], leaderPos[1]);
+          lNeighbors.forEach(([lnr, lnc]) => {
+            if (!board[lnr][lnc] && (lnr !== r || lnc !== c)) {
+              actions.push({ r: lnr, c: lnc, type: "ability_move" });
+            }
+          });
+        }
+        break;
+  
+      case "wanderer":
+        board.forEach((row, wr) =>
+          row.forEach((_, wc) => {
+            if (!board[wr][wc]) {
+              const wNeighbors = getNeighbors(wr, wc);
+              const hasEnemy = wNeighbors.some(([wnr, wnc]) => {
+                const nUnit = board[wnr][wnc];
+                return nUnit && nUnit.owner === enemyOwner;
+              });
+              if (!hasEnemy) {
+                actions.push({ r: wr, c: wc, type: "ability_move" });
+              }
+            }
+          })
+        );
+        break;
+  
+      case "illusionist":
+        if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
+        const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
+        board.forEach((row, tr) =>
+          row.forEach((target, tc) => {
+            if (target && (tr !== r || tc !== c)) {
+              const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+              if (isAdj) return;
+              if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
+              const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
+              if (Math.abs(myLeft - targetLeft) < 4) {
+                 actions.push({ r: tr, c: tc, type: "ability_swap" });
+              }
+            }
+          })
+        );
+        break;
+      
+      case "claw":
+        break;
+  
+      case "brewmaster":
+        neighbors.forEach(([nr, nc]) => {
+          const ally = board[nr][nc];
+          if (ally && ally.owner === owner) {
+            actions.push({ r: nr, c: nc, type: "ability_brew_select" });
+          }
+        });
+        break;
+  
+      default: break;
+    }
+    return actions;
+  };
+
+  // --- STATE MANAGEMENT ---
   const [board, setBoard] = useState([]);
   const [turn, setTurn] = useState(1);
   const [deck, setDeck] = useState([]);
@@ -162,7 +355,7 @@ const GameSection = ({ onBack }) => {
     aiTurnCounter.current = 0;
   };
 
-  // --- AI LOGIC: MOVE GENERATION (UPDATED FOR COMPLEX ABILITIES) ---
+  // --- AI LOGIC ---
   const getAllPossibleMoves = (board, owner) => {
     let allMoves = [];
     let enemyLeaderPos = null;
@@ -177,7 +370,6 @@ const GameSection = ({ onBack }) => {
     board.forEach((row, r) => {
       row.forEach((unit, c) => {
         if (unit && unit.owner === owner && !unit.moved) {
-          // 1. BASIC MOVES & STANDARD ABILITIES
           const basics = calculateBasicMoves(r, c, unit, board, getNeighbors);
           const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
           
@@ -188,26 +380,21 @@ const GameSection = ({ onBack }) => {
             sortScore: 0
           }));
 
-          // 2. EXPAND COMPLEX ABILITIES (MANIPULATOR, BRUISER, BREWMASTER)
-          // Ini yang membuat AI "Melihat" hasil dari ability
-          
-          // A. MANIPULATOR: Generate move untuk setiap kemungkinan target pindah
+          // SIMULASI ABILITY KOMPLEKS
           if (unit.cardId === "manipulator") {
              const manipulatorMoves = [];
              board.forEach((eRow, er) => eRow.forEach((eUnit, ec) => {
                  if (eUnit && eUnit.owner === enemyOwner) {
-                     // Cek apakah adjacent (Manipulator tidak bisa target adjacent)
                      const isAdj = getNeighbors(r, c).some(([nr, nc]) => nr === er && nc === ec);
                      if (!isAdj) {
-                         // Cek destinasi valid untuk musuh ini
                          const dests = calculateManipulatorDestinations(er, ec, board, getNeighbors);
                          dests.forEach(dest => {
                              manipulatorMoves.push({
-                                 type: "ability_manipulator_execute_sim", // Tipe khusus simulasi
+                                 type: "ability_manipulator_execute_sim",
                                  from: [r, c],
                                  enemyPos: [er, ec],
                                  dest: [dest.r, dest.c],
-                                 sortScore: 2000 // Prioritas tinggi
+                                 sortScore: 2000
                              });
                          });
                      }
@@ -216,7 +403,6 @@ const GameSection = ({ onBack }) => {
              allMoves = allMoves.concat(manipulatorMoves);
           }
 
-          // B. BRUISER: Generate move untuk setiap arah dorongan
           if (unit.cardId === "bruiser") {
              const neighbors = getNeighbors(r, c);
              neighbors.forEach(([nr, nc]) => {
@@ -225,9 +411,9 @@ const GameSection = ({ onBack }) => {
                      const pushDests = calculateBruiserPushTargets(r, c, nr, nc, board, getNeighbors);
                      pushDests.forEach(dest => {
                          moves.push({
-                             type: "ability_bruiser_push", // Sudah dihandle applySimMove
+                             type: "ability_bruiser_push",
                              from: [r, c],
-                             to: [nr, nc], // Posisi Bruiser setelah mendorong
+                             to: [nr, nc], 
                              pushTo: [dest.r, dest.c],
                              sortScore: 1500
                          });
@@ -236,7 +422,6 @@ const GameSection = ({ onBack }) => {
              });
           }
 
-          // C. BREWMASTER: Generate move untuk setiap teman yang didorong
           if (unit.cardId === "brewmaster") {
               const neighbors = getNeighbors(r, c);
               neighbors.forEach(([nr, nc]) => {
@@ -245,7 +430,7 @@ const GameSection = ({ onBack }) => {
                       const pushDests = calculateBasicMoves(nr, nc, ally, board, getNeighbors);
                       pushDests.forEach(dest => {
                           moves.push({
-                              type: "ability_brew_execute", // Sudah dihandle applySimMove
+                              type: "ability_brew_execute",
                               from: [r, c],
                               allyFrom: [nr, nc],
                               to: [dest.r, dest.c],
@@ -256,23 +441,31 @@ const GameSection = ({ onBack }) => {
               });
           }
 
-          // --- HEURISTIC SORTING ---
+          // HEURISTIC SORTING
           moves.forEach(m => {
             if (!m.sortScore) m.sortScore = 0;
-            const targetCell = board[m.r] ? board[m.r][m.c] : null; // Safety check
+            const targetCell = board[m.r] ? board[m.r][m.c] : null;
             
             const distToEnemyLeader = enemyLeaderPos && m.r !== undefined ? getDist(m.r, m.c, enemyLeaderPos.r, enemyLeaderPos.c) : 10;
             const prevDist = enemyLeaderPos ? getDist(r, c, enemyLeaderPos.r, enemyLeaderPos.c) : 10;
 
-            // Kill Priority
             if (targetCell && targetCell.owner !== owner) {
               if (targetCell.cardId.includes("leader")) m.sortScore += 100000;
               else m.sortScore += (UNIT_VALUES[targetCell.cardId] || 100) * 50;
             }
-            // Move Priority
             if (distToEnemyLeader < prevDist) m.sortScore += 5000;
             if (m.type.includes("ability")) m.sortScore += 1000;
             if (unit.cardId.includes("leader")) m.sortScore -= 2000;
+
+            // ILLUSIONIST KIDNAP STRATEGY
+            if (unit.cardId === "illusionist" && m.type === "ability_swap") {
+                // Jika target swap adalah Leader Musuh, prioritas UTAMA
+                if (targetCell && targetCell.cardId.includes("leader") && targetCell.owner !== owner) {
+                    m.sortScore += 500000; // SWAP THE KING!
+                }
+                // Jika swap membuat musuh masuk ke area kita (row kecil untuk AI)
+                if (m.r <= 2) m.sortScore += 5000;
+            }
           });
 
           allMoves = allMoves.concat(moves);
@@ -286,7 +479,6 @@ const GameSection = ({ onBack }) => {
   const applySimMove = (simBoard, move) => {
     const { from, to, type, pushTo, pullTo, landAt, allyFrom, enemyPos, dest } = move;
     
-    // Safety check: Pastikan unit penggerak masih ada (untuk simulasi berantai)
     const unit = simBoard[from[0]][from[1]];
     if (!unit) return simBoard;
 
@@ -300,29 +492,26 @@ const GameSection = ({ onBack }) => {
     } else if (type === "ability_bruiser_push" && pushTo) {
       const target = simBoard[to[0]][to[1]];
       simBoard[pushTo[0]][pushTo[1]] = target;
-      simBoard[to[0]][to[1]] = unit; // Bruiser maju
+      simBoard[to[0]][to[1]] = unit; 
       simBoard[from[0]][from[1]] = null;
     } else if (type === "ability_claw_pull" && pullTo) {
       const target = simBoard[to[0]][to[1]];
       simBoard[pullTo[0]][pullTo[1]] = target;
-      simBoard[to[0]][to[1]] = null; // Target ditarik
+      simBoard[to[0]][to[1]] = null; 
     } else if (type === "ability_claw_dash" && landAt) {
       simBoard[landAt[0]][landAt[1]] = unit;
       simBoard[from[0]][from[1]] = null;
     } else if (type === "ability_brew_execute" && allyFrom) {
       const ally = simBoard[allyFrom[0]][allyFrom[1]];
       if (ally) {
-        simBoard[to[0]][to[1]] = ally; // Ally pindah ke 'to'
+        simBoard[to[0]][to[1]] = ally; 
         simBoard[allyFrom[0]][allyFrom[1]] = null;
       }
     } else if (type === "ability_manipulator_execute_sim" && enemyPos && dest) {
-        // Logika Simuator Manipulator
         const target = simBoard[enemyPos[0]][enemyPos[1]];
         if (target) {
             simBoard[dest[0]][dest[1]] = target;
             simBoard[enemyPos[0]][enemyPos[1]] = null;
-            // Unit Manipulator sendiri TIDAK pindah, tapi action point habis (moved=true)
-            // Di sini kita tidak perlu set moved=true karena Minimax tidak mempedulikan status moved di dalam rekursi
         }
     }
     return simBoard;
@@ -381,6 +570,7 @@ const GameSection = ({ onBack }) => {
 
     enemyUnits.forEach((u) => {
       const neighbors = getNeighbors(u.r, u.c);
+      
       neighbors.forEach(([nr, nc]) => {
           threats.add(`${nr},${nc}`);
           if (hasManipulator) {
@@ -390,14 +580,23 @@ const GameSection = ({ onBack }) => {
               });
           }
       });
+
       if (u.cardId === "archer" || u.cardId === "claw") {
-        const startKey = `${u.r},${u.c}`;
-        const potentialPaths = STRAIGHT_JUMPS_PATHS[startKey];
-        if (potentialPaths) {
-           Object.values(potentialPaths).forEach(([endR, endC]) => {
-              threats.add(`${endR},${endC}`);
-           });
-        }
+         board.forEach((row, tr) => row.forEach((_, tc) => {
+             if (isVisuallyAligned(u.r, u.c, tr, tc)) {
+                 threats.add(`${tr},${tc}`);
+             }
+         }));
+      }
+
+      // ILLUSIONIST THREAT (NEW: VERTICAL LINE)
+      if (u.cardId === "illusionist") {
+          board.forEach((row, tr) => row.forEach((_, tc) => {
+              // Jika sejajar secara vertikal dengan Illusionist
+              if (isVisuallyVertical(u.r, u.c, tr, tc)) {
+                  threats.add(`${tr},${tc}`);
+              }
+          }));
       }
     });
     return threats;
@@ -410,6 +609,7 @@ const GameSection = ({ onBack }) => {
     let aiUnits = [];
     let pUnits = [];
     let playerHasManipulator = false;
+    let playerHasIllusionist = false;
 
     simBoard.forEach((row, r) => {
       row.forEach((c, cIdx) => {
@@ -424,6 +624,7 @@ const GameSection = ({ onBack }) => {
           if (c.cardId === "leader") pLeader = [r, cIdx];
           else pUnits.push({ r, c: cIdx, id: c.cardId });
           if (c.cardId === "manipulator") playerHasManipulator = true;
+          if (c.cardId === "illusionist") playerHasIllusionist = true;
         }
       });
     });
@@ -433,38 +634,51 @@ const GameSection = ({ onBack }) => {
 
     const playerThreatMap = getExtendedThreats(simBoard, 1); 
     const aiInDanger = playerThreatMap.has(`${aiLeader[0]},${aiLeader[1]}`);
-    
     const distToPlayerLeader = getDist(aiLeader[0], aiLeader[1], pLeader[0], pLeader[1]);
 
+    // --- HARD MODE LOGIC ---
     if (difficultyLevel === "hard") {
-        if (playerHasManipulator) {
-            if (aiLeader[0] > 1) score -= 20000 * aiLeader[0];
-            pUnits.forEach(pu => {
-                if (getDist(aiLeader[0], aiLeader[1], pu.r, pu.c) <= 3) score -= 5000; 
-            });
+        // 1. MANIPULATOR / ILLUSIONIST DEFENSE
+        if (playerHasManipulator || playerHasIllusionist) {
+            if (aiLeader[0] > 1) score -= 50000;
+            // Jika ada Illusionist, cek apakah AI Leader segaris vertikal
+            if (playerHasIllusionist) {
+                pUnits.forEach(pu => {
+                    if (pu.id === "illusionist" && isVisuallyVertical(aiLeader[0], aiLeader[1], pu.r, pu.c)) {
+                        score -= 200000; // BAHAYA VERTIKAL ILLUSIONIST!
+                    }
+                });
+            }
         }
-        if (aiInDanger) score -= 500000;
+        // 2. SELF PRESERVATION
+        if (aiInDanger) score -= 1000000;
 
+        // 3. BUNKER / BODYGUARD FORMATION
+        const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
+        const friendlyNeighbors = aiNeighbors.filter(([nr, nc]) => {
+            const u = simBoard[nr][nc];
+            return u && u.owner === 2;
+        }).length;
+        if (friendlyNeighbors === 0) score -= 5000;
+        else score += friendlyNeighbors * 2000;
+
+        // 4. HUNTER & POSITIONING
         let minDistanceToKill = 100;
         aiUnits.forEach(u => {
             const d = getDist(u.r, u.c, pLeader[0], pLeader[1]);
             if (d < minDistanceToKill) minDistanceToKill = d;
-            if (u.r > 3) score += 300; 
+            
+            const isDefensive = ["guard", "protector", "jailer"].includes(u.id);
+            if (!isDefensive && u.r > 3) score += 500; 
+            if (isDefensive && u.r <= 2) score += 500; 
         });
         
-        if (minDistanceToKill === 1) score += 50000; 
+        if (minDistanceToKill === 1) score += 100000; 
         else score += (15 - minDistanceToKill) * 2000; 
 
-        if (!playerHasManipulator) {
-            if (!aiInDanger) score += (15 - distToPlayerLeader) * 200; 
+        if (!playerHasManipulator && !playerHasIllusionist && !aiInDanger && aiLeader[0] <= 3) {
+             score += aiLeader[0] * 500;
         }
-
-        const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
-        const guardedCount = aiNeighbors.filter(([nr, nc]) => {
-            const u = simBoard[nr][nc];
-            return u && u.owner === 2;
-        }).length;
-        score += guardedCount * 1000; 
 
     } else if (difficultyLevel === "medium") {
         score += (aiUnits.length - pUnits.length) * 500;
@@ -541,13 +755,8 @@ const GameSection = ({ onBack }) => {
     currentBoard.forEach((row, r) => {
       row.forEach((unit, c) => {
         if (unit && unit.owner === enemyOwner && unit.cardId === "archer") {
-          const startKey = `${r},${c}`;
-          const potentialPaths = STRAIGHT_JUMPS_PATHS[startKey];
-          if (potentialPaths) {
-            const isStraightLine = Object.values(potentialPaths).some(
-              ([endR, endC]) => endR === tR && endC === tC
-            );
-            if (isStraightLine) threatCount++;
+          if (isVisuallyAligned(r, c, tR, tC)) {
+              threatCount++;
           }
         }
       });
@@ -726,10 +935,32 @@ const GameSection = ({ onBack }) => {
 
   }, [board, gameOver, nemesisPending, difficulty]);
 
+  // --- SMART RECRUIT: COUNTER-PICK LOGIC ---
   const smartRecruit = async (currentBoard, aiLeaderPos, limit) => {
     let localBoard = cloneBoard(currentBoard);
     let localVisible = [...visibleDeck];
     let localDeck = [...deck];
+
+    let playerHasAssassin = false;
+    let playerHasManipulator = false;
+    let playerHasArcher = false;
+    let playerHasClaw = false; 
+    let playerHasIllusionist = false;
+    let playerHasClusteredUnits = false;
+
+    currentBoard.forEach(row => row.forEach(u => {
+      if (u && u.owner === 1) {
+        if (u.cardId === 'assassin') playerHasAssassin = true;
+        if (u.cardId === 'manipulator') playerHasManipulator = true;
+        if (u.cardId === 'archer') playerHasArcher = true;
+        if (u.cardId === 'claw') playerHasClaw = true;
+        if (u.cardId === 'illusionist') playerHasIllusionist = true;
+      }
+    }));
+
+    let playerCount = 0;
+    currentBoard.forEach(row => row.forEach(u => { if(u && u.owner === 1) playerCount++; }));
+    if (playerCount >= 4) playerHasClusteredUnits = true;
 
     for (let i = 0; i < limit; i++) {
       let aiCount = 0;
@@ -742,26 +973,33 @@ const GameSection = ({ onBack }) => {
       if (aiCount >= 5 || localVisible.length === 0) break;
 
       setGameLog(`AI Recruiting...`);
-      await new Promise((r) => setTimeout(r, 300));
-
-      let priority = "attack";
-      if (difficulty === "easy") priority = "defense";
-      if (difficulty === "hard" && aiLeaderPos) {
-        const neighbors = getNeighbors(aiLeaderPos[0], aiLeaderPos[1]);
-        const nearThreats = neighbors.filter(([nr, nc]) => {
-             const u = localBoard[nr][nc];
-             return u && u.owner === 1;
-        }).length;
-        if (nearThreats > 0) priority = "defense";
-      }
+      await new Promise((r) => setTimeout(r, 400));
 
       let bestIdx = 0;
-      let bestScore = -1;
+      let bestScore = -Infinity;
 
       localVisible.forEach((card, idx) => {
         let score = UNIT_VALUES[card.id] || 0;
-        if (priority === "defense" && ["protector", "guard", "jailer"].includes(card.id)) score += 5000;
-        if (priority === "attack" && ["assassin", "manipulator", "claw"].includes(card.id)) score += 2000;
+        
+        // Counter Logic
+        if (playerHasAssassin && ["guard", "protector", "jailer"].includes(card.id)) score += 10000;
+        
+        if (playerHasManipulator || playerHasIllusionist) {
+            // Butuh range atau anti-move
+            if (["archer", "claw", "protector"].includes(card.id)) score += 8000;
+            // Hindari melee lemah yg mudah ditarik/ditukar
+            if (["hermit", "acrobat"].includes(card.id)) score -= 5000;
+        }
+        
+        if (playerHasArcher && ["rider", "acrobat", "claw"].includes(card.id)) score += 6000;
+        if (playerHasClaw && ["protector"].includes(card.id)) score += 15000; 
+        if (playerHasClusteredUnits && ["bruiser", "claw"].includes(card.id)) score += 7000;
+
+        if (difficulty === "hard") {
+            if (["assassin", "manipulator", "archer", "illusionist"].includes(card.id)) score += 5000;
+            if (["hermit", "brewmaster"].includes(card.id)) score -= 2000;
+        }
+
         if (score > bestScore) {
           bestScore = score;
           bestIdx = idx;
@@ -777,7 +1015,17 @@ const GameSection = ({ onBack }) => {
       }
 
       if (spots.length > 0) {
-        spots.sort((a, b) => priority === "defense" ? a[0] - b[0] : b[0] - a[0]);
+        spots.sort((a, b) => {
+            const isDefensive = ["guard", "protector", "jailer"].includes(chosenCard.id);
+            if (isDefensive) {
+                let distA = aiLeaderPos ? getDist(a[0], a[1], aiLeaderPos[0], aiLeaderPos[1]) : 0;
+                let distB = aiLeaderPos ? getDist(b[0], b[1], aiLeaderPos[0], aiLeaderPos[1]) : 0;
+                return distA - distB;
+            } else {
+                return b[0] - a[0]; 
+            }
+        });
+
         const spot = spots[0];
 
         if (chosenCard.id === "hermit" && spots.length >= 2) {
