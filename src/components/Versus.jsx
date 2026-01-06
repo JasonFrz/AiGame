@@ -5,12 +5,13 @@ import {
   TOTAL_CARDS_DATA,
   getCardData as getDbCardData,
   calculateBasicMoves,
-  calculateAbilityMoves,
+  // We will use local versions of complex moves to match GameSection exactly
   calculateVisualClawMoves,
   calculateBruiserPushTargets,
   calculateManipulatorDestinations,
   calculateNemesisReaction,
   SLOT_COORDINATES, 
+  STRAIGHT_JUMPS_PATHS
 } from "./db_monster";
 
 import gameLogo from "../assets/logo.png";
@@ -46,25 +47,10 @@ const Versus = () => {
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `;
 
+  // --- HELPER: SAFE DATA ---
   const getSafeUnitData = (id) => {
-    if (id === "leader")
-      return {
-        id: "leader",
-        name: "King (P1)",
-        unitImg: roiPlayer1Coin,
-        cardImg: roiCard,
-        type: "Essential",
-        desc: "Move 1 space.",
-      };
-    if (id === "leader2")
-      return {
-        id: "leader2",
-        name: "Queen (P2)",
-        unitImg: roiPlayer2Coin || roiPlayer1Coin,
-        cardImg: reineCard || roiCard,
-        type: "Essential",
-        desc: "Move 1 space.",
-      };
+    if (id === "leader") return { id: "leader", name: "King (P1)", unitImg: roiPlayer1Coin, cardImg: roiCard, type: "Essential", desc: "Move 1 space." };
+    if (id === "leader2") return { id: "leader2", name: "Queen (P2)", unitImg: roiPlayer2Coin, cardImg: reineCard, type: "Essential", desc: "Move 1 space." };
     try {
       const data = getDbCardData(id);
       return data || { name: "Unknown", desc: "No Data" };
@@ -73,58 +59,246 @@ const Versus = () => {
     }
   };
 
-  // --- GRID MAP ---
-  // (Menggunakan koordinat manual untuk tetangga)
+  // --- NEIGHBOR LOGIC (MATCHING GameSection.jsx) ---
   const getNeighbors = (r, c) => {
     const mapKey = `${r},${c}`;
     const manualMap = {
-      "0,0": [[1, 0],[1, 1],[2, 2]],
-      "1,0": [[0, 0],[2, 1],[1, 2],[2, 2]],
-      "1,1": [[0, 0],[2, 1],[2, 2],[2, 3],[3, 4],[1, 3]],
-      "1,2": [[2, 0],[3, 1],[2, 1],[1, 0]],
-      "1,3": [[2, 1],[2, 4]],
-      "2,0": [[1, 2],[3, 0],[3, 1]],
-      "2,1": [[1, 0],[1, 2],[2, 2],[3, 2],[3, 3],[3, 1]],
-      "2,2": [[0, 0],[1, 0],[1, 1],[2, 3],[2, 1],[3, 3]],
-      "2,3": [[2, 2],[1, 1],[1, 3],[3, 3],[4, 3],[3, 4]],
-      "2,4": [[1, 3],[3, 4],[3, 5]],
-      "3,0": [[2, 0],[3, 1],[4, 1],[4, 0]],
-      "3,1": [[3, 0],[2, 0],[1, 2],[2, 1],[3, 2],[4, 1]],
-      "3,2": [[4, 1],[3, 1],[2, 1],[3, 3],[4, 2],[5, 1]],
-      "3,3": [[2, 1],[2, 2],[2, 3],[3, 2],[4, 2],[4, 3]],
-      "3,4": [[2, 3],[1, 3],[2, 4],[4, 3],[4, 4],[3, 5]],
-      "3,5": [[2, 4],[3, 4],[4, 4],[5, 5]],
-      "4,0": [[3, 0],[4, 1],[5, 0],[6, 0]],
-      "4,1": [[3, 0],[3, 1],[3, 2],[4, 0],[5, 0],[5, 1]],
-      "4,2": [[3, 2],[3, 3],[4, 3],[5, 1],[5, 2],[5, 3]],
-      "4,3": [[3, 3],[2, 3],[3, 4],[4, 2],[5, 3],[4, 4]],
-      "4,4": [[4, 3],[3, 4],[3, 5],[5, 3],[5, 4],[5, 5]],
-      "5,0": [[4, 0],[4, 1],[5, 1],[6, 0],[7, 0],[6, 1]],
-      "5,1": [[4, 1],[3, 2],[4, 2],[5, 0],[6, 1],[5, 2]],
-      "5,2": [[5, 1],[4, 2],[5, 3],[6, 1],[6, 2],[6, 3]],
-      "5,3": [[4, 2],[4, 3],[4, 4],[5, 2],[6, 3],[5, 4]],
-      "5,4": [[5, 3],[4, 4],[5, 5],[6, 3],[7, 3],[6, 4]],
-      "5,5": [[3, 5],[4, 4],[5, 4],[6, 4]],
-      "6,0": [[4, 0],[5, 0],[7, 0]],
-      "6,1": [[5, 0],[5, 1],[5, 2],[7, 0],[7, 1],[6, 2]],
-      "6,2": [[6, 1],[5, 2],[6, 3],[7, 1],[8, 0],[7, 2]],
-      "6,3": [[5, 2],[5, 3],[5, 4],[6, 2],[7, 2],[7, 3]],
-      "6,4": [[7, 3],[5, 4],[5, 5]],
-      "7,0": [[6, 0],[5, 0],[6, 1],[7, 1]],
-      "7,1": [[7, 0],[6, 1],[6, 2],[8, 0]],
-      "7,2": [[8, 0],[6, 2],[6, 3],[5, 4],[7, 3]],
-      "7,3": [[7, 2],[6, 3],[5, 4],[5, 5],[6, 4]],
-      "8,0": [[7, 1],[6, 2],[7, 2]],
+      "0,0": [[1, 0], [1, 1], [2, 2]],
+      "1,0": [[0, 0], [2, 1], [1, 2], [2, 2]],
+      "1,1": [[0, 0], [2, 1], [2, 2], [2, 3], [3, 4], [1, 3]],
+      "1,2": [[2, 0], [3, 1], [2, 1], [1, 0]],
+      "1,3": [[2, 1], [2, 4]],
+      "2,0": [[1, 2], [3, 0], [3, 1]],
+      "2,1": [[1, 0], [1, 2], [2, 2], [3, 2], [3, 3], [3, 1]],
+      "2,2": [[0, 0], [1, 0], [1, 1], [2, 3], [2, 1], [3, 3]],
+      "2,3": [[2, 2], [1, 1], [1, 3], [3, 3], [4, 3], [3, 4]],
+      "2,4": [[1, 3], [3, 4], [3, 5]],
+      "3,0": [[2, 0], [3, 1], [4, 1], [4, 0]],
+      "3,1": [[3, 0], [2, 0], [1, 2], [2, 1], [3, 2], [4, 1]],
+      "3,2": [[4, 1], [3, 1], [2, 1], [3, 3], [4, 2], [5, 1]],
+      "3,3": [[2, 1], [2, 2], [2, 3], [3, 2], [4, 2], [4, 3]],
+      "3,4": [[2, 3], [1, 3], [2, 4], [4, 3], [4, 4], [3, 5]],
+      "3,5": [[2, 4], [3, 4], [4, 4], [5, 5]],
+      "4,0": [[3, 0], [4, 1], [5, 0], [6, 0]],
+      "4,1": [[3, 0], [3, 1], [3, 2], [4, 0], [5, 0], [5, 1]],
+      "4,2": [[3, 2], [3, 3], [4, 3], [5, 1], [5, 2], [5, 3]],
+      "4,3": [[3, 3], [2, 3], [3, 4], [4, 2], [5, 3], [4, 4]],
+      "4,4": [[4, 3], [3, 4], [3, 5], [5, 3], [5, 4], [5, 5]],
+      "5,0": [[4, 0], [4, 1], [5, 1], [6, 0], [7, 0], [6, 1]],
+      "5,1": [[4, 1], [3, 2], [4, 2], [5, 0], [6, 1], [5, 2]],
+      "5,2": [[5, 1], [4, 2], [5, 3], [6, 1], [6, 2], [6, 3]],
+      "5,3": [[4, 2], [4, 3], [4, 4], [5, 2], [6, 3], [5, 4]],
+      "5,4": [[5, 3], [4, 4], [5, 5], [6, 3], [7, 3], [6, 4]],
+      "5,5": [[3, 5], [4, 4], [5, 4], [6, 4]],
+      "6,0": [[4, 0], [5, 0], [7, 0]],
+      "6,1": [[5, 0], [5, 1], [5, 2], [7, 0], [7, 1], [6, 2]],
+      "6,2": [[6, 1], [5, 2], [6, 3], [7, 1], [8, 0], [7, 2]],
+      "6,3": [[5, 2], [5, 3], [5, 4], [6, 2], [7, 2], [7, 3]],
+      "6,4": [[7, 3], [5, 4], [5, 5]],
+      "7,0": [[6, 0], [5, 0], [6, 1], [7, 1]],
+      "7,1": [[7, 0], [6, 1], [6, 2], [8, 0]],
+      "7,2": [[8, 0], [6, 2], [6, 3], [7, 3]],
+      "7,3": [[7, 2], [6, 3], [5, 4], [6, 4]],
+      "8,0": [[7, 1], [6, 2], [7, 2]],
     };
     return manualMap[mapKey] || [];
   };
 
   const isRecruitZone = (r, c, player) => {
-    if (player === 1)
-      return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3", "8,0"].includes(`${r},${c}`);
-    if (player === 2)
-      return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1", "0,0"].includes(`${r},${c}`);
+    if (player === 1) return ["7,1", "6,0", "7,0", "7,2", "6,4", "7,3", "8,0"].includes(`${r},${c}`);
+    if (player === 2) return ["1,0", "2,0", "1,2", "1,3", "2,4", "1,1", "0,0"].includes(`${r},${c}`);
     return false;
+  };
+
+  // --- VISUAL MATH HELPERS (From GameSection) ---
+  const isVisuallyAligned = (r1, c1, r2, c2) => {
+    if (!SLOT_COORDINATES[r1] || !SLOT_COORDINATES[r1][c1]) return false;
+    if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
+
+    const p1 = SLOT_COORDINATES[r1][c1];
+    const p2 = SLOT_COORDINATES[r2][c2];
+    
+    const y1 = parseFloat(p1.top);
+    const x1 = parseFloat(p1.left);
+    const y2 = parseFloat(p2.top);
+    const x2 = parseFloat(p2.left);
+
+    const dy = Math.abs(y2 - y1);
+    const dx = Math.abs(x2 - x1);
+
+    // Vertical (Illusionist)
+    if (dx < 4.0) return true; 
+
+    // Diagonal (Archer/Claw/Rider)
+    if (dx > 0) {
+        const slope = dy / dx;
+        if (slope > 0.45 && slope < 0.65) return true;
+    }
+    return false;
+  };
+
+  const isVisuallyVertical = (r1, c1, r2, c2) => {
+    if (!SLOT_COORDINATES[r1] || !SLOT_COORDINATES[r1][c1]) return false;
+    if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
+    const x1 = parseFloat(SLOT_COORDINATES[r1][c1].left);
+    const x2 = parseFloat(SLOT_COORDINATES[r2][c2].left);
+    return Math.abs(x1 - x2) < 4.0;
+  };
+
+  // --- LOCAL CALCULATE ABILITY MOVES (From GameSection) ---
+  const calculateLocalAbilityMoves = (r, c, unit, board, getNeighbors) => {
+    const actions = [];
+    const neighbors = getNeighbors(r, c);
+    const owner = unit.owner;
+    const enemyOwner = owner === 1 ? 2 : 1;
+    const cardId = unit.cardId;
+  
+    const isJailed = neighbors.some(([nr, nc]) => {
+      const nUnit = board[nr][nc];
+      return nUnit && nUnit.owner === enemyOwner && nUnit.cardId === "jailer";
+    });
+    if (isJailed && cardId !== "nemesis") return [];
+  
+    switch (cardId) {
+      case "acrobat":
+        neighbors.forEach(([nr, nc]) => {
+          if (board[nr] && board[nr][nc]) { 
+            const startKey = `${r},${c}`;
+            const bridgeKey = `${nr},${nc}`;
+            const targetPos = STRAIGHT_JUMPS_PATHS[startKey]?.[bridgeKey];
+            if (targetPos) {
+              const [targetR, targetC] = targetPos;
+              if (board[targetR] && !board[targetR][targetC]) {
+                actions.push({ r: targetR, c: targetC, type: "ability_move" });
+              }
+            }
+          }
+        });
+        break;
+  
+      case "rider":
+        board.forEach((row, tr) => {
+            row.forEach((cell, tc) => {
+              if (!cell) {
+                 if (isVisuallyAligned(r, c, tr, tc)) {
+                     const p1 = SLOT_COORDINATES[r][c];
+                     const p2 = SLOT_COORDINATES[tr][tc];
+                     const dist = Math.sqrt(Math.pow(parseFloat(p1.top)-parseFloat(p2.top),2) + Math.pow(parseFloat(p1.left)-parseFloat(p2.left),2));
+                     if (dist > 20 && dist < 40) {
+                         const midY = (parseFloat(p1.top) + parseFloat(p2.top)) / 2;
+                         const midX = (parseFloat(p1.left) + parseFloat(p2.left)) / 2;
+                         let midR = -1, midC = -1;
+                         SLOT_COORDINATES.forEach((sRow, sr) => sRow.forEach((sCoords, sc) => {
+                             const d = Math.sqrt(Math.pow(parseFloat(sCoords.top)-midY,2) + Math.pow(parseFloat(sCoords.left)-midX,2));
+                             if (d < 3.0) { midR = sr; midC = sc; }
+                         }));
+                         if (midR !== -1 && board[midR] && !board[midR][midC]) {
+                             actions.push({ r: tr, c: tc, type: "ability_move" });
+                         }
+                     }
+                 }
+              }
+            });
+        });
+        break;
+  
+      case "bruiser":
+        neighbors.forEach(([nr, nc]) => {
+          const target = board[nr][nc];
+          if (target && target.owner === enemyOwner) {
+            const validDestinations = calculateBruiserPushTargets(r, c, nr, nc, board, getNeighbors);
+            validDestinations.forEach((dest) => {
+              actions.push({ r: nr, c: nc, type: "ability_bruiser_push", pushTo: [dest.r, dest.c] });
+            });
+          }
+        });
+        break;
+  
+      case "manipulator":
+        board.forEach((row, tr) =>
+          row.forEach((target, tc) => {
+            if (target && target.owner === enemyOwner) {
+              const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+              if (!isAdj) { 
+                const dests = calculateManipulatorDestinations(tr, tc, board, getNeighbors);
+                if (dests.length > 0) {
+                  actions.push({ r: tr, c: tc, type: "ability_manipulator_target" });
+                }
+              }
+            }
+          })
+        );
+        break;
+  
+      case "guard":
+        let leaderPos = null;
+        board.forEach((row, lr) =>
+          row.forEach((lUnit, lc) => {
+            if (lUnit && lUnit.owner === owner && (lUnit.cardId === "leader" || lUnit.cardId === "leader2")) {
+              leaderPos = [lr, lc];
+            }
+          })
+        );
+        if (leaderPos) {
+          const lNeighbors = getNeighbors(leaderPos[0], leaderPos[1]);
+          lNeighbors.forEach(([lnr, lnc]) => {
+            if (!board[lnr][lnc] && (lnr !== r || lnc !== c)) {
+              actions.push({ r: lnr, c: lnc, type: "ability_move" });
+            }
+          });
+        }
+        break;
+  
+      case "wanderer":
+        board.forEach((row, wr) =>
+          row.forEach((_, wc) => {
+            if (!board[wr][wc]) {
+              const wNeighbors = getNeighbors(wr, wc);
+              const hasEnemy = wNeighbors.some(([wnr, wnc]) => {
+                const nUnit = board[wnr][wnc];
+                return nUnit && nUnit.owner === enemyOwner;
+              });
+              if (!hasEnemy) {
+                actions.push({ r: wr, c: wc, type: "ability_move" });
+              }
+            }
+          })
+        );
+        break;
+  
+      case "illusionist":
+        if (!SLOT_COORDINATES[r] || !SLOT_COORDINATES[r][c]) break;
+        const myLeft = parseFloat(SLOT_COORDINATES[r][c].left);
+        board.forEach((row, tr) =>
+          row.forEach((target, tc) => {
+            if (target && (tr !== r || tc !== c)) {
+              const isAdj = neighbors.some((n) => n[0] === tr && n[1] === tc);
+              if (isAdj) return;
+              if (!SLOT_COORDINATES[tr] || !SLOT_COORDINATES[tr][tc]) return;
+              const targetLeft = parseFloat(SLOT_COORDINATES[tr][tc].left);
+              if (Math.abs(myLeft - targetLeft) < 4) {
+                 actions.push({ r: tr, c: tc, type: "ability_swap" });
+              }
+            }
+          })
+        );
+        break;
+      
+      case "claw":
+        break;
+  
+      case "brewmaster":
+        neighbors.forEach(([nr, nc]) => {
+          const ally = board[nr][nc];
+          if (ally && ally.owner === owner) {
+            actions.push({ r: nr, c: nc, type: "ability_brew_select" });
+          }
+        });
+        break;
+  
+      default: break;
+    }
+    return actions;
   };
 
   // --- STATE ---
@@ -149,6 +323,7 @@ const Versus = () => {
   const [bruiserTarget, setBruiserTarget] = useState(null);
   const [bruiserPendingMoves, setBruiserPendingMoves] = useState([]);
   const [manipulatorTarget, setManipulatorTarget] = useState(null);
+  const [brewmasterTarget, setBrewmasterTarget] = useState(null);
 
   // Nemesis State
   const [nemesisPending, setNemesisPending] = useState(null);
@@ -197,6 +372,9 @@ const Versus = () => {
     setNemesisPending(null);
     setClawMode("pull");
     setTurnPhaseType(null);
+    setBruiserTarget(null);
+    setManipulatorTarget(null);
+    setBrewmasterTarget(null);
   };
 
   const findUnit = (b, cardId, owner) => {
@@ -239,6 +417,7 @@ const Versus = () => {
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
+    setBrewmasterTarget(null);
 
     if (unit && unit.owner === authorizedOwner) {
       if (unit.moved && !nemesisPending) {
@@ -275,7 +454,8 @@ const Versus = () => {
              const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
              setValidMoves(moves);
          } else {
-             const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+             // USE LOCAL CALCULATION HERE
+             const abilities = calculateLocalAbilityMoves(r, c, unit, board, getNeighbors);
              setValidMoves(abilities);
          }
          setSelectedUnitAbility(unitData);
@@ -301,6 +481,11 @@ const Versus = () => {
 
     if (turnPhaseType) return; 
 
+    setBruiserTarget(null);
+    setBruiserPendingMoves([]);
+    setManipulatorTarget(null);
+    setBrewmasterTarget(null);
+
     if (actionMode === "move") {
       setActionMode("ability");
       if (unit.cardId === "claw") {
@@ -308,7 +493,8 @@ const Versus = () => {
           setValidMoves(moves);
           if (moves.length === 0) setGameLog(clawMode === 'pull' ? "No targets to Pull" : "No targets to Dash");
       } else {
-          const abilities = calculateAbilityMoves(r, c, unit, board, getNeighbors);
+          // USE LOCAL CALCULATION HERE
+          const abilities = calculateLocalAbilityMoves(r, c, unit, board, getNeighbors);
           setValidMoves(abilities);
           if (abilities.length === 0) setGameLog("No ability targets available!");
           else setGameLog("Ability Mode: Select Target (Red)");
@@ -332,6 +518,12 @@ const Versus = () => {
           setValidMoves(moves);
           setGameLog(newMode === "pull" ? "Hook Mode Active" : "Dash Mode Active");
       }
+  };
+
+  const hasVizierInTeam = (owner, currentBoard) => {
+    return currentBoard.some((row) =>
+      row.some((u) => u && u.owner === owner && u.cardId === "vizier")
+    );
   };
 
   const handleBoardClick = (r, c) => {
@@ -393,6 +585,19 @@ const Versus = () => {
               return;
           }
 
+          if (action.type === "ability_brew_select") {
+            setBrewmasterTarget({ r, c });
+            const allyUnit = board[r][c];
+            const validAllySteps = calculateBasicMoves(r, c, allyUnit, board, getNeighbors);
+            const executeMoves = validAllySteps.map(m => ({ ...m, type: "ability_brew_execute", allyFrom: [r, c] }));
+            if (executeMoves.length === 0) setGameLog("Ally has no moves!");
+            else {
+              setValidMoves(executeMoves);
+              setGameLog("Select Ally Destination");
+            }
+            return;
+          }
+
           executeAction(r, c, action);
       }
   };
@@ -413,6 +618,13 @@ const Versus = () => {
     if (type === "move" || type === "reaction_move" || type === "ability_move") {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
+      if (unit.cardId.includes("leader") && hasVizierInTeam(unit.owner, board) && !unit.hasBonusMoved) {
+          newBoard[targetR][targetC] = { ...unit, moved: false, hasBonusMoved: true };
+          setBoard(newBoard);
+          setGameLog("Vizier Power: Leader Moves Again!");
+          setTimeout(() => handleSelectUnit(targetR, targetC), 50);
+          return;
+      }
     } else if (type === "ability_swap") {
       const targetUnit = newBoard[targetR][targetC];
       newBoard[sr][sc] = targetUnit;
@@ -437,6 +649,11 @@ const Versus = () => {
        const landAt = action.landAt;
        newBoard[landAt[0]][landAt[1]] = unit;
        newBoard[sr][sc] = null;
+    } else if (type === "ability_brew_execute" && action.allyFrom) {
+        const allyPos = action.allyFrom;
+        const allyUnit = newBoard[allyPos[0]][allyPos[1]];
+        newBoard[targetR][targetC] = allyUnit;
+        newBoard[allyPos[0]][allyPos[1]] = null;
     }
 
     setBoard(newBoard);
@@ -448,6 +665,7 @@ const Versus = () => {
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
     setManipulatorTarget(null);
+    setBrewmasterTarget(null);
 
     if (nemesisPending) {
         setNemesisPending(null);
@@ -496,6 +714,22 @@ const Versus = () => {
       }
   };
 
+  const getArcherThreatCount = (targetPos, enemyOwner, currentBoard) => {
+    let threatCount = 0;
+    const [tR, tC] = targetPos;
+    currentBoard.forEach((row, r) => {
+      row.forEach((unit, c) => {
+        if (unit && unit.owner === enemyOwner && unit.cardId === "archer") {
+          // Use the exact same visual math as GameSection
+          if (isVisuallyAligned(r, c, tR, tC)) {
+              threatCount++;
+          }
+        }
+      });
+    });
+    return threatCount;
+  };
+
   const checkVersusWin = (currentBoard) => {
     let p1Pos = null;
     let p2Pos = null;
@@ -512,51 +746,11 @@ const Versus = () => {
     if (!p1Pos) return "Player 2";
     if (!p2Pos) return "Player 1";
 
-    // --- ARCHER LOGIC HELPER ---
-    const checkArcherThreats = (pos, enemyOwner) => {
-        let threatCount = 0;
-        const neighbors = getNeighbors(pos[0], pos[1]);
-        
-        // Loop through neighbors to find lines extending 2 spaces out
-        neighbors.forEach(([midR, midC]) => {
-            const midNeighbors = getNeighbors(midR, midC);
-            // Check neighbors of the neighbor (distance 2)
-            midNeighbors.forEach(([farR, farC]) => {
-                const farUnit = currentBoard[farR][farC];
-                // Is there an enemy Archer here?
-                if (farUnit && farUnit.owner === enemyOwner && farUnit.cardId === 'archer') {
-                    // Check linearity using SLOT_COORDINATES
-                    if (SLOT_COORDINATES[pos[0]] && SLOT_COORDINATES[pos[0]][pos[1]] &&
-                        SLOT_COORDINATES[midR] && SLOT_COORDINATES[midR][midC] &&
-                        SLOT_COORDINATES[farR] && SLOT_COORDINATES[farR][farC]) {
-                        
-                        const p1 = SLOT_COORDINATES[pos[0]][pos[1]]; // Leader
-                        const p2 = SLOT_COORDINATES[midR][midC];     // Mid
-                        const p3 = SLOT_COORDINATES[farR][farC];     // Archer
-
-                        const x1 = parseFloat(p1.left), y1 = parseFloat(p1.top);
-                        const x2 = parseFloat(p2.left), y2 = parseFloat(p2.top);
-                        const x3 = parseFloat(p3.left), y3 = parseFloat(p3.top);
-
-                        const angle1 = Math.atan2(y2 - y1, x2 - x1);
-                        const angle2 = Math.atan2(y3 - y2, x3 - x2);
-
-                        // Strict straight line check
-                        if (Math.abs(angle1 - angle2) < 0.15) {
-                            threatCount++;
-                        }
-                    }
-                }
-            });
-        });
-        return threatCount;
-    };
-
     const isLeaderDefeated = (pos, owner) => {
       const neighbors = getNeighbors(pos[0], pos[1]);
       const enemyOwner = owner === 1 ? 2 : 1;
-      let adjacentEnemies = 0;
       let occupiedNeighbors = 0;
+      let directThreats = 0;
       let assassinThreat = false;
 
       neighbors.forEach(([nr, nc]) => {
@@ -564,25 +758,18 @@ const Versus = () => {
         if (cell) {
           occupiedNeighbors++;
           if (cell.owner === enemyOwner) {
-            if (cell.cardId === 'assassin') {
-                assassinThreat = true;
-            }
-            // Archer and Cub do not count if adjacent
-            if (cell.cardId !== "cub" && cell.cardId !== "archer") {
-              adjacentEnemies++;
-            }
+            if (cell.cardId === 'assassin') assassinThreat = true;
+            if (cell.cardId !== "cub" && cell.cardId !== "archer") directThreats++;
           }
         }
       });
 
       if (assassinThreat) return true;
 
-      // Add Archer threats from distance
-      const archerThreats = checkArcherThreats(pos, enemyOwner);
-      const totalThreats = adjacentEnemies + archerThreats;
+      const archerThreats = getArcherThreatCount(pos, enemyOwner, currentBoard);
 
-      if (totalThreats >= 2) return true;
-      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length && totalThreats >= 2) return true; // Surrounded case
+      if (directThreats + archerThreats >= 2) return true;
+      if (neighbors.length > 0 && occupiedNeighbors === neighbors.length) return true; 
       return false;
     };
 
@@ -690,7 +877,7 @@ const Versus = () => {
 
   const resetForP1 = (b) => {
     const resetBoard = b.map((row) =>
-      row.map((c) => (c ? { ...c, moved: false, isNew: false } : null))
+      row.map((c) => (c ? { ...c, moved: false, isNew: false, hasBonusMoved: false } : null))
     );
     setBoard(resetBoard);
     setTurn(1);
