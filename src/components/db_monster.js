@@ -921,15 +921,24 @@ export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
   let dist1Moves = [];
 
   neighbors.forEach(([n1r, n1c]) => {
-    if (!board[n1r][n1c]) {
+    // 1. Check if Step 1 is valid (Walking logic: must be empty)
+    if (board[n1r] && board[n1r][n1c] === null) {
+      // Add as a fallback Move 1 option
       dist1Moves.push({ r: n1r, c: n1c, type: "reaction_move" });
 
+      // 2. From this valid Step 1, look for Step 2
       const neighbors2 = getNeighbors(n1r, n1c);
       neighbors2.forEach(([n2r, n2c]) => {
+        // Prevent backtracking to start
         if (n2r === r && n2c === c) return;
 
-        if (!board[n2r][n2c]) {
-          if (!dist2Moves.some((m) => m.r === n2r && m.c === n2c)) {
+        // Check if Step 2 is valid (Empty)
+        if (board[n2r] && board[n2r][n2c] === null) {
+          // Add to Dist 2 moves if unique
+          const alreadyExists = dist2Moves.some(
+            (m) => m.r === n2r && m.c === n2c
+          );
+          if (!alreadyExists) {
             dist2Moves.push({ r: n2r, c: n2c, type: "reaction_move" });
           }
         }
@@ -937,7 +946,11 @@ export const calculateNemesisReaction = (r, c, board, getNeighbors) => {
     }
   });
 
+  // Rule: MUST move 2 spaces if possible.
   if (dist2Moves.length > 0) return dist2Moves;
+  
+  // Fallback: If 2 spaces not possible, move 1.
   if (dist1Moves.length > 0) return dist1Moves;
+
   return [];
 };
