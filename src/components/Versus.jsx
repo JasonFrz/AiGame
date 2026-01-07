@@ -301,8 +301,7 @@ const Versus = () => {
   // --- STATE ---
   const [board, setBoard] = useState([]);
   const [turn, setTurn] = useState(1); 
-  const [round, setRound] = useState(1); 
-  const [p2RecruitCount, setP2RecruitCount] = useState(0); 
+  // 1 = P1 Move, 2 = P1 Recruit, 3 = P2 Move, 4 = P2 Recruit
 
   const [deck, setDeck] = useState([]);
   const [visibleDeck, setVisibleDeck] = useState([]);
@@ -314,7 +313,6 @@ const Versus = () => {
   const [actionMode, setActionMode] = useState("move"); 
   const [selectedUnitAbility, setSelectedUnitAbility] = useState(null);
   const [clawMode, setClawMode] = useState("pull");
-  const [turnPhaseType, setTurnPhaseType] = useState(null); 
   
   // Special Unit States
   const [bruiserTarget, setBruiserTarget] = useState(null);
@@ -348,8 +346,6 @@ const Versus = () => {
     setCurrentRoster(units);
   }, [board, turn]);
 
-  // --- HELPER: RESET SELECTION STATE ---
-  // This ensures no ghost selections remain when turns change or actions end
   const resetSelectionState = () => {
     setSelectedPos(null);
     setValidMoves([]);
@@ -373,16 +369,12 @@ const Versus = () => {
     setVisibleDeck(shuffled.slice(0, 3));
     
     setTurn(1);
-    setRound(1); 
-    setP2RecruitCount(0); 
-    
     setGameOver(null);
     setRecruitStep(0);
     setGameLog("Player 1 Turn");
     setNemesisPending(null);
     setClawMode("pull");
-    setTurnPhaseType(null);
-    resetSelectionState(); // Reset selections on init
+    resetSelectionState(); 
   };
 
   const findUnit = (b, cardId, owner) => {
@@ -398,7 +390,7 @@ const Versus = () => {
 
   // --- LOGIC INTERACTION ---
 
-  const handleSelectUnit = (r, c, isForced = false) => {
+  const handleSelectUnit = (r, c) => {
     if (gameOver) return;
 
     if (nemesisPending) {
@@ -418,7 +410,7 @@ const Versus = () => {
     const unit = board[r][c];
     const authorizedOwner = nemesisPending ? nemesisPending.owner : (turn === 1 ? 1 : 2);
 
-    resetSelectionState(); // Clear previous selection before selecting new
+    resetSelectionState(); 
 
     if (unit && unit.owner === authorizedOwner) {
       if (unit.moved && !nemesisPending) {
@@ -445,31 +437,11 @@ const Versus = () => {
           return;
       }
 
-      if (turnPhaseType === "ability") {
-         if (unitData.type !== "Active") {
-             setGameLog("Turn Locked: Abilities Only");
-             return;
-         }
-         setActionMode("ability");
-         if (unit.cardId === "claw") {
-             const moves = calculateVisualClawMoves(r, c, unit, board, clawMode);
-             setValidMoves(moves);
-         } else {
-             const abilities = calculateLocalAbilityMoves(r, c, unit, board, getNeighbors);
-             setValidMoves(abilities);
-         }
+      // Default to move unless ability mode was active (but we reset it, so always default to moves + visual check)
+      const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
+      setValidMoves(moves);
+      if (unitData.type === "Active") {
          setSelectedUnitAbility(unitData);
-      } else if (turnPhaseType === "move") {
-         setActionMode("move");
-         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-         setValidMoves(moves);
-         setSelectedUnitAbility(null);
-      } else {
-         const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
-         setValidMoves(moves);
-         if (unitData.type === "Active") {
-             setSelectedUnitAbility(unitData);
-         }
       }
     }
   };
@@ -478,8 +450,6 @@ const Versus = () => {
     if (!selectedPos) return;
     const [r, c] = selectedPos;
     const unit = board[r][c];
-
-    if (turnPhaseType) return; 
 
     setBruiserTarget(null);
     setBruiserPendingMoves([]);
@@ -557,12 +527,11 @@ const Versus = () => {
       const action = validMoves.find(m => m.r === r && m.c === c);
 
       if (selectedPos && action) {
-          // --- SECURITY CHECK ---
           const currentUnit = board[selectedPos[0]][selectedPos[1]];
           const requiredOwner = turn === 1 ? 1 : 2;
           
           if (!nemesisPending && currentUnit && currentUnit.owner !== requiredOwner) {
-              resetSelectionState(); // Deselect instantly if cheat detected
+              resetSelectionState(); 
               return;
           }
 
@@ -627,12 +596,13 @@ const Versus = () => {
       newBoard[targetR][targetC] = unit;
       newBoard[sr][sc] = null;
       
-      // --- VIZIER POWER CHECK ---
-      // If Vizier is in team, reset 'moved' to false, set 'hasBonusMoved' to true.
-      // Do NOT return. Fall through to allow selection reset and Nemesis/Win checks.
+      // --- VIZIER POWER CHECK (MATCHING PvAI) ---
       if (unit.cardId.includes("leader") && hasVizierInTeam(unit.owner, board) && !unit.hasBonusMoved) {
           newBoard[targetR][targetC] = { ...unit, moved: false, hasBonusMoved: true };
-          setGameLog("Vizier Power: Leader Can Move Again");
+          setBoard(newBoard);
+          setGameLog("Vizier Power: Leader Moves Again!");
+          setTimeout(() => handleSelectUnit(targetR, targetC), 50);
+          return;
       }
 
     } else if (type === "ability_swap") {
@@ -667,19 +637,12 @@ const Versus = () => {
     }
 
     setBoard(newBoard);
-    
-    // Clear selections immediately
     resetSelectionState();
 
     if (nemesisPending) {
         setNemesisPending(null);
         setGameLog(`Resume Player ${turn === 1 ? 1 : 2} Turn`);
         return;
-    }
-
-    if (turnPhaseType === null && !nemesisPending) {
-         const isAbility = type.includes("ability");
-         setTurnPhaseType(isAbility ? "ability" : "move");
     }
 
     checkForNemesisTrigger(boardBeforeMove, newBoard);
@@ -791,7 +754,6 @@ const Versus = () => {
     newBoard[r][c] = { owner, cardId, moved: true, isNew: true };
     setBoard(newBoard);
     
-    // Clear selection after recruiting to prevent bugs
     resetSelectionState();
 
     if (cardId === "hermit") return;
@@ -810,77 +772,51 @@ const Versus = () => {
     setRecruitSelectionIndex(null);
     setMobileTab(null);
 
-    // --- RECRUITMENT LOGIC UPDATE ---
+    // End recruitment step - pass to next player
     if (turn === 2) {
-      // P1 Recruit -> Done -> P2 Move
-      endTurnLogic(2, newBoard);
+        // P1 Finished Recruit -> P2 Move
+        setTurn(3);
+        setGameLog("Player 2 Turn");
     } else if (turn === 4) {
-      // P2 Recruit -> Check if they need to recruit more
-      const currentRecruitCount = p2RecruitCount + 1;
-      setP2RecruitCount(currentRecruitCount);
-
-      // Rule: Round 1 = 2 recruits, Round N = 1 recruit
-      const limit = round === 1 ? 2 : 1; 
-
-      if (currentRecruitCount < limit) {
-        // Still needs to recruit
-        setGameLog(`P2 Recruit (${currentRecruitCount + 1}/${limit})`);
-      } else {
-        // Limit reached -> Done -> P1 Move
-        endTurnLogic(4, newBoard);
-      }
+        // P2 Finished Recruit -> P1 Move
+        resetForP1(newBoard);
     }
   };
 
-  const endTurnLogic = (phase, currentBoard = board) => {
+  const handleEndTurn = () => {
     if (nemesisPending) {
         setGameLog("Must Resolve Nemesis Move!");
         return;
     }
     
-    // BUG FIX: Clear selection immediately when turn logic starts
-    resetSelectionState();
-
     const count = (o) =>
-      currentBoard
+      board
         .flat()
         .filter((u) => u && u.owner === o && u.cardId !== "cub").length;
+    
+    const deckHasCards = visibleDeck.length > 0;
 
-    // --- TURN CYCLE ---
-    if (phase === 1) { 
-      // P1 Move Done -> P1 Recruit
-      if (count(1) < 5 && visibleDeck.length > 0) {
-        setTurn(2);
-        setGameLog("P1 Recruit Phase");
-        setMobileTab("recruit");
+    resetSelectionState();
+
+    if (turn === 1) { 
+      // P1 Move Phase Ends
+      if (count(1) < 5 && deckHasCards) {
+          setTurn(2); // Go to P1 Recruit
+          setGameLog("Player 1 Recruit");
+          setMobileTab("recruit");
       } else {
-        // Skip Recruit -> P2 Move
-        setTurn(3);
-        setGameLog("Player 2 Turn");
-        setTurnPhaseType(null);
+          setTurn(3); // Go directly to P2 Move
+          setGameLog("Player 2 Turn");
       }
-    } else if (phase === 2) { 
-      // P1 Recruit Done -> P2 Move
-      setTurn(3);
-      setGameLog("Player 2 Turn");
-      setTurnPhaseType(null);
-    } else if (phase === 3) { 
-      // P2 Move Done -> P2 Recruit
-      // Reset P2 recruit count sebelum fase recruit dimulai
-      setP2RecruitCount(0); 
-      
-      if (count(2) < 5 && visibleDeck.length > 0) {
-        setTurn(4);
-        const limit = round === 1 ? 2 : 1;
-        setGameLog(`P2 Recruit Phase (1/${limit})`);
-        setMobileTab("recruit");
-      } else {
-        // Skip Recruit -> P1 Move
-        resetForP1(currentBoard);
-      }
-    } else if (phase === 4) { 
-      // P2 Recruit Done -> P1 Move
-      resetForP1(currentBoard);
+    } else if (turn === 3) {
+       // P2 Move Phase Ends
+       if (count(2) < 5 && deckHasCards) {
+           setTurn(4); // Go to P2 Recruit
+           setGameLog("Player 2 Recruit");
+           setMobileTab("recruit");
+       } else {
+           resetForP1(board); // Go directly to P1 Move
+       }
     }
   };
 
@@ -890,9 +826,7 @@ const Versus = () => {
     );
     setBoard(resetBoard);
     setTurn(1);
-    setRound(prev => prev + 1); // Increment Ronde
     setGameLog("Player 1 Turn");
-    setTurnPhaseType(null);
   };
 
   // --- UI COMPONENTS ---
@@ -988,17 +922,15 @@ const Versus = () => {
           )}
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => endTurnLogic(turn, board)}
-            className={`px-4 py-2 rounded-lg shadow border text-sm font-bold uppercase text-white transition-colors ${
-              turn === 1 || turn === 3
-                ? "bg-amber-600 hover:bg-amber-500 border-amber-400"
-                : "bg-gray-600 hover:bg-gray-500 border-gray-400"
-            } ${nemesisPending ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={!!nemesisPending}
-          >
-            {turn === 1 || turn === 3 ? "End Action" : "Skip Recruit"}
-          </button>
+          {(turn === 1 || turn === 3) && (
+             <button
+                onClick={handleEndTurn}
+                className={`px-4 py-2 rounded-lg shadow border text-sm font-bold uppercase text-white transition-colors bg-amber-600 hover:bg-amber-500 border-amber-400 ${nemesisPending ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={!!nemesisPending}
+             >
+                End Turn
+             </button>
+          )}
           <button
             onClick={() => navigate("/")}
             className="bg-gradient-to-b from-[#5D4037] to-[#3E2723] hover:from-[#6D4C41] text-[#EFEBE9] border border-[#8D6E63] px-4 py-2 rounded-lg font-semibold text-sm shadow-md"
