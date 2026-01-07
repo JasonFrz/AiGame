@@ -544,7 +544,6 @@ const GameSection = ({ onBack }) => {
     return actions;
   };
 
-  // --- STATE MANAGEMENT ---
   const [board, setBoard] = useState([]);
   const [turn, setTurn] = useState(1);
   const [deck, setDeck] = useState([]);
@@ -632,7 +631,6 @@ const GameSection = ({ onBack }) => {
     aiTurnCounter.current = 0;
   };
 
-  // --- AI LOGIC ---
   const getAllPossibleMoves = (board, owner) => {
     let allMoves = [];
     let enemyLeaderPos = null;
@@ -665,7 +663,6 @@ const GameSection = ({ onBack }) => {
             sortScore: 0,
           }));
 
-          // SIMULASI ABILITY KOMPLEKS
           if (unit.cardId === "manipulator") {
             const manipulatorMoves = [];
             board.forEach((eRow, er) =>
@@ -748,7 +745,6 @@ const GameSection = ({ onBack }) => {
             });
           }
 
-          // HEURISTIC SORTING
           moves.forEach((m) => {
             if (!m.sortScore) m.sortScore = 0;
             const targetCell = board[m.r] ? board[m.r][m.c] : null;
@@ -769,17 +765,14 @@ const GameSection = ({ onBack }) => {
             if (m.type.includes("ability")) m.sortScore += 1000;
             if (unit.cardId.includes("leader")) m.sortScore -= 2000;
 
-            // ILLUSIONIST KIDNAP STRATEGY
             if (unit.cardId === "illusionist" && m.type === "ability_swap") {
-              // Jika target swap adalah Leader Musuh, prioritas UTAMA
               if (
                 targetCell &&
                 targetCell.cardId.includes("leader") &&
                 targetCell.owner !== owner
               ) {
-                m.sortScore += 500000; // SWAP THE KING!
+                m.sortScore += 500000; 
               }
-              // Jika swap membuat musuh masuk ke area kita (row kecil untuk AI)
               if (m.r <= 2) m.sortScore += 5000;
             }
           });
@@ -981,15 +974,12 @@ const GameSection = ({ onBack }) => {
       });
     });
 
-    // Cek Kondisi Menang/Kalah Mutlak
     if (!aiLeader) return -WIN_SCORE;
     if (!pLeader) return WIN_SCORE;
 
-    // 2. Analisis Ancaman & Jarak
     const playerThreatMap = getExtendedThreats(simBoard, 1);
     const aiInDanger = playerThreatMap.has(`${aiLeader[0]},${aiLeader[1]}`);
 
-    // Jarak ke Leader Musuh (Tujuan Utama jika aman)
     const distToPlayerLeader = getDist(
       aiLeader[0],
       aiLeader[1],
@@ -997,55 +987,42 @@ const GameSection = ({ onBack }) => {
       pLeader[1]
     );
 
-    // Hitung jarak ke Unit Musuh TERDEKAT (Untuk logika kabur)
     let distToClosestEnemy = 100;
     pUnits.forEach((p) => {
       let d = getDist(aiLeader[0], aiLeader[1], p.r, p.c);
-      // Assassin & Archer dianggap lebih dekat 1 petak karena range/bahayanya
       if (p.id === "assassin" || p.id === "archer") d = Math.max(1, d - 1);
       if (d < distToClosestEnemy) distToClosestEnemy = d;
     });
 
-    // --- LOGIKA EVALUASI UTAMA ---
     if (difficultyLevel === "hard" || difficultyLevel === "medium") {
-      // A. MODE BERTAHAN (Musuh terlalu dekat)
       if (distToClosestEnemy <= 2) {
-        // Logika: Semakin jauh jaraknya (distToClosestEnemy naik), skor semakin tinggi.
         score += distToClosestEnemy * 5000;
 
-        // Penalty besar karena berada dalam zona bahaya (mendorong AI untuk keluar dari situasi ini)
         score -= 20000;
 
-        // Bonus jika AI Leader mundur ke area aman (Baris 0 atau 1)
         if (aiLeader[0] <= 1) score += 2000;
       }
-      // B. MODE MENYERANG (Aman)
       else {
-        // Logika: Semakin dekat ke Leader musuh (dist turun), skor semakin tinggi (minus dikurangi).
         score -= distToPlayerLeader * 100;
       }
 
-      // C. Logic Spesifik Hard Mode (Counter-Play)
       if (difficultyLevel === "hard") {
-        // Anti Manipulator/Illusionist
         if (playerHasManipulator || playerHasIllusionist) {
-          if (aiLeader[0] > 1) score -= 50000; // Jangan maju terlalu jauh
+          if (aiLeader[0] > 1) score -= 50000; 
           if (playerHasIllusionist) {
             pUnits.forEach((pu) => {
               if (
                 pu.id === "illusionist" &&
                 isVisuallyVertical(aiLeader[0], aiLeader[1], pu.r, pu.c)
               ) {
-                score -= 200000; // Bahaya Swap Vertikal
+                score -= 200000; 
               }
             });
           }
         }
 
-        // Self Preservation (Bahaya dimakan langsung)
         if (aiInDanger) score -= 1000000;
 
-        // Bunker Formation (Cari teman)
         const aiNeighbors = getNeighbors(aiLeader[0], aiLeader[1]);
         const friendlyNeighbors = aiNeighbors.filter(([nr, nc]) => {
           const u = simBoard[nr][nc];
@@ -1055,22 +1032,17 @@ const GameSection = ({ onBack }) => {
         if (friendlyNeighbors === 0) score -= 5000;
         else score += friendlyNeighbors * 2000;
 
-        // Bonus Posisi Unit Lain (Bukan Leader)
         aiUnits.forEach((u) => {
           const isDefensive = ["guard", "protector", "jailer"].includes(u.id);
-          // Unit agresif disuruh maju
           if (!isDefensive && u.r > 3) score += 500;
-          // Unit defensif disuruh jaga kandang
           if (isDefensive && u.r <= 2) score += 500;
         });
       }
 
-      // Logic Medium sederhana
       if (difficultyLevel === "medium") {
         if (aiInDanger) score -= 5000;
       }
     } else {
-      // EASY MODE: Polos, hanya hitung jarak ke leader musuh
       score += (20 - distToPlayerLeader) * 100;
     }
 
@@ -1245,15 +1217,10 @@ const GameSection = ({ onBack }) => {
         isAiProcessing.current = false;
         return;
       }
-
-      // --- LOGIC BARU: RESET MEMORI & HITUNG DEPTH ---
-
-      // Reset cache memori setiap awal langkah baru
       if (transpositionTable.current) {
         transpositionTable.current.clear();
       }
 
-      // Hitung total unit di papan untuk menentukan Endgame atau bukan
       let totalAllUnits = 0;
       board.forEach((r) =>
         r.forEach((c) => {
@@ -1261,16 +1228,14 @@ const GameSection = ({ onBack }) => {
         })
       );
 
-      // Tentukan Kedalaman (Search Depth)
-      let SEARCH_DEPTH = 2; // Default Easy
+      let SEARCH_DEPTH = 2; 
 
       if (difficulty === "medium") {
         SEARCH_DEPTH = 3;
       } else if (difficulty === "hard") {
-        // Hard Mode Dynamic Logic:
-        if (totalAllUnits > 12) SEARCH_DEPTH = 3; // Early Game (Cepat)
-        else if (totalAllUnits > 6) SEARCH_DEPTH = 4; // Mid Game (Pintar)
-        else SEARCH_DEPTH = 5; // End Game (Sangat Pintar/Deep)
+        if (totalAllUnits > 12) SEARCH_DEPTH = 3; 
+        else if (totalAllUnits > 6) SEARCH_DEPTH = 4;
+        else SEARCH_DEPTH = 5; 
       }
 
       setGameLog(`AI Thinking (${difficulty} D-${SEARCH_DEPTH})...`);
@@ -1285,11 +1250,9 @@ const GameSection = ({ onBack }) => {
       let alpha = -Infinity;
       let beta = Infinity;
 
-      // --- MINIMAX LOOP DENGAN DEPTH BARU ---
       for (let move of allPossibleMoves) {
         const simBoard = applySimMove(cloneBoard(currentBoard), move);
 
-        // Panggil Minimax dengan SEARCH_DEPTH yang sudah dihitung
         let score = minimax(
           simBoard,
           SEARCH_DEPTH - 1,
@@ -1299,7 +1262,6 @@ const GameSection = ({ onBack }) => {
           difficulty
         );
 
-        // Randomness sedikit untuk Easy/Medium agar tidak terlalu robotik
         if (difficulty !== "hard" && score === bestScore) {
           if (Math.random() > 0.5) bestMove = move;
         } else if (score > bestScore) {
@@ -1309,7 +1271,6 @@ const GameSection = ({ onBack }) => {
         alpha = Math.max(alpha, score);
       }
 
-      // --- EKSEKUSI LANGKAH (Logic Lama) ---
       if (bestMove) {
         const unit = currentBoard[bestMove.from[0]][bestMove.from[1]];
         const unitName = getCardData(unit.cardId).name;
@@ -1351,7 +1312,6 @@ const GameSection = ({ onBack }) => {
       }
     }
 
-    // 3. Logic Recruit (Logic Lama)
     const recruitLimit = aiTurnCounter.current === 1 ? 2 : 1;
     let aiLeaderPos = null;
     board.forEach((row, r) =>
@@ -1363,9 +1323,8 @@ const GameSection = ({ onBack }) => {
 
     await smartRecruit(board, aiLeaderPos, recruitLimit);
     isAiProcessing.current = false;
-  }, [board, gameOver, nemesisPending, difficulty, minimax]); // Tambahkan minimax ke dependency jika perlu
+  }, [board, gameOver, nemesisPending, difficulty, minimax]);
 
-  // --- SMART RECRUIT: COUNTER-PICK LOGIC ---
   const smartRecruit = async (currentBoard, aiLeaderPos, limit) => {
     let localBoard = cloneBoard(currentBoard);
     let localVisible = [...visibleDeck];
@@ -1417,7 +1376,6 @@ const GameSection = ({ onBack }) => {
       localVisible.forEach((card, idx) => {
         let score = UNIT_VALUES[card.id] || 0;
 
-        // Counter Logic
         if (
           playerHasAssassin &&
           ["guard", "protector", "jailer"].includes(card.id)
@@ -1425,9 +1383,7 @@ const GameSection = ({ onBack }) => {
           score += 10000;
 
         if (playerHasManipulator || playerHasIllusionist) {
-          // Butuh range atau anti-move
           if (["archer", "claw", "protector"].includes(card.id)) score += 8000;
-          // Hindari melee lemah yg mudah ditarik/ditukar
           if (["hermit", "acrobat"].includes(card.id)) score -= 5000;
         }
 

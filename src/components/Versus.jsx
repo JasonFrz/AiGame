@@ -437,7 +437,6 @@ const Versus = () => {
           return;
       }
 
-      // Default to move unless ability mode was active (but we reset it, so always default to moves + visual check)
       const moves = calculateBasicMoves(r, c, unit, board, getNeighbors);
       setValidMoves(moves);
       if (unitData.type === "Active") {
@@ -799,23 +798,21 @@ const Versus = () => {
     resetSelectionState();
 
     if (turn === 1) { 
-      // P1 Move Phase Ends
       if (count(1) < 5 && deckHasCards) {
-          setTurn(2); // Go to P1 Recruit
+          setTurn(2); 
           setGameLog("Player 1 Recruit");
           setMobileTab("recruit");
       } else {
-          setTurn(3); // Go directly to P2 Move
+          setTurn(3); 
           setGameLog("Player 2 Turn");
       }
     } else if (turn === 3) {
-       // P2 Move Phase Ends
        if (count(2) < 5 && deckHasCards) {
-           setTurn(4); // Go to P2 Recruit
+           setTurn(4);
            setGameLog("Player 2 Recruit");
            setMobileTab("recruit");
        } else {
-           resetForP1(board); // Go directly to P1 Move
+           resetForP1(board); 
        }
     }
   };
@@ -829,7 +826,6 @@ const Versus = () => {
     setGameLog("Player 1 Turn");
   };
 
-  // --- UI COMPONENTS ---
   const CardUI = ({ data, onClick, isSelected, isEmpty }) => {
     if (isEmpty)
       return (
