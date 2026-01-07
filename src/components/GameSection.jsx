@@ -415,6 +415,8 @@ const GameSection = ({ onBack }) => {
 
   // --- AI LOGIC CORE ---
 
+  const getDist = (r1, c1, r2, c2) => Math.abs(r1 - r2) + Math.abs(c1 - c2);
+
   const getAllPossibleMoves = (board, owner) => {
     let allMoves = [];
     const enemyOwner = owner === 1 ? 2 : 1;
@@ -432,11 +434,24 @@ const GameSection = ({ onBack }) => {
     );
 
     // THREAT DETECTION FOR SORTING
-    // Check if AI Leader is currently threatened by Illusionist or Claw
+    // Check if AI Leader is currently threatened by Illusionist, Claw, or JUST NEARBY enemies
     let isThreatened = false;
+    let closestEnemyDist = 99;
+    let closestEnemyPos = null;
+
     if (aiLeaderPos) {
         board.forEach((row, r) => row.forEach((u, c) => {
             if (u && u.owner === enemyOwner) {
+                const dist = getDist(r, c, aiLeaderPos.r, aiLeaderPos.c);
+                if (dist < closestEnemyDist) {
+                    closestEnemyDist = dist;
+                    closestEnemyPos = { r, c };
+                }
+
+                // General Paranoia: If any enemy is within 2 tiles, AI acts scared
+                if (dist <= 2) isThreatened = true;
+
+                // Specific threats
                 if (u.cardId === 'illusionist' && isVisuallyVertical(r, c, aiLeaderPos.r, aiLeaderPos.c)) isThreatened = true;
                 if (u.cardId === 'claw' && isVisuallyAligned(r, c, aiLeaderPos.r, aiLeaderPos.c)) isThreatened = true;
             }
@@ -511,11 +526,21 @@ const GameSection = ({ onBack }) => {
 
           // --- MOVE SORTING (CRITICAL FOR IMPOSSIBLE AI) ---
           moves.forEach((m) => {
-            // Priority 0: ESCAPE DEATH (Illusionist/Claw/Assassin)
+            // Priority 0: ESCAPE DEATH (Illusionist/Claw/Assassin/Melee)
             if (unit.cardId.includes("leader") && isThreatened) {
-                // If I'm the leader and I'm moving, check if I'm still threatened at dest
-                // Simple heuristic: moving ANYWHERE is better than staying
-                if (m.type === "move") m.sortScore += 500000;
+                // Heuristic: Moving AWAY from the closest enemy
+                if (m.type === "move" && closestEnemyPos) {
+                   const destDist = getDist(m.to[0], m.to[1], closestEnemyPos.r, closestEnemyPos.c);
+                   
+                   // Massive bonus for running away
+                   if (destDist > closestEnemyDist) {
+                      m.sortScore += 2000000;
+                   } 
+                   // Basic bonus for just moving at all if threatened
+                   else {
+                      m.sortScore += 500000; 
+                   }
+                }
             }
 
             // Priority 1: Target the Enemy Leader
@@ -689,8 +714,6 @@ const GameSection = ({ onBack }) => {
 
     // --- HARD / IMPOSSIBLE LOGIC ---
 
-    const getDist = (r1, c1, r2, c2) => Math.abs(r1 - r2) + Math.abs(c1 - c2);
-
     // 1. CALCULATE KILL PRESSURE (Checkmate Conditions)
     let aiLeaderThreats = 0;
     let playerLeaderThreats = 0;
@@ -701,9 +724,18 @@ const GameSection = ({ onBack }) => {
         
         // --- DEFENSIVE CHECK: IS AI LEADER THREATENED? ---
         if (u.owner === 1) {
-            // Melee threat
-            if (getDist(r, c, aiLeader.r, aiLeader.c) <= 1) aiLeaderThreats++;
-            
+            const distToAiLeader = getDist(r, c, aiLeader.r, aiLeader.c);
+
+            // Melee threat (Range 1) - EXTREME DANGER
+            if (distToAiLeader <= 1) {
+                aiLeaderThreats++;
+                score -= 8000000; // Almost as bad as losing
+            } 
+            // Nearby threat (Range 2) - EXTREME CAUTION (RUN AWAY!)
+            else if (distToAiLeader <= 2) {
+                score -= 2000000; // Very heavy penalty, forces AI to prioritize distance
+            }
+
             // SPECIAL THREAT: CLAW (Straight Line Pull)
             // If the enemy Claw is aligned, it can pull AI leader into death. Massive Penalty.
             if (u.cardId === 'claw') {
@@ -728,7 +760,8 @@ const GameSection = ({ onBack }) => {
 
         // --- OFFENSIVE CHECK: CAN WE KILL PLAYER LEADER? ---
         if (u.owner === 2) {
-             if (getDist(r, c, pLeader.r, pLeader.c) <= 1) playerLeaderThreats++;
+             const distToPlayerLeader = getDist(r, c, pLeader.r, pLeader.c);
+             if (distToPlayerLeader <= 1) playerLeaderThreats++;
              if (['archer', 'claw'].includes(u.cardId) && isVisuallyAligned(r, c, pLeader.r, pLeader.c)) playerLeaderThreats++;
              if (u.cardId === 'illusionist' && isVisuallyVertical(r, c, pLeader.r, pLeader.c)) playerLeaderThreats++;
         }
@@ -736,19 +769,21 @@ const GameSection = ({ onBack }) => {
 
     // CRITICAL: If enemy leader is threatened by >= 2 sources (or 1 assassin), it's basically a win
     if (playerLeaderThreats >= 2) score += 5000000; 
-    if (aiLeaderThreats >= 2) score -= 5000000;
+    
+    // If AI Leader is threatened, it's very bad.
+    if (aiLeaderThreats > 0) score -= 5000000;
 
     // 2. ASSASSIN THREAT (Absolute Danger)
     if (pAssassin) {
        const distToAssassin = getDist(aiLeader.r, aiLeader.c, pAssassin.r, pAssassin.c);
-       if (distToAssassin <= 1) score -= 800000; // Almost dead
-       else if (distToAssassin <= 2) score -= 100000; // Danger zone
-       else score += distToAssassin * 1000; // Keep away
+       if (distToAssassin <= 1) score -= 9000000; // Death imminent
+       else if (distToAssassin <= 2) score -= 2000000; // Flee immediately
+       else score += distToAssassin * 2000; // Keep away
     }
 
-    // 3. AGGRESSION: Distance to enemy leader
+    // 3. AGGRESSION: Distance to enemy leader (but safer now)
     const distToEnemy = getDist(aiLeader.r, aiLeader.c, pLeader.r, pLeader.c);
-    score -= distToEnemy * 100; // Closer is slightly better generally
+    score -= distToEnemy * 50; // Lower priority than safety
 
     // 4. POSITIONING: Central Control
     // Reward units for being in the center (rows 3,4,5, cols 2,3)
