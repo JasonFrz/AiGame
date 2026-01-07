@@ -376,7 +376,7 @@
       if (!SLOT_COORDINATES[r2] || !SLOT_COORDINATES[r2][c2]) return false;
       const x1 = parseFloat(SLOT_COORDINATES[r1][c1].left);
       const x2 = parseFloat(SLOT_COORDINATES[r2][c2].left);
-      return Math.abs(x1 - x2) < 6.0;
+      return Math.abs(x1 - x2) < 8.0;
     };
 
     // --- LOCAL CALCULATE ABILITY ---
@@ -796,6 +796,7 @@
               }
               if (distToEnemyLeader < prevDist) m.sortScore += 5000;
               if (m.type.includes("ability")) m.sortScore += 1000;
+              m.sortScore += Math.random() * 50;
               if (unit.cardId.includes("leader")) m.sortScore -= 2000;
 
               // ILLUSIONIST KIDNAP STRATEGY
@@ -808,7 +809,6 @@
                 ) {
                   m.sortScore += 500000; // SWAP THE KING!
                 }
-                // Jika swap membuat musuh masuk ke area kita (row kecil untuk AI)
                 if (m.r <= 2) m.sortScore += 5000;
               }
             });
@@ -982,106 +982,123 @@
       return threats;
     };
 
+// Ganti seluruh fungsi evaluateBoardState dengan ini:
 const evaluateBoardState = (simBoard, difficultyLevel) => {
-    let score = 0;
-    let aiLeader = null;
-    let pLeader = null;
-    let pUnits = []; 
-    
-    // --- 1. MAPPING PAPAN & SCORE MATERIAL ---
-    simBoard.forEach((row, r) => {
-      row.forEach((c, cIdx) => {
-        if (!c) return;
-        const val = UNIT_VALUES[c.cardId] || 100;
-        
-        // Center Control (Bonus Posisi Tengah)
-        const centerCol = (row.length - 1) / 2;
-        const distFromCenter = Math.abs(cIdx - centerCol);
-        const centerBonus = (3.5 - distFromCenter) * 15; 
-
-        if (c.owner === 2) {
-          score += val;
-          score += centerBonus; 
-          if (c.cardId === "leader2") aiLeader = [r, cIdx];
-        } else {
-          score -= val;
-          if (c.cardId === "leader") pLeader = [r, cIdx];
-          else pUnits.push({ ...c, r, c: cIdx }); // Simpan data musuh lengkap
-        }
-      });
-    });
-
-    if (!aiLeader) return -WIN_SCORE;
-    if (!pLeader) return WIN_SCORE;
-
-    // --- 2. DETEKSI BAHAYA AKURAT (SIMULATION BASED) ---
-    let threatenedBySkill = false;
-
-    // Loop semua unit musuh untuk cek apakah mereka bisa Skill ke Leader AI
-    pUnits.forEach((enemy) => {
-      // A. Cek Bahaya ILLUSIONIST
-      if (enemy.cardId === "illusionist") {
-        // Gunakan logic game asli untuk cek swap
-        const swapMoves = calculateAbilityMoves(enemy.r, enemy.c, enemy, simBoard, getNeighbors);
-        const canSwapLeader = swapMoves.some(m => m.type === "ability_swap" && m.r === aiLeader[0] && m.c === aiLeader[1]);
-        if (canSwapLeader) {
-          score -= 500000; // SANGAT BAHAYA
-          threatenedBySkill = true;
-        }
-      }
-
-      // B. Cek Bahaya CLAW
-      if (enemy.cardId === "claw") {
-        // Cek mode Pull
-        const pullMoves = calculateVisualClawMoves(enemy.r, enemy.c, enemy, simBoard, "pull");
-        // Cek mode Dash
-        const dashMoves = calculateVisualClawMoves(enemy.r, enemy.c, enemy, simBoard, "dash");
-        
-        const canHookLeader = [...pullMoves, ...dashMoves].some(m => m.r === aiLeader[0] && m.c === aiLeader[1]);
-        if (canHookLeader) {
-          score -= 500000; // SANGAT BAHAYA
-          threatenedBySkill = true;
-        }
-      }
-
-      // C. Cek Bahaya ARCHER (Manual Check karena Pasif)
-      if (enemy.cardId === "archer") {
-        if (isVisuallyAligned(enemy.r, enemy.c, aiLeader[0], aiLeader[1])) {
-           score -= 50000; // Bahaya Range
-           threatenedBySkill = true;
-        }
-      }
+  let score = 0;
+  let aiLeader = null; // {r, c, visualLeft}
+  let pLeader = null;
+  let pUnits = [];
+  
+  // --- 1. MAPPING PAPAN & SCORE MATERIAL ---
+  simBoard.forEach((row, r) => {
+    row.forEach((c, cIdx) => {
+      if (!c) return;
+      const val = UNIT_VALUES[c.cardId] || 100;
       
-      // D. Cek Bahaya ASSASSIN (Jarak dekat)
-      if (enemy.cardId === "assassin") {
-         const dist = getDist(enemy.r, enemy.c, aiLeader[0], aiLeader[1]);
-         if (dist <= 2) score -= 100000; // Assassin mendekat = LARI
+      // Ambil posisi visual (Left %)
+      let vLeft = 50; 
+      if (SLOT_COORDINATES[r] && SLOT_COORDINATES[r][cIdx]) {
+          vLeft = parseFloat(SLOT_COORDINATES[r][cIdx].left);
+      }
+
+      if (c.owner === 2) {
+        // AI UNITS
+        score += val;
+        // Bonus Center kecil (fleksibilitas)
+        const distFromCenter = Math.abs(vLeft - 50);
+        score += (50 - distFromCenter) * 2; 
+
+        if (c.cardId === "leader2") aiLeader = { r, c: cIdx, visualLeft: vLeft };
+      } else {
+        // PLAYER UNITS
+        score -= val;
+        if (c.cardId === "leader") pLeader = [r, cIdx];
+        else pUnits.push({ ...c, r, c: cIdx, visualLeft: vLeft }); 
       }
     });
+  });
 
-    // --- 3. LOGIC KEPUTUSAN ---
-    const distToPlayerLeader = getDist(aiLeader[0], aiLeader[1], pLeader[0], pLeader[1]);
+  if (!aiLeader) return -WIN_SCORE;
+  if (!pLeader) return WIN_SCORE;
 
-    if (difficultyLevel === "hard" || difficultyLevel === "medium") {
-      // Jika terancam skill mematikan (Claw/Illusionist), fokus LARI/HINDAR
-      if (threatenedBySkill) {
-         // Beri insentif besar untuk posisi yang AMAN dari skill
-         // (Karena di loop Minimax, langkah yang menghasilkan threatenedBySkill=false akan dipilih)
-      } else {
-         // Jika aman, baru boleh agresif
-         score -= distToPlayerLeader * 100;
-         
-         // Bonus formasi (teman di sekitar)
-         const neighbors = getNeighbors(aiLeader[0], aiLeader[1]);
-         const friends = neighbors.filter(([nr, nc]) => simBoard[nr][nc] && simBoard[nr][nc].owner === 2).length;
-         score += friends * 2000;
+  // --- 2. LOGIKA HEMISPHERE AVOIDANCE (ANTI-STRATEGI) ---
+  // AI akan menghitung rata-rata posisi unit berbahaya Anda
+  let threatSum = 0;
+  let threatCount = 0;
+  
+  pUnits.forEach(u => {
+      // Hanya hitung unit yang punya skill berbahaya / range
+      if (['illusionist', 'claw', 'archer', 'assassin', 'bruiser', 'manipulator'].includes(u.cardId)) {
+          threatSum += u.visualLeft;
+          threatCount++;
       }
-    } else {
-      score += (20 - distToPlayerLeader) * 100;
+  });
+  
+  if (threatCount > 0) {
+      const threatCOG = threatSum / threatCount; // Center of Gravity (Rata-rata posisi musuh)
+      
+      // JIKA MUSUH BERAT DI KIRI (< 48%), AI HARUS KE KANAN
+      if (threatCOG < 48) {
+          if (aiLeader.visualLeft <= 50) score -= 200000; // Hukuman berat jika AI ada di Kiri
+          else score += 50000; // Bonus besar jika AI ada di Kanan
+      } 
+      // JIKA MUSUH BERAT DI KANAN (> 52%), AI HARUS KE KIRI
+      else if (threatCOG > 52) {
+          if (aiLeader.visualLeft >= 50) score -= 200000; // Hukuman berat jika AI ada di Kanan
+          else score += 50000; // Bonus besar jika AI ada di Kiri
+      }
+  }
+
+  // --- 3. DETEKSI BAHAYA INSTAN (TACTICAL) ---
+  // Cek apakah skill musuh BISA dieksekusi sekarang juga (Line of Sight check)
+  let threatenedBySkill = false;
+
+  pUnits.forEach((enemy) => {
+    // CLAW
+    if (enemy.cardId === "claw") {
+      const pullMoves = calculateVisualClawMoves(enemy.r, enemy.c, enemy, simBoard, "pull");
+      const dashMoves = calculateVisualClawMoves(enemy.r, enemy.c, enemy, simBoard, "dash");
+      if ([...pullMoves, ...dashMoves].some(m => m.r === aiLeader.r && m.c === aiLeader.c)) {
+         score -= 2000000; // HUKUMAN MATI (Lebih besar dari kemenangan)
+         threatenedBySkill = true;
+      }
     }
 
-    return score;
-  };
+    // ILLUSIONIST (Gunakan toleransi lebar 8%)
+    if (enemy.cardId === "illusionist") {
+       const diff = Math.abs(aiLeader.visualLeft - enemy.visualLeft);
+       if (diff < 8.0) {
+           score -= 2000000; // HUKUMAN MATI
+           threatenedBySkill = true;
+       }
+    }
+    
+    // ASSASSIN
+    if (enemy.cardId === "assassin") {
+       const dist = getDist(enemy.r, enemy.c, aiLeader.r, aiLeader.c);
+       if (dist <= 2) score -= 500000;
+    }
+  });
+
+  // --- 4. DEFAULT AGGRESSION ---
+  const distToPlayerLeader = getDist(aiLeader.r, aiLeader.c, pLeader[0], pLeader[1]);
+
+  if (difficultyLevel === "hard" || difficultyLevel === "medium") {
+    if (!threatenedBySkill) {
+       // Hanya agresif jika tidak dalam bahaya skill
+       score -= distToPlayerLeader * 100;
+       
+       // Bonus formasi (cari teman)
+       const neighbors = getNeighbors(aiLeader.r, aiLeader.c);
+       const friends = neighbors.filter(([nr, nc]) => simBoard[nr][nc] && simBoard[nr][nc].owner === 2).length;
+       score += friends * 2000;
+    }
+  } else {
+    score += (20 - distToPlayerLeader) * 100;
+  }
+
+  return score;
+};
 
     const cloneBoard = (b) => {
       const len = b.length;
