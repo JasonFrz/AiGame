@@ -771,7 +771,7 @@ const GameSection = ({ onBack }) => {
                 targetCell.cardId.includes("leader") &&
                 targetCell.owner !== owner
               ) {
-                m.sortScore += 500000; 
+                m.sortScore += 500000;
               }
               if (m.r <= 2) m.sortScore += 5000;
             }
@@ -946,6 +946,18 @@ const GameSection = ({ onBack }) => {
     return threats;
   };
 
+  const getVisualDistance = (r1, c1, r2, c2) => {
+    if (!SLOT_COORDINATES[r1]?.[c1] || !SLOT_COORDINATES[r2]?.[c2]) return 999;
+
+    const p1 = SLOT_COORDINATES[r1][c1];
+    const p2 = SLOT_COORDINATES[r2][c2];
+
+    const dy = parseFloat(p2.top) - parseFloat(p1.top);
+    const dx = parseFloat(p2.left) - parseFloat(p1.left);
+
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   const evaluateBoardState = (simBoard, difficultyLevel) => {
     let score = 0;
     let aiLeader = null;
@@ -980,12 +992,19 @@ const GameSection = ({ onBack }) => {
     const playerThreatMap = getExtendedThreats(simBoard, 1);
     const aiInDanger = playerThreatMap.has(`${aiLeader[0]},${aiLeader[1]}`);
 
-    const distToPlayerLeader = getDist(
+    const distToPlayerLeader = getVisualDistance(
       aiLeader[0],
       aiLeader[1],
       pLeader[0],
       pLeader[1]
     );
+
+    const leftSideUnits = aiUnits.filter((u) => u.c <= 2).length;
+    const rightSideUnits = aiUnits.filter((u) => u.c > 2).length;
+
+    if (leftSideUnits > rightSideUnits + 2) {
+      score -= 3000;
+    }
 
     let distToClosestEnemy = 100;
     pUnits.forEach((p) => {
@@ -1001,21 +1020,20 @@ const GameSection = ({ onBack }) => {
         score -= 20000;
 
         if (aiLeader[0] <= 1) score += 2000;
-      }
-      else {
+      } else {
         score -= distToPlayerLeader * 100;
       }
 
       if (difficultyLevel === "hard") {
         if (playerHasManipulator || playerHasIllusionist) {
-          if (aiLeader[0] > 1) score -= 50000; 
+          if (aiLeader[0] > 1) score -= 50000;
           if (playerHasIllusionist) {
             pUnits.forEach((pu) => {
               if (
                 pu.id === "illusionist" &&
                 isVisuallyVertical(aiLeader[0], aiLeader[1], pu.r, pu.c)
               ) {
-                score -= 200000; 
+                score -= 200000;
               }
             });
           }
@@ -1228,14 +1246,14 @@ const GameSection = ({ onBack }) => {
         })
       );
 
-      let SEARCH_DEPTH = 2; 
+      let SEARCH_DEPTH = 2;
 
       if (difficulty === "medium") {
         SEARCH_DEPTH = 3;
       } else if (difficulty === "hard") {
-        if (totalAllUnits > 12) SEARCH_DEPTH = 3; 
+        if (totalAllUnits > 12) SEARCH_DEPTH = 3;
         else if (totalAllUnits > 6) SEARCH_DEPTH = 4;
-        else SEARCH_DEPTH = 5; 
+        else SEARCH_DEPTH = 5;
       }
 
       setGameLog(`AI Thinking (${difficulty} D-${SEARCH_DEPTH})...`);
