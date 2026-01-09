@@ -393,7 +393,7 @@ export const UNIT_VALUES = {
 
   jailer: 700,      
   protector: 600,   
-  vizier: 500,      
+  vizier: 950,      
   brewmaster: 500,   
   hermit: 400,       
   

@@ -1223,7 +1223,7 @@ const GameSection = ({ onBack }) => {
       })
     );
 
-    const MAX_AI_MOVES = 2;
+    const MAX_AI_MOVES = 5;
     const canMove = aiMovesMade < MAX_AI_MOVES && aiMovesMade < aiTotalUnits;
 
     if (canMove) {
